@@ -338,7 +338,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
                 LSL_Converter = (ICodeConverter)new CSCodeGenerator();
                 compileScript = LSL_Converter.Convert(Script);
 
-                lock(m_syncy) m_positionMap = ((CSCodeGenerator) LSL_Converter).PositionMap;
+                m_positionMap = ((CSCodeGenerator) LSL_Converter).PositionMap;
             }
 
             // Check this late so the map is generated on sim start
@@ -584,7 +584,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 
         public KeyValuePair<int, int> FindErrorPosition(int line, int col)
         {
-            lock(m_syncy) return FindErrorPosition(line, col, m_positionMap);
+            return FindErrorPosition(line, col, m_positionMap);
         }
 
         private class kvpSorter : IComparer<KeyValuePair<int,int>>
