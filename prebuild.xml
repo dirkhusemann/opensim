@@ -540,6 +540,7 @@
         <Match pattern="*.cs" recurse="true">
           <Exclude name="Tests" pattern="Tests"/>
         </Match>
+        <Match pattern="*.addin.xml" path="Resources" buildAction="EmbeddedResource" recurse="true"/>
       </Files>
     </Project>
 
@@ -953,52 +954,6 @@
 
       <Files>
         <Match pattern="*.cs" recurse="true"/>
-      </Files>
-    </Project>
-
-    <Project name="OpenSim.Region.CoreModules" path="OpenSim/Region/CoreModules" type="Library">
-      <Configuration name="Debug">
-        <Options>
-          <OutputPath>../../../bin/</OutputPath>
-        </Options>
-      </Configuration>
-      <Configuration name="Release">
-        <Options>
-          <OutputPath>../../../bin/</OutputPath>
-        </Options>
-      </Configuration>
-
-      <ReferencePath>../../../bin/</ReferencePath>
-      <Reference name="System" localCopy="false"/>
-      <Reference name="System.Xml"/>
-      <Reference name="System.Drawing"/>
-      <Reference name="System.Runtime.Remoting"/>
-      <Reference name="System.Web"/>
-      <Reference name="OpenMetaverseTypes.dll"/>
-      <Reference name="OpenMetaverse.StructuredData.dll"/>
-      <Reference name="OpenMetaverse.dll"/>
-      <Reference name="OpenSim.Framework"/>
-      <Reference name="OpenSim.Framework.Communications"/>
-      <Reference name="OpenSim.Data" />
-      <Reference name="OpenSim.Region.Framework" />
-      <Reference name="OpenSim.Framework.Console"/>
-      <Reference name="OpenSim.Framework.Servers"/>
-      <Reference name="OpenSim.Framework.Statistics"/>
-      <Reference name="OpenSim.Region.Physics.Manager"/>
-      <Reference name="OpenSim.Grid.AssetServer"/>
-
-      <!-- For scripting in funny languages by default -->
-      <Reference name="Microsoft.JScript"/>
-      <Reference name="XMLRPC.dll"/>
-      <Reference name="OpenSim.Framework.Communications"/>
-      <Reference name="Nini.dll" />
-      <Reference name="log4net.dll"/>
-      <Reference name="DotNetOpenMail.dll"/>
-
-      <Files>
-        <Match pattern="*.cs" recurse="true">
-          <Exclude name="Tests" pattern="Tests" />
-        </Match>
       </Files>
     </Project>
 
@@ -2772,6 +2727,7 @@
       <Files>
         <!-- SADLY the way this works means you need to keep adding these paths -->
         <Match path="Agent/TextureSender/Tests" pattern="*.cs" recurse="true" />
+        <Match path="Avatar/Inventory/Archiver/Tests" pattern="*.cs" recurse="true" />
         <Match path="World/Terrain/Tests" pattern="*.cs" recurse="true" />
         <Match path="World/Archiver/Tests" pattern="*.cs" recurse="true" />
       </Files>

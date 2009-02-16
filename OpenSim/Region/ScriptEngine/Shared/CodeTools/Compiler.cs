@@ -71,9 +71,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
 
         private string FilePrefix;
         private string ScriptEnginesPath = "ScriptEngines";
+        // mapping between LSL and C# line/column numbers
+        private Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>> m_positionMap; 
+        private ICodeConverter LSL_Converter;
 
-        private static ICodeConverter LSL_Converter;
-        private static Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>> m_positionMap; // mapping between LSL and C# line/column numbers
+        // private object m_syncy = new object();
+
         private static CSharpCodeProvider CScodeProvider = new CSharpCodeProvider();
         private static VBCodeProvider VBcodeProvider = new VBCodeProvider();
         private static JScriptCodeProvider JScodeProvider = new JScriptCodeProvider();
@@ -89,6 +92,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
             m_scriptEngine = scriptEngine;
             ReadConfig();
         }
+
         public bool in_startup = true;
         public void ReadConfig()
         {
@@ -654,18 +658,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
             return message;
         }
 
-        public Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>>
-                LineMap()
+        public Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>> LineMap()
         {
             if (m_positionMap == null)
                 return null;
-
+            
             Dictionary<KeyValuePair<int, int>, KeyValuePair<int, int>> ret =
                 new Dictionary<KeyValuePair<int,int>, KeyValuePair<int, int>>();
-
+            
             foreach (KeyValuePair<int, int> kvp in m_positionMap.Keys)
                 ret.Add(kvp, m_positionMap[kvp]);
-
+            
             return ret;
         }
     }
