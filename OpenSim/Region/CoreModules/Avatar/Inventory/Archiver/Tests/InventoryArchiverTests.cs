@@ -26,14 +26,18 @@
  */
 
 using System;
+using System.IO;
 using System.Text;
+using System.Threading;
 using NUnit.Framework;
+using NUnit.Framework.SyntaxHelpers;
 using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Region.CoreModules.Avatar.Inventory.Archiver;
+using OpenSim.Region.CoreModules.World.Archiver;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Tests.Common.Setup;
 
@@ -42,10 +46,19 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver.Tests
     [TestFixture]
     public class InventoryArchiverTests
     {
+        private void SaveCompleted(
+            bool succeeded, CachedUserInfo userInfo, string invPath, Stream saveStream, Exception reportedException)
+        {
+            lock (this)
+            {
+                Monitor.PulseAll(this);
+            }            
+        }
+        
         /// <summary>
         /// Test saving a V0.1 OpenSim Inventory Archive (subject to change since there is no fixed format yet).
         /// </summary>
-        [Test]        
+        [Test]
         public void TestSaveIarV0p1()
         {        
             //log4net.Config.XmlConfigurator.Configure();
@@ -90,70 +103,76 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver.Tests
             cm.AssetCache.AddAsset(asset1);
             
             // Create item
+            UUID item1Id = UUID.Parse("00000000-0000-0000-0000-000000000080");
             InventoryItemBase item1 = new InventoryItemBase();
             item1.Name = "My Little Dog";
             item1.AssetID = asset1.FullID;
+            item1.ID = item1Id;
             item1.Folder = userInfo.RootFolder.FindFolderByPath("Objects").ID;            
-            scene.AddInventoryItem(userId, item1);
-            
-            /*
+            scene.AddInventoryItem(userId, item1);            
             
             MemoryStream archiveWriteStream = new MemoryStream();
+            archiverModule.OnInventoryArchiveSaved += SaveCompleted;                
             
-            scene.EventManager.OnOarFileSaved += SaveCompleted;
-            archiverModule.ArchiveRegion(archiveWriteStream);            
-            m_waitHandle.WaitOne(60000, true);
+            lock (this)
+            {
+                archiverModule.ArchiveInventory(userFirstName, userLastName, "Objects", archiveWriteStream);                            
+                Monitor.Wait(this, 60000);
+            } 
 
             byte[] archive = archiveWriteStream.ToArray();           
             MemoryStream archiveReadStream = new MemoryStream(archive);
             TarArchiveReader tar = new TarArchiveReader(archiveReadStream);
-        
-            bool gotControlFile = false;
+            
+            //bool gotControlFile = false;
             bool gotObject1File = false;
-            bool gotObject2File = false;
-            string expectedObject1FileName = string.Format(
-                "{0}_{1:000}-{2:000}-{3:000}__{4}.xml",
-                part1.Name,
-                Math.Round(part1.GroupPosition.X), Math.Round(part1.GroupPosition.Y), Math.Round(part1.GroupPosition.Z),
-                part1.UUID);
+            //bool gotObject2File = false;
+            string expectedObject1FilePath = string.Format(
+                "{0}{1}_{2}.xml",
+                "Objects/",
+                item1.Name,
+                item1Id);
+/*
             string expectedObject2FileName = string.Format(
                 "{0}_{1:000}-{2:000}-{3:000}__{4}.xml",
                 part2.Name,
                 Math.Round(part2.GroupPosition.X), Math.Round(part2.GroupPosition.Y), Math.Round(part2.GroupPosition.Z),
-                part2.UUID);            
+                part2.UUID);
+                */            
             
             string filePath;
             TarArchiveReader.TarEntryType tarEntryType;
             
             while (tar.ReadEntry(out filePath, out tarEntryType) != null)
             {
+                /*
                 if (ArchiveConstants.CONTROL_FILE_PATH == filePath)
                 {
                     gotControlFile = true;
                 }
-                else if (filePath.StartsWith(ArchiveConstants.OBJECTS_PATH))
+                */
+                if (filePath.StartsWith("Objects/") && filePath.EndsWith(".xml"))
                 {
-                    string fileName = filePath.Remove(0, ArchiveConstants.OBJECTS_PATH.Length);
+                    //string fileName = filePath.Remove(0, "Objects/".Length);
                     
-                    if (fileName.StartsWith(part1.Name))
-                    {
-                        Assert.That(fileName, Is.EqualTo(expectedObject1FileName));
+                    //if (fileName.StartsWith(part1.Name))
+                    //{
+                        Assert.That(filePath, Is.EqualTo(expectedObject1FilePath));
                         gotObject1File = true;
-                    }
-                    else if (fileName.StartsWith(part2.Name))
-                    {
-                        Assert.That(fileName, Is.EqualTo(expectedObject2FileName));
-                        gotObject2File = true;                        
-                    }
+                    //}
+                    //else if (fileName.StartsWith(part2.Name))
+                    //{
+                    //    Assert.That(fileName, Is.EqualTo(expectedObject2FileName));
+                    //    gotObject2File = true;                        
+                    //}
                 }
             }
 
-            Assert.That(gotControlFile, Is.True, "No control file in archive");
-            Assert.That(gotObject1File, Is.True, "No object1 file in archive");
-            Assert.That(gotObject2File, Is.True, "No object2 file in archive");
+            //Assert.That(gotControlFile, Is.True, "No control file in archive");
+            Assert.That(gotObject1File, Is.True, "No item1 file in archive");
+            //Assert.That(gotObject2File, Is.True, "No object2 file in archive");
             
-            // TODO: Test presence of more files and contents of files.
-            */
+            // TODO: Test presence of more files and contents of files.            
         }        
     }
 }

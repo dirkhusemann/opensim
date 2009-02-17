@@ -2493,15 +2493,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             OutPacket(avp, ThrottleOutPacketType.Task);
         }
 
-        public void SendAnimations(UUID[] animations, int[] seqs, UUID sourceAgentId)
+        public void SendAnimations(UUID[] animations, int[] seqs, UUID sourceAgentId, UUID[] objectIDs)
         {
             //m_log.DebugFormat("[CLIENT]: Sending animations to {0}", Name);
 
             AvatarAnimationPacket ani = (AvatarAnimationPacket)PacketPool.Instance.GetPacket(PacketType.AvatarAnimation);
             // TODO: don't create new blocks if recycling an old packet
-            ani.AnimationSourceList = new AvatarAnimationPacket.AnimationSourceListBlock[1];
-            ani.AnimationSourceList[0] = new AvatarAnimationPacket.AnimationSourceListBlock();
-            ani.AnimationSourceList[0].ObjectID = sourceAgentId;
+            ani.AnimationSourceList = new AvatarAnimationPacket.AnimationSourceListBlock[animations.Length];
             ani.Sender = new AvatarAnimationPacket.SenderBlock();
             ani.Sender.ID = sourceAgentId;
             ani.AnimationList = new AvatarAnimationPacket.AnimationListBlock[animations.Length];
@@ -2511,6 +2509,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 ani.AnimationList[i] = new AvatarAnimationPacket.AnimationListBlock();
                 ani.AnimationList[i].AnimID = animations[i];
                 ani.AnimationList[i].AnimSequenceID = seqs[i];
+
+                ani.AnimationSourceList[i] = new AvatarAnimationPacket.AnimationSourceListBlock();
+                ani.AnimationSourceList[i].ObjectID = objectIDs[i];
+                if (objectIDs[i] == UUID.Zero)
+                    ani.AnimationSourceList[i].ObjectID = sourceAgentId;
             }
             ani.Header.Reliable = false;
             OutPacket(ani, ThrottleOutPacketType.Task);
@@ -7679,7 +7682,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 Transfer.TransferInfo.Params = new byte[20];
                 Array.Copy(req.RequestAssetID.GetBytes(), 0, Transfer.TransferInfo.Params, 0, 16);
-                int assType = req.AssetInf.Metadata.Type;
+                int assType = req.AssetInf.Type;
                 Array.Copy(Utils.IntToBytes(assType), 0, Transfer.TransferInfo.Params, 16, 4);
             }
             else if (req.AssetRequestSource == 3)

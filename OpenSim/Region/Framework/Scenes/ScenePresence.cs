@@ -816,14 +816,14 @@ namespace OpenSim.Region.Framework.Scenes
             // Moved this from SendInitialData to ensure that m_appearance is initialized
             // before the inventory is processed in MakeRootAgent. This fixes a race condition
             // related to the handling of attachments
-            m_scene.GetAvatarAppearance(m_controllingClient, out m_appearance);            
+            //m_scene.GetAvatarAppearance(m_controllingClient, out m_appearance);            
 
             if (pos.X < 0 || pos.X > Constants.RegionSize || pos.Y < 0 || pos.Y > Constants.RegionSize || pos.Z < 0)
             {
                 Vector3 emergencyPos = new Vector3(128, 128, 128);
 
                 m_log.WarnFormat(
-                    "[SCENE]: MakeRootAgent() was given an illegal position of {0} for avatar {1}, {2}.  Substituting {3}",
+                    "[SCENE PRESENCE]: MakeRootAgent() was given an illegal position of {0} for avatar {1}, {2}.  Substituting {3}",
                     pos, Name, UUID, emergencyPos);
 
                 pos = emergencyPos;
@@ -845,8 +845,17 @@ namespace OpenSim.Region.Framework.Scenes
             AbsolutePosition = pos;
 
             AddToPhysicalScene(isFlying);
-            if ((m_appearance != null) && (m_appearance.AvatarHeight > 0))
-                SetHeight(m_appearance.AvatarHeight);
+            if (m_appearance != null)
+            {
+                if (m_appearance.AvatarHeight > 0)
+                    SetHeight(m_appearance.AvatarHeight);
+            }
+            else
+            {
+                m_log.ErrorFormat("[SCENE PRESENCE]: null appearance in MakeRoot in {0}", Scene.RegionInfo.RegionName);
+                // emergency; this really shouldn't happen
+                m_appearance = new AvatarAppearance();
+            }
             
             // Don't send an animation pack here, since on a region crossing this will sometimes cause a flying 
             // avatar to return to the standing position in mid-air.  On login it looks like this is being sent
@@ -1745,18 +1754,18 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
-        public void AddAnimation(UUID animID)
+        public void AddAnimation(UUID animID, UUID objectID)
         {
             if (m_isChildAgent)
                 return;
 
-            if (m_animations.Add(animID, m_controllingClient.NextAnimationSequenceNumber))
+            if (m_animations.Add(animID, m_controllingClient.NextAnimationSequenceNumber, objectID))
             {
                 SendAnimPack();
             }
         }
 
-        public void AddAnimation(string name)
+        public void AddAnimation(string name, UUID objectID)
         {
             if (m_isChildAgent)
                 return;
@@ -1765,7 +1774,7 @@ namespace OpenSim.Region.Framework.Scenes
             if (animID == UUID.Zero)
                 return;
 
-            AddAnimation(animID);
+            AddAnimation(animID, objectID);
         }
 
         public void RemoveAnimation(UUID animID)
@@ -1795,13 +1804,14 @@ namespace OpenSim.Region.Framework.Scenes
         {
             UUID[] animIDs;
             int[] sequenceNums;
-            m_animations.GetArrays( out animIDs, out sequenceNums );
+            UUID[] objectIDs;
+            m_animations.GetArrays( out animIDs, out sequenceNums, out objectIDs);
             return animIDs;
         }
 
         public void HandleStartAnim(IClientAPI remoteClient, UUID animID)
         {
-            AddAnimation(animID);
+            AddAnimation(animID, UUID.Zero);
         }
 
         public void HandleStopAnim(IClientAPI remoteClient, UUID animID)
@@ -1817,7 +1827,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             //m_log.DebugFormat("Updating movement animation to {0}", anim);
             
-            if (m_animations.TrySetDefaultAnimation(anim, m_controllingClient.NextAnimationSequenceNumber))
+            if (m_animations.TrySetDefaultAnimation(anim, m_controllingClient.NextAnimationSequenceNumber, UUID.Zero))
             {
                 SendAnimPack();
             }
@@ -2275,13 +2285,13 @@ namespace OpenSim.Region.Framework.Scenes
         /// </summary>
         /// <param name="animations"></param>
         /// <param name="seqs"></param>
-        public void SendAnimPack(UUID[] animations, int[] seqs)
+        public void SendAnimPack(UUID[] animations, int[] seqs, UUID[] objectIDs)
         {
             if (m_isChildAgent)
                 return;
 
             m_scene.Broadcast(
-                delegate(IClientAPI client) { client.SendAnimations(animations, seqs, m_controllingClient.AgentId); });
+                delegate(IClientAPI client) { client.SendAnimations(animations, seqs, m_controllingClient.AgentId, objectIDs); });
         }
 
         public void SendAnimPackToClient(IClientAPI client)
@@ -2290,10 +2300,11 @@ namespace OpenSim.Region.Framework.Scenes
                 return;
             UUID[] animIDs;
             int[] sequenceNums;
+            UUID[] objectIDs;
 
-            m_animations.GetArrays(out animIDs, out sequenceNums);
+            m_animations.GetArrays(out animIDs, out sequenceNums, out objectIDs);
 
-            client.SendAnimations(animIDs, sequenceNums, m_controllingClient.AgentId);
+            client.SendAnimations(animIDs, sequenceNums, m_controllingClient.AgentId, objectIDs);
         }
 
         /// <summary>
@@ -2308,10 +2319,11 @@ namespace OpenSim.Region.Framework.Scenes
 
             UUID[] animIDs;
             int[] sequenceNums;
+            UUID[] objectIDs;
 
-            m_animations.GetArrays(out animIDs, out sequenceNums);
+            m_animations.GetArrays(out animIDs, out sequenceNums, out objectIDs);
 
-            SendAnimPack(animIDs, sequenceNums);
+            SendAnimPack(animIDs, sequenceNums, objectIDs);
         }
 
         #endregion
@@ -2573,7 +2585,8 @@ namespace OpenSim.Region.Framework.Scenes
             cAgent.Position = m_pos;
             cAgent.Velocity = m_velocity;
             cAgent.Center = m_CameraCenter;
-            cAgent.Size = new Vector3(0, 0, m_avHeight);
+            // Don't copy the size; it is inferred from apearance parameters
+            //cAgent.Size = new Vector3(0, 0, m_avHeight);
             cAgent.AtAxis = m_CameraAtAxis;
             cAgent.LeftAxis = m_CameraLeftAxis;
             cAgent.UpAxis = m_CameraUpAxis;
@@ -2605,13 +2618,37 @@ namespace OpenSim.Region.Framework.Scenes
 
             cAgent.AlwaysRun = m_setAlwaysRun;
 
-            //cAgent.AgentTextures = ???
             //cAgent.GroupID = ??
             // Groups???
 
             // Animations???
 
-            cAgent.VisualParams = m_appearance.VisualParams;
+            try
+            {
+                int i = 0;
+                UUID[] textures = new UUID[m_appearance.Wearables.Length * 2];
+                foreach (AvatarWearable aw in m_appearance.Wearables)
+                {
+                    if (aw != null)
+                    {
+                        textures[i++] = aw.ItemID;
+                        textures[i++] = aw.AssetID;
+                    }
+                    else
+                        m_log.DebugFormat("[SCENE PRESENCE]: Null wearable in CopyTo");
+                }
+                cAgent.AgentTextures = textures;
+                cAgent.VisualParams = m_appearance.VisualParams;
+            }
+            catch (Exception e)
+            {
+                m_log.Warn("[SCENE PRESENCE]: exception in CopyTo " + e.Message);
+            }
+            //cAgent.GroupID = ??
+            // Groups???
+
+            // Animations???
+
         }
 
         public void CopyFrom(AgentData cAgent)
@@ -2622,7 +2659,7 @@ namespace OpenSim.Region.Framework.Scenes
             m_pos = cAgent.Position;
             m_velocity = cAgent.Velocity;
             m_CameraCenter = cAgent.Center;
-            m_avHeight = cAgent.Size.Z;
+            //m_avHeight = cAgent.Size.Z;
             m_CameraAtAxis = cAgent.AtAxis;
             m_CameraLeftAxis = cAgent.LeftAxis;
             m_CameraUpAxis = cAgent.UpAxis;
@@ -2634,20 +2671,39 @@ namespace OpenSim.Region.Framework.Scenes
 
             m_headrotation = cAgent.HeadRotation;
             m_bodyRot = cAgent.BodyRotation;
-            m_AgentControlFlags = cAgent.ControlFlags; // We need more flags!
+            m_AgentControlFlags = cAgent.ControlFlags; 
 
             if (m_scene.Permissions.IsGod(new UUID(cAgent.AgentID)))
                 m_godlevel = cAgent.GodLevel;
             m_setAlwaysRun = cAgent.AlwaysRun;
 
-            //cAgent.AgentTextures = ???
+            uint i = 0;
+            AvatarWearable[] wearables = new AvatarWearable[cAgent.AgentTextures.Length / 2];
+            Primitive.TextureEntry te = new Primitive.TextureEntry(UUID.Random());
+            try
+            {
+                for (uint n = 0; n < cAgent.AgentTextures.Length; n += 2)
+                {
+                    UUID itemId = cAgent.AgentTextures[n];
+                    UUID assetId = cAgent.AgentTextures[n + 1];
+                    wearables[i] = new AvatarWearable(itemId, assetId);
+                    te.CreateFace(i++).TextureID = assetId;
+                }
+            }
+            catch (Exception e)
+            {
+                m_log.Warn("[SCENE PRESENCE]: exception in CopyFrom " + e.Message);
+            }
+            //m_appearance.Texture = te;
+            m_appearance.Wearables = wearables;
+            //m_appearance.VisualParams = cAgent.VisualParams;
+            m_appearance.SetAppearance(te.ToBytes(), new List<byte>(cAgent.VisualParams));
 
             //cAgent.GroupID = ??
             //Groups???
 
             // Animations???
 
-            m_appearance.VisualParams = cAgent.VisualParams;
         }
 
         #endregion Child Agent Updates
@@ -2778,7 +2834,7 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 m_physicsActor = scene.AddAvatar(Firstname + "." + Lastname, pVec, new PhysicsVector(0, 0, m_avHeight), isFlying);
             }
-
+            scene.AddPhysicsActorTaint(m_physicsActor);
             //m_physicsActor.OnRequestTerseUpdate += SendTerseUpdateToAllClients;
             m_physicsActor.OnCollisionUpdate += PhysicsCollisionUpdate;
             m_physicsActor.SubscribeEvents(1000);
