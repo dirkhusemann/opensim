@@ -143,14 +143,37 @@ namespace OpenSim.Region.Framework.Scenes
 
                 animIDs[0] = m_defaultAnimation.AnimID;
                 sequenceNums[0] = m_defaultAnimation.SequenceNum;
+                objectIDs[0] = m_defaultAnimation.ObjectID;
 
                 for (int i = 0; i < m_animations.Count; ++i)
                 {
                     animIDs[i + 1] = m_animations[i].AnimID;
                     sequenceNums[i + 1] = m_animations[i].SequenceNum;
-                    objectIDs[i + i] = m_animations[i].ObjectID;
+                    objectIDs[i + 1] = m_animations[i].ObjectID;
                 }
             }
+        }
+
+        public Animation[] ToArray()
+        {
+            Animation[] theArray = new Animation[m_animations.Count];
+            uint i = 0;
+            try
+            {
+                foreach (Animation anim in m_animations)
+                    theArray[i++] = anim;
+            }
+            catch 
+            {
+                /* S%^t happens. Ignore. */ 
+            }
+            return theArray;
+        }
+
+        public void FromArray(Animation[] theArray)
+        {
+            foreach (Animation anim in theArray)
+                m_animations.Add(anim);
         }
     }
 }
