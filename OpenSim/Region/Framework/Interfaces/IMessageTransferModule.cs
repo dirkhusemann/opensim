@@ -30,7 +30,7 @@ using OpenSim.Framework;
 namespace OpenSim.Region.Framework.Interfaces
 {
     public delegate void MessageResultNotification(bool success);
-
+   
     public interface IMessageTransferModule
     {
         void SendInstantMessage(GridInstantMessage im, MessageResultNotification result);
