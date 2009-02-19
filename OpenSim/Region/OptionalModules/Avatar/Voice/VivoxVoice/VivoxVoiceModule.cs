@@ -26,6 +26,9 @@
  */
 
 using System;
+using System.IO;
+using System.Net;
+using System.Xml;
 using System.Collections;
 using System.Reflection;
 using OpenMetaverse;
@@ -47,6 +50,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+        private static readonly bool DUMP = true;
+
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
         private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
 
@@ -56,6 +61,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private string m_vivoxAdminPassword;
         private string m_vivoxSipDomain;
         private string m_vivoxSalt;
+
+        private string m_authToken;
         
         private IConfig m_config;
         private Scene m_scene;
@@ -91,19 +98,24 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_vivoxSipDomain = m_config.GetString("vivox_sip_domain", String.Empty);
                 m_vivoxSalt = m_config.GetString("vivox_salt", String.Empty);
 
-                // XXX: change to method call to be more specific
+                /*
+                 [AMW] Unconditionally initialize so we can test the hard-coded values
+                       we have been given.
+                
                 if (String.IsNullOrEmpty(m_vivoxServer) ||
                     String.IsNullOrEmpty(m_vivoxSipDomain) ||
                     String.IsNullOrEmpty(m_vivoxAdminUser) ||
                     String.IsNullOrEmpty(m_vivoxAdminPassword))
                 {
-                    m_log.Error("[VOICE] plugin mis-configured");
-                    m_log.Info("[VOICE] plugin disabled: incomplete configuration");
+                    m_log.Error("[VivoxVoice] plugin mis-configured");
+                    m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
                     return;
                 }
                 m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
+                */
 
                 scene.EventManager.OnRegisterCaps += OnRegisterCaps;
+
             }
             catch (Exception e)
             {
@@ -135,7 +147,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         public void OnRegisterCaps(UUID agentID, Caps caps)
         {
+
             m_log.DebugFormat("[VivoxVoice] OnRegisterCaps: agentID {0} caps {1}", agentID, caps);
+
             string capsBase = "/CAPS/" + caps.CapsObjectPath;
             caps.RegisterHandler("ParcelVoiceInfoRequest",
                                  new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
@@ -194,7 +208,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 LandData land = m_scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
 
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo =
-                    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
+                // [AMW-temp]    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
+                    new LLSDParcelVoiceInfoResponse("sip:confctl-6093@vd1.vivox.com", land.LocalID, creds);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
 
@@ -253,7 +268,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 // create LLSD response to client
                 LLSDVoiceAccountResponse voiceAccountResponse =
-                    new LLSDVoiceAccountResponse(voiceUser, voicePassword);
+                //    [AMW-temp] new LLSDVoiceAccountResponse(voiceUser, voicePassword);
+                    new LLSDVoiceAccountResponse("ibm1", "vivox12");
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
                 m_log.DebugFormat("[CAPS][PROVISIONVOICE]: {0}", r);
 
@@ -266,6 +282,182 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 return "<llsd>undef</llsd>";
             }
+        }
+
+        /// <summary>
+        /// Perform administrative login for Vivox.
+        /// Returns a hash table containing values returned from the request.
+        /// </summary>
+
+        private static readonly string m_vivox_login_p = "http://{0}/api2/viv_signin.php?userid={1}&pwd={2}";
+
+        private Hashtable vivox_login(string name, string password)
+        {
+            string requrl = String.Format(m_vivox_login_p, m_vivoxServer, name, password);
+            return VivoxCall(requrl);
+        }
+
+        /// <summary>
+        /// Retrieve account information for the specified user.
+        /// Returns a hash table containing values returned from the request.
+        /// </summary>
+
+        private static readonly string m_vivox_getacct_p = "http://{0}/api2/viv_get_acct.php?userid={1}&pwd={2}&user_name={3}";
+
+        private Hashtable vivox_getAccountInfo(string user)
+        {
+            string requrl = String.Format(m_vivox_getacct_p, m_vivoxServer, m_vivoxAdminUser, m_vivoxAdminPassword, user);
+            return VivoxCall(requrl);
+        }
+
+        /// <summary>
+        /// Creates a new account.
+        /// For now we supply the minimum set of values, which
+        /// is user name and password. We *can* supply a lot more
+        /// demographic data.
+        /// </summary>
+
+        private static readonly string m_vivox_newacct_p = "http://{0}/api2/viv_adm_acct_new.php?username={1}&pwd={2}";
+
+        private Hashtable vivox_createAccount(string user, string password)
+        {
+            string requrl = String.Format(m_vivox_newacct_p, m_vivoxServer, user, password);
+            return VivoxCall(requrl);
+        }
+
+        /// <summary>
+        /// Change the user's password.
+        /// </summary>
+
+        private static readonly string m_vivox_password_p = "http://{0}/api2/viv_adm_password.php?username={1}&new_pwd={2}";
+
+        private Hashtable vivox_password(string user, string password)
+        {
+            string requrl = String.Format(m_vivox_password_p, m_vivoxServer, user, password);
+            return VivoxCall(requrl);
+        }
+
+        /// <summary>
+        /// Create a channel.
+        /// Once again, there a multitude of options possible. In the simplest case 
+        /// we specify only the name and get a non-persistent cannel in return. Non
+        /// persistent means that the channel gets deleted if no-one uses it for
+        /// 5 hours. To accomodate future requirements, it may be a good idea to
+        /// initially create channels under the umbrella of a parent ID based upon
+        /// the region name. That way we have a context for side channels, if those
+        /// are required in a later phase.
+        /// In this case the call handles parent and description as optional values.
+        /// </summary>
+
+        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}";
+
+        private Hashtable vivox_createChannel(string parent, string channelid, string description)
+        {
+            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid);
+            if(parent != null && parent != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
+            }
+            if(description != null && description != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_desc={1}", requrl, description);
+            }
+            return VivoxCall(requrl);
+        }
+
+        /// <summary>
+        /// This method handles the WEB side of making a request over the
+        /// Vivox interface. The returned values are tansferred to a has
+        /// table which is returned as the result.
+        /// The outomce of the call can eb determined by examining the 
+        /// status value in the hash table.
+        /// </summary>
+
+        private Hashtable VivoxCall(string requrl)
+        {
+
+            string lab;
+            string val;
+            int v;
+            Hashtable vars = new Hashtable();
+
+			HttpWebRequest  req = (HttpWebRequest) WebRequest.Create(requrl);            
+            HttpWebResponse rsp = null;
+
+            // Just parameters
+            req.ContentLength=0;
+
+            // Send request and retrieve the response
+            rsp = (HttpWebResponse) req.GetResponse();
+
+            XmlReaderSettings        settings = new XmlReaderSettings();
+
+            settings.ConformanceLevel             = ConformanceLevel.Fragment;
+            settings.IgnoreComments               = true;
+            settings.IgnoreWhitespace             = true;
+            settings.IgnoreProcessingInstructions = true;
+            settings.ValidationType               = ValidationType.None;
+
+            XmlReader rdr = XmlReader.Create(rsp.GetResponseStream(),settings);
+
+            // Scan the returned values into a hash table. I've added
+            // the DUMP facility because the returned data is not documented
+            // for most of the calls. We can use this to figure out what
+            // we want to extract.
+
+            while(rdr.Read())
+            {
+
+                lab = String.Empty;
+                val = String.Empty;
+                v = 0;
+
+                switch(rdr.NodeType)
+                {
+					case XmlNodeType.Element :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <{0}>", rdr.Name);
+						lab = rdr.Name;
+                        v++;
+						break;
+					case XmlNodeType.Text :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] [{0}]", rdr.Value);
+						val = rdr.Value;
+                        v++;
+						break;
+					case XmlNodeType.CDATA :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <![CDATA[{0}]]>", rdr.Value);
+						break;
+					case XmlNodeType.ProcessingInstruction :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <?{0}{1}?>", rdr.Name, rdr.Value);
+						break;
+					case XmlNodeType.Comment :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <!--{0}-->", rdr.Value);
+						break;
+					case XmlNodeType.XmlDeclaration :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <?xml version=1.0?>");
+						break;
+					case XmlNodeType.Document :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] Document");
+						break;
+					case XmlNodeType.DocumentType :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] <!DOCTYPE{0}[{1}]>", rdr.Name, rdr.Value);
+						break;
+					case XmlNodeType.EntityReference :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] EntityReference: {0}", rdr.Name);
+						break;
+					case XmlNodeType.EndElement :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] </{0}>", rdr.Name);
+						break;
+					default :
+						if (DUMP) m_log.DebugFormat("[VivoxVoice] Unrecognized: <{0} [{1}]>", rdr.Name, rdr.Value);
+						break;
+                }
+
+                if(v == 2) vars.Add(lab, val);
+            }
+
+            return vars;
+
         }
     }
 }
