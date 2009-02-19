@@ -318,9 +318,9 @@ namespace OpenSim.Region.Communications.Hypergrid
                 //Console.WriteLine("Size: " + m.PhysicalDimension.Height + "-" + m.PhysicalDimension.Width);
                 byte[] imageData = OpenJPEG.EncodeFromImage(m, true);
                 AssetBase ass = new AssetBase(UUID.Random(), "region " + info.RegionID.ToString());
-                info.RegionSettings.TerrainImageID = ass.Metadata.FullID;
-                ass.Metadata.Type = (int)AssetType.Texture;
-                ass.Metadata.Temporary = false;
+                info.RegionSettings.TerrainImageID = ass.FullID;
+                ass.Type = (int)AssetType.Texture;
+                ass.Temporary = false;
                 ass.Data = imageData;
                 m_assetcache.AddAsset(ass);
 
@@ -700,8 +700,8 @@ namespace OpenSim.Region.Communications.Hypergrid
             userData.UserHomeRemotingPort = (string)requestData["home_remoting"];
 
 
-            m_log.DebugFormat("[HGrid]: Told by user service to prepare for a connection from {0} {1} {2}",
-                              userData.FirstName, userData.SurName, userData.ID);
+            m_log.DebugFormat("[HGrid]: Prepare for connection from {0} {1} (@{2}) UUID={3}",
+                              userData.FirstName, userData.SurName, userData.UserServerURI, userData.ID);
             m_log.Debug("[HGrid]: home_address: " + userData.UserHomeAddress +
                        "; home_port: " + userData.UserHomePort + "; remoting: " + userData.UserHomeRemotingPort);
 

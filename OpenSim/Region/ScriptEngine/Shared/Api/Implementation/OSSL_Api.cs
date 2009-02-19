@@ -559,7 +559,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (World.Entities.ContainsKey((UUID)avatar) && World.Entities[avatarID] is ScenePresence)
             {
                 ScenePresence target = (ScenePresence)World.Entities[avatarID];
-                target.AddAnimation(animation);
+                target.AddAnimation(animation, m_host.UUID);
             }
         }
 
@@ -675,6 +675,24 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             drawList +="Image " +width + "," + height+ ","+ imageUrl +"; " ;
             return drawList;
+        }
+
+        public LSL_Vector osGetDrawStringSize(string contentType, string text, string fontName, int fontSize)
+        {
+            CheckThreatLevel(ThreatLevel.VeryLow, "osGetDrawStringSize");
+            m_host.AddScriptLPS(1);
+
+            LSL_Vector vec = new LSL_Vector(0,0,0);
+            IDynamicTextureManager textureManager = World.RequestModuleInterface<IDynamicTextureManager>();
+            if (textureManager != null) 
+            {
+                double xSize, ySize;
+                textureManager.GetDrawStringSize(contentType, text, fontName, fontSize,
+                                                 out xSize, out ySize);
+                vec.x = xSize;
+                vec.y = ySize;
+            }
+            return vec;
         }
 
         public void osSetStateEvents(int events)
@@ -1025,10 +1043,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             // Create new asset
             AssetBase asset = new AssetBase();
-            asset.Metadata.Name = notecardName;
-            asset.Metadata.Description = "Script Generated Notecard";
-            asset.Metadata.Type = 7;
-            asset.Metadata.FullID = UUID.Random();
+            asset.Name = notecardName;
+            asset.Description = "Script Generated Notecard";
+            asset.Type = 7;
+            asset.FullID = UUID.Random();
             string notecardData = "";
 
             for (int i = 0; i < contents.Length; i++) {
@@ -1048,8 +1066,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             taskItem.ResetIDs(m_host.UUID);
             taskItem.ParentID = m_host.UUID;
             taskItem.CreationDate = (uint)Util.UnixTimeSinceEpoch();
-            taskItem.Name = asset.Metadata.Name;
-            taskItem.Description = asset.Metadata.Description;
+            taskItem.Name = asset.Name;
+            taskItem.Description = asset.Description;
             taskItem.Type = 7;
             taskItem.InvType = 7;
             taskItem.OwnerID = m_host.OwnerID;
@@ -1063,7 +1081,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             taskItem.Flags = 0;
             taskItem.PermsGranter = UUID.Zero;
             taskItem.PermsMask = 0;
-            taskItem.AssetID = asset.Metadata.FullID;
+            taskItem.AssetID = asset.FullID;
 
             m_host.Inventory.AddInventoryItem(taskItem, false);
         }
