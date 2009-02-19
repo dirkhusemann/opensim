@@ -50,14 +50,18 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
         private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
 
-        private string m_asterisk;
-        private string m_asterisk_password;
-        private string m_asterisk_salt;
-        private int m_asterisk_timeout;
-        private string m_confDomain;
+        // vivox server, admin user, admin password
+        private string m_vivoxServer;
+        private string m_vivoxAdminUser;
+        private string m_vivoxAdminPassword;
+        private string m_vivoxSipDomain;
+        private string m_vivoxSalt;
+        
         private IConfig m_config;
         private Scene m_scene;
-        private string m_sipDomain;
+
+        // private int m_asterisk_timeout;
+        // private string m_confDomain;
 
         #region IRegionModule Members
 
@@ -81,15 +85,23 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             try
             {
-                m_vivox = m_config.GetString("vivox_server", String.Empty);
-                m_vivox_sipDomain = m_config.GetString("sip_domain", String.Empty);
-                if (String.IsNullOrEmpty(m_sipDomain))
+                m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
+                m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
+                m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+                m_vivoxSipDomain = m_config.GetString("vivox_sip_domain", String.Empty);
+                m_vivoxSalt = m_config.GetString("vivox_salt", String.Empty);
+
+                // XXX: change to method call to be more specific
+                if (String.IsNullOrEmpty(m_vivoxServer) ||
+                    String.IsNullOrEmpty(m_vivoxSipDomain) ||
+                    String.IsNullOrEmpty(m_vivoxAdminUser) ||
+                    String.IsNullOrEmpty(m_vivoxAdminPassword))
                 {
-                    m_log.Error("[VOICE] plugin mis-configured: missing sip_domain configuration");
-                    m_log.Info("[VOICE] plugin disabled");
+                    m_log.Error("[VOICE] plugin mis-configured");
+                    m_log.Info("[VOICE] plugin disabled: incomplete configuration");
                     return;
                 }
-                m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivox);
+                m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
 
                 scene.EventManager.OnRegisterCaps += OnRegisterCaps;
             }
@@ -155,7 +167,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         public string ParcelVoiceInfoRequest(string request, string path, string param,
                                              UUID agentID, Caps caps)
         {
-            // we need to do:
+            // XXX: 
+            // - check whether we have a region channel in our cache
+            // - if not: 
+            //       create it and cache it
+            // - send it to the client
             // - send channel_uri: as "sip:regionID@m_sipDomain"
             try
             {
@@ -163,10 +179,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                   request, path, param);
 
 
+                // XXX: check for existence of region channel: create
+                //      it if does not exist
+                string channel = "foobar-foobar-foobar";
+                // fill in the response
+
                 // setup response to client
                 Hashtable creds = new Hashtable();
-                creds["channel_uri"] = String.Format("sip:{0}@{1}",
-                                                     m_scene.RegionInfo.RegionID, m_vivox_sipDomain);
+                creds["channel_uri"] = String.Format("sip:{0}@{1}", channel, m_vivoxSipDomain);
 
                 string regionName = m_scene.RegionInfo.RegionName;
                 ScenePresence avatar = m_scene.GetScenePresence(agentID);
@@ -177,30 +197,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
-
-
-                // XXX: need to adapt this to Vivox XML API:
-                // - check whether channel exists for our region
-                // - if not: create one and cache it
-                // Hashtable requestData = new Hashtable();
-                // requestData["admin_password"] = m_vivox_password;
-                // requestData["region"] = m_scene.RegionInfo.RegionID.ToString();
-                // if (!String.IsNullOrEmpty(m_confDomain))
-                // {
-                //     requestData["region"] += String.Format("@{0}", m_confDomain);
-                // }
-
-                // ArrayList SendParams = new ArrayList();
-                // SendParams.Add(requestData);
-                // XmlRpcRequest updateAccountRequest = new XmlRpcRequest("region_update", SendParams);
-                // XmlRpcResponse updateAccountResponse = updateAccountRequest.Send(m_vivox, m_vivox_timeout);
-                // Hashtable responseData = (Hashtable) updateAccountResponse.Value;
-
-                // if (!responseData.ContainsKey("success")) throw new Exception("region_update call failed");
-
-                // bool success = Convert.ToBoolean((string) responseData["success"]);
-                // if (!success) throw new Exception("region_update failed");
-
 
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0}", r);
                 return r;
@@ -229,15 +225,20 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             // XXX we need to
             // - get user data from UserProfileCacheService
             // - check whether voice account exists on vivox server
-            // - if not: create it 
+            // - if not: 
+            //       create it 
+            // - reset the password to a nonce
             // - send account details back to client:
-            //   + user: base 64 encoded user name (otherwise SL
+            //   + user: base 64 encoded user name (agentID?) (otherwise SL
             //           client is unhappy)
             //   + password: as obtained from vivox
             try
             {
                 m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
+
+
+                // XXX: check for vivox voice account: search by name
 
                 // get user data & prepare voice account response
                 string voiceUser = "x" + Convert.ToBase64String(agentID.GetBytes());
@@ -246,34 +247,15 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 CachedUserInfo userInfo = m_scene.CommsManager.UserProfileCacheService.GetUserDetails(agentID);
                 if (null == userInfo) throw new Exception("cannot get user details");
 
-                // we generate a nonce everytime
-                string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivox_salt);
+                // generate nonce
+                string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
+                // XXX: update vivox user account with new password
+
+                // create LLSD response to client
                 LLSDVoiceAccountResponse voiceAccountResponse =
                     new LLSDVoiceAccountResponse(voiceUser, voicePassword);
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
                 m_log.DebugFormat("[CAPS][PROVISIONVOICE]: {0}", r);
-
-
-                // update user account on asterisk frontend
-                Hashtable requestData = new Hashtable();
-                requestData["admin_password"] = m_vivox_password;
-                requestData["username"] = voiceUser;
-                if (!String.IsNullOrEmpty(m_sipDomain))
-                {
-                    requestData["username"] += String.Format("@{0}", m_sipDomain);
-                }
-                requestData["password"] = voicePassword;
-
-                ArrayList SendParams = new ArrayList();
-                SendParams.Add(requestData);
-                XmlRpcRequest updateAccountRequest = new XmlRpcRequest("account_update", SendParams);
-                XmlRpcResponse updateAccountResponse = updateAccountRequest.Send(m_vivox, m_vivox_timeout);
-                Hashtable responseData = (Hashtable) updateAccountResponse.Value;
-
-                if (!responseData.ContainsKey("success")) throw new Exception("account_update call failed");
-
-                bool success = Convert.ToBoolean((string) responseData["success"]);
-                if (!success) throw new Exception("account_update failed");
 
                 return r;
             }

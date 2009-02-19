@@ -656,6 +656,20 @@ InterregionComms = "RESTComms"
     ; salt for asterisk nonces
     asterisk_salt = paluempalum
 
+[VivoxVoice]
+    ; NOTE: you need to have access to a VivoxVoice server
+    enabled = false
+    ; vivox voice server
+    vivox_server = foobar.vivox.com
+    ; vivox admin user name
+    vivox_admin_user = DeepThroat
+    ; vivox admin password
+    vivox_admin_password = VoiceG4te
+    ; sip domain to use for channels
+    vivox_sip_domain = foobar.vivox.com
+    ; salt to use for user account passwords
+    vivox_salt = pepper
+
 
 ; Uncomment the following to control the progression of daytime
 ; in the Sim.  The defaults are what is shown below
