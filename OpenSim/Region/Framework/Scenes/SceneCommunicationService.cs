@@ -689,6 +689,9 @@ namespace OpenSim.Region.Framework.Scenes
 
             IEventQueue eq = avatar.Scene.RequestModuleInterface<IEventQueue>();
 
+            // Reset animations; the viewer does that in teleports.
+            avatar.ResetAnimations();
+
             if (regionHandle == m_regionInfo.RegionHandle)
             {
                 m_log.DebugFormat(
@@ -1195,7 +1198,8 @@ namespace OpenSim.Region.Framework.Scenes
                 }
                 agent.RestoreInCurrentScene();
             }
-            agent.IsInTransit = false;
+            // In any case
+            agent.NotInTransit();
 
             //m_log.DebugFormat("[SCENE COMM]: Crossing agent {0} {1} completed.", agent.Firstname, agent.Lastname);
         }
