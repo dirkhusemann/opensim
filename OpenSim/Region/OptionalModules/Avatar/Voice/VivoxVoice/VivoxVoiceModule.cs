@@ -81,18 +81,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             try
             {
-                // m_sipDomain = m_config.GetString("sip_domain", String.Empty);
-                // m_log.InfoFormat("[VivoxVoice] using SIP domain {0}", m_sipDomain);
-
-                // m_confDomain = m_config.GetString("conf_domain", String.Empty);
-                // m_log.InfoFormat("[VivoxVoice] using conf domain {0}", m_confDomain);
-
                 m_vivox = m_config.GetString("vivox_server", String.Empty);
-                // m_vivox_password = m_config.GetString("asterisk_password", String.Empty);
-                // m_vivox_timeout = m_config.GetInt("asterisk_timeout", 3000);
-                // m_vivox_salt = m_config.GetString("asterisk_salt", "Wuffwuff");
-                // if (String.IsNullOrEmpty(m_vivox)) throw new Exception("missing asterisk_frontend config parameter");
-                // if (String.IsNullOrEmpty(m_vivox_password)) throw new Exception("missing asterisk_password config parameter");
+                m_vivox_sipDomain = m_config.GetString("sip_domain", String.Empty);
+                if (String.IsNullOrEmpty(m_sipDomain))
+                {
+                    m_log.Error("[VOICE] plugin mis-configured: missing sip_domain configuration");
+                    m_log.Info("[VOICE] plugin disabled");
+                    return;
+                }
                 m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivox);
 
                 scene.EventManager.OnRegisterCaps += OnRegisterCaps;
@@ -133,18 +129,18 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                  new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
-                                                           {
-                                                               return ParcelVoiceInfoRequest(request, path, param,
-                                                                                             agentID, caps);
-                                                           }));
+                                                       {
+                                                           return ParcelVoiceInfoRequest(request, path, param,
+                                                                                         agentID, caps);
+                                                       }));
             caps.RegisterHandler("ProvisionVoiceAccountRequest",
                                  new RestStreamHandler("POST", capsBase + m_provisionVoiceAccountRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
-                                                           {
-                                                               return ProvisionVoiceAccountRequest(request, path, param,
-                                                                                                   agentID, caps);
-                                                           }));
+                                                       {
+                                                           return ProvisionVoiceAccountRequest(request, path, param,
+                                                                                               agentID, caps);
+                                                       }));
         }
 
         /// <summary>
@@ -170,7 +166,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // setup response to client
                 Hashtable creds = new Hashtable();
                 creds["channel_uri"] = String.Format("sip:{0}@{1}",
-                                                     m_scene.RegionInfo.RegionID, m_sipDomain);
+                                                     m_scene.RegionInfo.RegionID, m_vivox_sipDomain);
 
                 string regionName = m_scene.RegionInfo.RegionName;
                 ScenePresence avatar = m_scene.GetScenePresence(agentID);
@@ -183,25 +179,27 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
 
 
-                // update region on asterisk-opensim frontend
-                Hashtable requestData = new Hashtable();
-                requestData["admin_password"] = m_vivox_password;
-                requestData["region"] = m_scene.RegionInfo.RegionID.ToString();
-                if (!String.IsNullOrEmpty(m_confDomain))
-                {
-                    requestData["region"] += String.Format("@{0}", m_confDomain);
-                }
+                // XXX: need to adapt this to Vivox XML API:
+                // - check whether channel exists for our region
+                // - if not: create one and cache it
+                // Hashtable requestData = new Hashtable();
+                // requestData["admin_password"] = m_vivox_password;
+                // requestData["region"] = m_scene.RegionInfo.RegionID.ToString();
+                // if (!String.IsNullOrEmpty(m_confDomain))
+                // {
+                //     requestData["region"] += String.Format("@{0}", m_confDomain);
+                // }
 
-                ArrayList SendParams = new ArrayList();
-                SendParams.Add(requestData);
-                XmlRpcRequest updateAccountRequest = new XmlRpcRequest("region_update", SendParams);
-                XmlRpcResponse updateAccountResponse = updateAccountRequest.Send(m_vivox, m_vivox_timeout);
-                Hashtable responseData = (Hashtable) updateAccountResponse.Value;
+                // ArrayList SendParams = new ArrayList();
+                // SendParams.Add(requestData);
+                // XmlRpcRequest updateAccountRequest = new XmlRpcRequest("region_update", SendParams);
+                // XmlRpcResponse updateAccountResponse = updateAccountRequest.Send(m_vivox, m_vivox_timeout);
+                // Hashtable responseData = (Hashtable) updateAccountResponse.Value;
 
-                if (!responseData.ContainsKey("success")) throw new Exception("region_update call failed");
+                // if (!responseData.ContainsKey("success")) throw new Exception("region_update call failed");
 
-                bool success = Convert.ToBoolean((string) responseData["success"]);
-                if (!success) throw new Exception("region_update failed");
+                // bool success = Convert.ToBoolean((string) responseData["success"]);
+                // if (!success) throw new Exception("region_update failed");
 
 
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0}", r);
@@ -228,15 +226,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         public string ProvisionVoiceAccountRequest(string request, string path, string param,
                                                    UUID agentID, Caps caps)
         {
-            // we need to
+            // XXX we need to
             // - get user data from UserProfileCacheService
-            // - generate nonce for user voice account password
-            // - issue XmlRpc request to asterisk opensim front end:
+            // - check whether voice account exists on vivox server
+            // - if not: create it 
+            // - send account details back to client:
             //   + user: base 64 encoded user name (otherwise SL
             //           client is unhappy)
-            //   + password: nonce
-            // - the XmlRpc call to asteris-opensim was successful:
-            //   send account details back to client
+            //   + password: as obtained from vivox
             try
             {
                 m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: request: {0}, path: {1}, param: {2}",
