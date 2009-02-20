@@ -59,12 +59,6 @@ namespace OpenSim.Framework.Communications
         }
         protected IGridServices m_gridService;
 
-        public IInterRegionCommunications InterRegion
-        {
-            get { return m_interRegion; }
-        }
-        protected IInterRegionCommunications m_interRegion;
-
         public UserProfileCacheService UserProfileCacheService
         {
             get { return m_userProfileCacheService; }
@@ -322,16 +316,6 @@ namespace OpenSim.Framework.Communications
         public Dictionary<UUID, FriendRegionInfo> GetFriendRegionInfos(List<UUID> uuids)
         {
             return m_messageService.GetFriendRegionInfos(uuids);
-        }
-
-        public List<UUID> InformFriendsInOtherRegion(UUID agentId, ulong destRegionHandle, List<UUID> friends, bool online)
-        {
-            return m_interRegion.InformFriendsInOtherRegion(agentId, destRegionHandle, friends, online);
-        }
-
-        public bool TriggerTerminateFriend(ulong regionHandle, UUID agentID, UUID exFriendID)
-        {
-            return m_interRegion.TriggerTerminateFriend(regionHandle, agentID, exFriendID);
         }
 
         #endregion
