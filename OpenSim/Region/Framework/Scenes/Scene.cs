@@ -2112,21 +2112,6 @@ namespace OpenSim.Region.Framework.Scenes
                 appearance = new AvatarAppearance();
             }
         
-            //try
-            //{
-            //    if (m_AvatarFactory != null)
-            //    {
-            //        if (m_AvatarFactory.TryGetAvatarAppearance(client.AgentId, out appearance))
-            //            return;
-            //    }
-            //}
-            //catch (Exception e)
-            //{
-            //    m_log.ErrorFormat("[APPEARANCE]: Problem fetching appearance for avatar {0}, {1}",
-            //        client.Name, e);
-            //}
-
-            //m_log.Warn("[APPEARANCE]: Appearance not found, returning default");
         }
 
         /// <summary>
@@ -2692,19 +2677,6 @@ namespace OpenSim.Region.Framework.Scenes
             }
         }
 
-        /// <summary>
-        /// Agent is crossing the border into a neighbouring region.  Tell the neighbour about it!
-        /// </summary>
-        /// <param name="regionHandle"></param>
-        /// <param name="agentID"></param>
-        /// <param name="position"></param>
-        /// <param name="isFlying"></param>
-        /// <returns></returns>
-        public bool InformNeighbourOfCrossing(ulong regionHandle, UUID agentID, Vector3 position, bool isFlying)
-        {
-            return m_sceneGridService.CrossToNeighbouringRegion(regionHandle, agentID, position, isFlying);
-        }
-
         public void CrossAgentToNewRegion(ScenePresence agent, bool isFlying)
         {
             m_sceneGridService.CrossAgentToNewRegion(this, agent, isFlying);
@@ -2741,16 +2713,6 @@ namespace OpenSim.Region.Framework.Scenes
         public Dictionary<UUID, FriendRegionInfo> GetFriendRegionInfos(List<UUID> uuids)
         {
             return CommsManager.GetFriendRegionInfos(uuids);
-        }
-
-        public List<UUID> InformFriendsInOtherRegion(UUID agentId, ulong destRegionHandle, List<UUID> friends, bool online)
-        {
-            return CommsManager.InformFriendsInOtherRegion(agentId, destRegionHandle, friends, online);
-        }
-
-        public bool TriggerTerminateFriend(ulong regionHandle, UUID agentID, UUID exFriendID)
-        {
-            return CommsManager.TriggerTerminateFriend(regionHandle, agentID, exFriendID);
         }
 
         public virtual void StoreAddFriendship(UUID ownerID, UUID friendID, uint perms)

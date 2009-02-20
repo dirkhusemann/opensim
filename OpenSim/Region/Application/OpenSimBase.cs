@@ -274,7 +274,7 @@ namespace OpenSim
             m_commsManager
                 = new CommunicationsLocal(
                     m_networkServersInfo, m_httpServer, m_assetCache, userService, userService,
-                    inventoryService, backendService, backendService, userService,
+                    inventoryService, backendService, userService,
                     libraryRootFolder, m_configSettings.DumpAssetsToFile);
 
             // set up XMLRPC handler for client's initial login request message
@@ -437,7 +437,7 @@ namespace OpenSim
         private IAssetServer loadAssetServer(string id, PluginInitialiserBase pi)
         {
 
-            if(id != null && id != String.Empty)
+            if (id != null && id != String.Empty)
             {
                 m_log.DebugFormat("[OPENSIMBASE] Attempting to load asset server id={0}", id);
 
