@@ -151,7 +151,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             m_log.DebugFormat("[VivoxVoice] OnRegisterCaps: agentID {0} caps {1}", agentID, caps);
 
             string capsBase = "/CAPS/" + caps.CapsObjectPath;
-            caps.RegisterHandler("ParcelVoiceInfo",
+            caps.RegisterHandler("ParcelVoiceInfoRequest",
                                  new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
@@ -159,7 +159,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                            return ParcelVoiceInfoRequest(request, path, param,
                                                                                          agentID, caps);
                                                        }));
-            caps.RegisterHandler("ProvisionVoiceAccount",
+            caps.RegisterHandler("ProvisionVoiceAccountRequest",
                                  new RestStreamHandler("POST", capsBase + m_provisionVoiceAccountRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
@@ -381,7 +381,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             int v;
             Hashtable vars = new Hashtable();
 
-			HttpWebRequest  req = (HttpWebRequest) WebRequest.Create(requrl);            
+            HttpWebRequest  req = (HttpWebRequest) WebRequest.Create(requrl);            
             HttpWebResponse rsp = null;
 
             // Just parameters
@@ -414,43 +414,43 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 switch(rdr.NodeType)
                 {
-					case XmlNodeType.Element :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <{0}>", rdr.Name);
-						lab = rdr.Name;
+                    case XmlNodeType.Element :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <{0}>", rdr.Name);
+                        lab = rdr.Name;
                         v++;
-						break;
-					case XmlNodeType.Text :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] [{0}]", rdr.Value);
-						val = rdr.Value;
+                        break;
+                    case XmlNodeType.Text :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] [{0}]", rdr.Value);
+                        val = rdr.Value;
                         v++;
-						break;
-					case XmlNodeType.CDATA :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <![CDATA[{0}]]>", rdr.Value);
-						break;
-					case XmlNodeType.ProcessingInstruction :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <?{0}{1}?>", rdr.Name, rdr.Value);
-						break;
-					case XmlNodeType.Comment :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <!--{0}-->", rdr.Value);
-						break;
-					case XmlNodeType.XmlDeclaration :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <?xml version=1.0?>");
-						break;
-					case XmlNodeType.Document :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] Document");
-						break;
-					case XmlNodeType.DocumentType :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] <!DOCTYPE{0}[{1}]>", rdr.Name, rdr.Value);
-						break;
-					case XmlNodeType.EntityReference :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] EntityReference: {0}", rdr.Name);
-						break;
-					case XmlNodeType.EndElement :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] </{0}>", rdr.Name);
-						break;
-					default :
-						if (DUMP) m_log.DebugFormat("[VivoxVoice] Unrecognized: <{0} [{1}]>", rdr.Name, rdr.Value);
-						break;
+                        break;
+                    case XmlNodeType.CDATA :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <![CDATA[{0}]]>", rdr.Value);
+                        break;
+                    case XmlNodeType.ProcessingInstruction :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <?{0}{1}?>", rdr.Name, rdr.Value);
+                        break;
+                    case XmlNodeType.Comment :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <!--{0}-->", rdr.Value);
+                        break;
+                    case XmlNodeType.XmlDeclaration :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <?xml version=1.0?>");
+                        break;
+                    case XmlNodeType.Document :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] Document");
+                        break;
+                    case XmlNodeType.DocumentType :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] <!DOCTYPE{0}[{1}]>", rdr.Name, rdr.Value);
+                        break;
+                    case XmlNodeType.EntityReference :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] EntityReference: {0}", rdr.Name);
+                        break;
+                    case XmlNodeType.EndElement :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] </{0}>", rdr.Name);
+                        break;
+                    default :
+                        if (DUMP) m_log.DebugFormat("[VivoxVoice] Unrecognized: <{0} [{1}]>", rdr.Name, rdr.Value);
+                        break;
                 }
 
                 if(v == 2) vars.Add(lab, val);
