@@ -28,6 +28,7 @@
 using System;
 using System.IO;
 using System.Net;
+using System.Text;
 using System.Xml;
 using System.Collections;
 using System.Reflection;
@@ -257,19 +258,22 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 // get user data & prepare voice account response
                 string voiceUser = "x" + Convert.ToBase64String(agentID.GetBytes());
+                // XXX: test. above line is the correct one (i guess)
+                // string voiceUser = "x" + Convert.ToBase64String(Encoding.UTF8.GetBytes("ibm1"));
                 voiceUser = voiceUser.Replace('+', '-').Replace('/', '_');
 
                 CachedUserInfo userInfo = m_scene.CommsManager.UserProfileCacheService.GetUserDetails(agentID);
                 if (null == userInfo) throw new Exception("cannot get user details");
 
                 // generate nonce
-                string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
+                // string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
+                string voicePassword = "$1$" + Util.Md5Hash("vivox12");
                 // XXX: update vivox user account with new password
 
                 // create LLSD response to client
                 LLSDVoiceAccountResponse voiceAccountResponse =
-                //    [AMW-temp] new LLSDVoiceAccountResponse(voiceUser, voicePassword);
-                    new LLSDVoiceAccountResponse("ibm1", "vivox12");
+                    new LLSDVoiceAccountResponse(voiceUser, voicePassword);
+
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
                 m_log.DebugFormat("[CAPS][PROVISIONVOICE]: {0}", r);
 
