@@ -243,11 +243,11 @@ namespace OpenSim.Framework.Communications.Capabilities
         public string CapsRequest(string request, string path, string param,
                                   OSHttpRequest httpRequest, OSHttpResponse httpResponse)
         {
-            //m_log.Debug("[CAPS]: Seed Caps Request in region: " + m_regionName);
+            m_log.Debug("[CAPS]: Seed Caps Request in region: " + m_regionName);
 
             string result = LLSDHelpers.SerialiseLLSDReply(m_capsHandlers.CapsDetails);
 
-            //m_log.DebugFormat("[CAPS] CapsRequest {0}", result);
+            m_log.DebugFormat("[CAPS] CapsRequest {0}", result);
 
             return result;
         }

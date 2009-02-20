@@ -151,7 +151,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             m_log.DebugFormat("[VivoxVoice] OnRegisterCaps: agentID {0} caps {1}", agentID, caps);
 
             string capsBase = "/CAPS/" + caps.CapsObjectPath;
-            caps.RegisterHandler("ParcelVoiceInfoRequest",
+            caps.RegisterHandler("ParcelVoiceInfo",
                                  new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
@@ -159,7 +159,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                            return ParcelVoiceInfoRequest(request, path, param,
                                                                                          agentID, caps);
                                                        }));
-            caps.RegisterHandler("ProvisionVoiceAccountRequest",
+            caps.RegisterHandler("ProvisionVoiceAccount",
                                  new RestStreamHandler("POST", capsBase + m_provisionVoiceAccountRequestPath,
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
