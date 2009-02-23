@@ -206,61 +206,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         }
 
         /// <summary>
-        /// Callback for a client request for ParcelVoiceInfo
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="path"></param>
-        /// <param name="param"></param>
-        /// <param name="agentID"></param>
-        /// <param name="caps"></param>
-        /// <returns></returns>
-        public string ParcelVoiceInfoRequest(string request, string path, string param,
-                                             UUID agentID, Caps caps)
-        {
-            // XXX: 
-            // - check whether we have a region channel in our cache
-            // - if not: 
-            //       create it and cache it
-            // - send it to the client
-            // - send channel_uri: as "sip:regionID@m_sipDomain"
-            try
-            {
-                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
-                                  request, path, param);
-
-
-                // XXX: check for existence of region channel: create
-                //      it if does not exist
-                string channel = "foobar-foobar-foobar";
-                // fill in the response
-
-                // setup response to client
-                Hashtable creds = new Hashtable();
-                creds["channel_uri"] = String.Format("sip:{0}@{1}", channel, m_vivoxSipDomain);
-
-                string regionName = m_scene.RegionInfo.RegionName;
-                ScenePresence avatar = m_scene.GetScenePresence(agentID);
-                if (null == m_scene.LandChannel) throw new Exception("land data not yet available");
-                LandData land = m_scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
-
-                LLSDParcelVoiceInfoResponse parcelVoiceInfo =
-                    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
-
-                string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
-
-                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0}", r);
-                return r;
-            }
-            catch (Exception e)
-            {
-                m_log.ErrorFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0}, retry later", e.Message);
-                m_log.DebugFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0} failed", e.ToString());
-
-                return "<llsd>undef</llsd>";
-            }
-        }
-
-        /// <summary>
         /// Callback for a client request for Voice Account Details
         /// </summary>
         /// <param name="request"></param>
@@ -317,6 +262,62 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 m_log.ErrorFormat("[VivoxVoice][CAPS][PROVISIONVOICE]: {0}, retry later", e.Message);
                 m_log.DebugFormat("[VivoxVoice][CAPS][PROVISIONVOICE]: {0} failed", e.ToString());
+
+                return "<llsd>undef</llsd>";
+            }
+        }
+
+        /// <summary>
+        /// Callback for a client request for ParcelVoiceInfo
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="path"></param>
+        /// <param name="param"></param>
+        /// <param name="agentID"></param>
+        /// <param name="caps"></param>
+        /// <returns></returns>
+        public string ParcelVoiceInfoRequest(string request, string path, string param,
+                                             UUID agentID, Caps caps)
+        {
+            // XXX: 
+            // - check whether we have a region channel in our cache
+            // - if not: 
+            //       create it and cache it
+            // - send it to the client
+            // - send channel_uri: as "sip:regionID@m_sipDomain"
+            try
+            {
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
+                                  request, path, param);
+
+
+                // XXX: check for existence of region channel: create
+                //      it if does not exist
+                string channel = "foobar-foobar-foobar";
+                // fill in the response
+
+                // setup response to client
+                Hashtable creds = new Hashtable();
+                creds["channel_uri"] = String.Format("sip:{0}@{1}", channel, m_vivoxSipDomain);
+
+                string regionName = m_scene.RegionInfo.RegionName;
+                ScenePresence avatar = m_scene.GetScenePresence(agentID);
+                if (null == m_scene.LandChannel) throw new Exception("land data not yet available");
+                LandData land = m_scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
+
+                LLSDParcelVoiceInfoResponse parcelVoiceInfo =
+                    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
+                    // new LLSDParcelVoiceInfoResponse("sip:confctl-6093@vd1.vivox.com", land.LocalID, creds);
+
+                string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
+
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0}", r);
+                return r;
+            }
+            catch (Exception e)
+            {
+                m_log.ErrorFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0}, retry later", e.Message);
+                m_log.DebugFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0} failed", e.ToString());
 
                 return "<llsd>undef</llsd>";
             }
