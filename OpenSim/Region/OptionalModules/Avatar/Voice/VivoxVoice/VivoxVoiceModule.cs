@@ -366,7 +366,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         public string ParcelVoiceInfoRequest(Scene scene, string request, string path, string param,
                                              UUID agentID, Caps caps)
         {
-            // XXX: 
             // - check whether we have a region channel in our cache
             // - if not: 
             //       create it and cache it
@@ -378,34 +377,42 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                   request, path, param);
 
                 string channel_uri;
-                // TODO: non-persistent channel time out after 5
-                // hours, need to check for existence?
-                if (m_region2Channel.ContainsKey(scene.RegionInfo.RegionID))
-                {
-                    channel_uri = m_region2Channel[scene.RegionInfo.RegionID];
-                }
-                else
-                {
-                    // XXX: invoke with null for the first shot
-                    Hashtable h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                    if (!h.ContainsKey(".response.level0.body.chan_id"))
-                    {
-                        throw new Exception("vivox channel id not available");
-                    }
-                    if (!h.ContainsKey(".response.level0.body.chan_uri"))
-                    {
-                        throw new Exception("vivox channel uri not available");
-                    }
 
-                    string channel_id = (string)h[".response.level0.body.chan_id"];
-                    channel_uri = (string)h[".response.level0.body.chan_uri"];
-                    m_region2Channel[scene.RegionInfo.RegionID] = channel_uri;
-
-                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: new channel: region {0} \"{1}\" chan_id {2} channel_uri {3}", 
-                                      scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_id, channel_uri);
+                lock (vlock)
+                {
+                    // TODO: non-persistent channel time out after 5
+                    // hours, need to check for existence?
+                    if (m_region2Channel.ContainsKey(scene.RegionInfo.RegionID))
+                    {
+                        channel_uri = m_region2Channel[scene.RegionInfo.RegionID];
+                    }
+                    else
+                    {
+                        string channel_id;
+                        
+                        // try retrieving it in case it already exists
+                        // from a previous life
+                        Hashtable h = vivox_getChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                        if (!h.ContainsKey(".response.level0.body.chan_uri"))
+                        {
+                            // it does not exist yet, create it.
+                            h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                        }
+                        if (!h.ContainsKey(".response.level0.body.chan_uri"))
+                        {
+                            throw new Exception("vivox channel uri not available");
+                        }
+                        
+                        channel_id = (string)h[".response.level0.body.chan_id"];
+                        channel_uri = (string)h[".response.level0.body.chan_uri"];
+                        
+                        m_region2Channel[scene.RegionInfo.RegionID] = channel_uri;
+                        m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: new channel: region {0} \"{1}\" chan_id {2} channel_uri {3}", 
+                                          scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_id, channel_uri);
+                    }
+                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
+                                      scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
                 }
-                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
-                                  scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
 
                 // fill in the response
                 Hashtable creds = new Hashtable();
@@ -486,6 +493,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             return VivoxCall(requrl, true);
         }
 
+
+        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}&auth_token={3}";
+
         /// <summary>
         /// Create a channel.
         /// Once again, there a multitude of options possible. In the simplest case 
@@ -497,12 +507,34 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// are required in a later phase.
         /// In this case the call handles parent and description as optional values.
         /// </summary>
-
-        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}&auth_token={3}";
-
         private Hashtable vivox_createChannel(string parent, string channelid, string description)
         {
             string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid, m_authToken);
+            if (parent != null && parent != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
+            }
+            if (description != null && description != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_desc={1}", requrl, description);
+            }
+            return VivoxCall(requrl, true);
+        }
+
+        /// <summary>
+        /// Retrieve a channel.
+        /// Once again, there a multitude of options possible. In the simplest case 
+        /// we specify only the name and get a non-persistent cannel in return. Non
+        /// persistent means that the channel gets deleted if no-one uses it for
+        /// 5 hours. To accomodate future requirements, it may be a good idea to
+        /// initially create channels under the umbrella of a parent ID based upon
+        /// the region name. That way we have a context for side channels, if those
+        /// are required in a later phase.
+        /// In this case the call handles parent and description as optional values.
+        /// </summary>
+        private Hashtable vivox_getChannel(string parent, string channelid, string description)
+        {
+            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "get", channelid, m_authToken);
             if (parent != null && parent != String.Empty)
             {
                 requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
