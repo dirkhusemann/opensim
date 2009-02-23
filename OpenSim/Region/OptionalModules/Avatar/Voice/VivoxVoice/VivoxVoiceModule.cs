@@ -243,6 +243,85 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 // XXX: check for vivox voice account: search by name
 
+                Hashtable vresp;
+                bool      retry = false;
+                int       code  = -1;
+                string    agentname = agentID.ToString();
+                string    password  = "plugh";
+
+                do
+                {
+
+				    vresp = vivox_getAccountInfo(agentname);
+
+				    // If the request was recognized, then this should be set to something
+
+ 				    if (vresp.Contains(".response.level0.body.code"))
+				    {
+
+                        code = (int) vresp[".response.level0.body.code"];
+
+				  	    switch(code)
+					    {
+						    case 201 : // Account expired
+                                m_log.Error("[VivoxVoice] Get account information failed : expired credetnials");
+                                retry = false; // [AMW] Change to true when login performed.
+                                // [AMW] ToDO: Repeat Admin Login
+							    break;
+						    case 202 : // Missing credentials
+                                m_log.Error("[VivoxVoice] Get account information failed : missing credentials");
+							    break;
+						    case 212 : // Not authorized
+                                m_log.Error("[VivoxVoice] Get account information failed : not authorized");
+							    break;
+						    case 300 : // Required parameter missing
+                                m_log.Error("[VivoxVoice] Get account information failed : parameter missing");
+							    break;
+						    case 403 : // Account does not exist
+                                vresp = vivox_createAccount(agentname,password);
+								if (vresp.Contains(".response.level0.body.code"))
+                                {
+                                    code = (int) vresp[".response.level0.body.code"];
+                                    switch(code)
+                                    {
+										case 201 : // Account expired
+											m_log.Error("[VivoxVoice] Create account information failed : expired credetnials");
+											retry = false; // [AMW] Change to true when login performed.
+											// [AMW] ToDO: Repeat Admin Login
+											break;
+										case 202 : // Missing credentials
+											m_log.Error("[VivoxVoice] Create account information failed : missing credentials");
+											break;
+										case 212 : // Not authorized
+											m_log.Error("[VivoxVoice] Create account information failed : not authorized");
+											break;
+										case 300 : // Required parameter missing
+											m_log.Error("[VivoxVoice] Create account information failed : parameter missing");
+											break;
+										case 400 : // Create failed
+											m_log.Error("[VivoxVoice] Create account information failed : create failed");
+											break;
+                                    }
+                                }
+							    break;
+						    case 404 : // Failed to retrieve account
+                                m_log.Error("[VivoxVoice] Get account information failed : retrieve failed");
+                                // [AMW] Sleep and retry for a fixed period? Or just abandon?
+							    break;
+					    }
+				    }
+
+                }  while (retry);
+
+ 				if (code != 0)
+                {
+                    // [AMW] Failed to obtain account information
+                }
+          
+                // Unconditionally change thepassword on each request
+
+                vivox_password(agentname, password);
+
                 // get user data & prepare voice account response
                 string voiceUser = "x" + Convert.ToBase64String(agentID.GetBytes());
                 // XXX: test. above line is the correct one (i guess)
@@ -254,7 +333,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 // generate nonce
                 // string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
-                string voicePassword = "$1$" + Util.Md5Hash("vivox12");
+                string voicePassword = "$1$" + Util.Md5Hash(password);
                 // XXX: update vivox user account with new password
 
                 // create LLSD response to client
