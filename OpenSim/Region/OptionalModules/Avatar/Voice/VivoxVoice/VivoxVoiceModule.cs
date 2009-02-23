@@ -403,11 +403,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// In this case the call handles parent and description as optional values.
         /// </summary>
 
-        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}";
+        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}&auth_token={3}";
 
         private Hashtable vivox_createChannel(string parent, string channelid, string description)
         {
-            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid);
+            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid, m_authToken);
             if (parent != null && parent != String.Empty)
             {
                 requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
