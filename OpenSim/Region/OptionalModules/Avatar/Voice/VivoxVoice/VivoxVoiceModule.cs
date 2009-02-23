@@ -376,7 +376,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
-                string channel_uri;
+                string channel_uri = null;
 
                 lock (vlock)
                 {
@@ -388,27 +388,29 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     }
                     else
                     {
-                        string channel_id;
-                        
                         // try retrieving it in case it already exists
                         // from a previous life
                         Hashtable h = vivox_getChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                        if (!h.ContainsKey(".response.level0.body.chan_uri"))
+                        if (!h.ContainsKey(".response.level0.body.level2.uri"))
                         {
                             // it does not exist yet, create it.
                             h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
                         }
-                        if (!h.ContainsKey(".response.level0.body.chan_uri"))
+
+                        if (h.ContainsKey(".response.level0.body.chan_uri"))
+                        {
+                            channel_uri = (string)h[".response.level0.body.chan_uri"];
+                        }
+                        else if (h.ContainsKey(".response.level0.body.level2.uri"))
+                        {
+                            channel_uri = (string)h[".response.level0.body.level2.uri"];
+                        }
+                        else
                         {
                             throw new Exception("vivox channel uri not available");
                         }
-                        
-                        channel_id = (string)h[".response.level0.body.chan_id"];
-                        channel_uri = (string)h[".response.level0.body.chan_uri"];
-                        
+
                         m_region2Channel[scene.RegionInfo.RegionID] = channel_uri;
-                        m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: new channel: region {0} \"{1}\" chan_id {2} channel_uri {3}", 
-                                          scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_id, channel_uri);
                     }
                     m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
                                       scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
