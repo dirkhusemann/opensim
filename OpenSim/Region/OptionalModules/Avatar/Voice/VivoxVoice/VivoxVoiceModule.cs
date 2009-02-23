@@ -264,7 +264,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         switch(code)
                         {
                             case 201 : // Account expired
-                                m_log.Error("[VivoxVoice] Get account information failed : expired credetnials");
+                                m_log.Error("[VivoxVoice] Get account information failed : expired credentials");
                                 retry = false; // [AMW] Change to true when login performed.
                                 // [AMW] ToDO: Repeat Admin Login
                                 break;
