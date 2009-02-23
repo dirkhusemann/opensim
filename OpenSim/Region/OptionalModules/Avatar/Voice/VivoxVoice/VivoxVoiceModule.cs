@@ -244,8 +244,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 Hashtable vresp;
                 bool      retry = false;
                 int       code  = -1;
-                string    agentname = agentID.ToString();
+                string    agentname = "x" + Convert.ToBase64String(agentID.GetBytes());
                 string    password  = "plughplugh";
+
+                agentname = agentname.Replace('+', '-').Replace('/', '_');
 
                 do
                 {
@@ -321,10 +323,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 vivox_password(agentname, password);
 
                 // get user data & prepare voice account response
-                string voiceUser = "x" + Convert.ToBase64String(agentID.GetBytes());
+                // string voiceUser = "x" + Convert.ToBase64String(agentID.GetBytes());
                 // XXX: test. above line is the correct one (i guess)
                 // string voiceUser = "x" + Convert.ToBase64String(Encoding.UTF8.GetBytes("ibm1"));
-                voiceUser = voiceUser.Replace('+', '-').Replace('/', '_');
+                // voiceUser = voiceUser.Replace('+', '-').Replace('/', '_');
 
                 CachedUserInfo userInfo = scene.CommsManager.UserProfileCacheService.GetUserDetails(agentID);
                 if (null == userInfo) throw new Exception("cannot get user details");
@@ -332,13 +334,21 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // generate nonce
                 // string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
                 // string voicePassword = "$1$" + Util.Md5Hash(password);
-                // string voicePassword = password;
-                string voicePassword = "$1"+password;
+                // string voicePassword = Convert.ToBase64String(Encoding.UTF8.GetBytes("$1$" + Util.Md5Hash(password)));
+                // string voicePassword = "$1$" + Util.SHA1Hash(password);
+                // string voicePassword = "$1$" + Util.SHA1Hash(voiceUser+password);
+                // string voicePassword = Util.SHA1Hash(voiceUser+password);
+                string voicePassword = password;
+                // string voicePassword = Convert.ToBase64String(Encoding.UTF8.GetBytes(password));
+                // string voicePassword = "$1$" + Convert.ToBase64String(Encoding.UTF8.GetBytes(password));
+                // string voicePassword = "x" + Convert.ToBase64String(Encoding.UTF8.GetBytes(password));
+                // string voicePassword = "$1"+password;
                 // XXX: update vivox user account with new password
 
                 // create LLSD response to client
                 LLSDVoiceAccountResponse voiceAccountResponse =
-                    new LLSDVoiceAccountResponse(voiceUser, voicePassword);
+                //    new LLSDVoiceAccountResponse(voiceUser, voicePassword);
+                    new LLSDVoiceAccountResponse(agentname, voicePassword);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
                 m_log.DebugFormat("[CAPS][PROVISIONVOICE]: {0}", r);
