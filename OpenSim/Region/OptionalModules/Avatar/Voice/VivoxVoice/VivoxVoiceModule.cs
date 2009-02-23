@@ -109,55 +109,56 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             lock(vlock)
             {
-				if(m_WOF)
-				{
+                if(m_WOF)
+                {
 
-					try
-					{
-						m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
-						m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
-						m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
-						m_vivoxSipDomain = m_config.GetString("vivox_sip_domain", String.Empty);
-						m_vivoxSalt = m_config.GetString("vivox_salt", String.Empty);
+                    try
+                    {
+                        m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
+                        m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
+                        m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+                        m_vivoxSipDomain = m_config.GetString("vivox_sip_domain", String.Empty);
+                        m_vivoxSalt = m_config.GetString("vivox_salt", String.Empty);
 
-						if (String.IsNullOrEmpty(m_vivoxServer) ||
-							String.IsNullOrEmpty(m_vivoxSipDomain) ||
-							String.IsNullOrEmpty(m_vivoxAdminUser) ||
-							String.IsNullOrEmpty(m_vivoxAdminPassword))
-						{
-							m_log.Error("[VivoxVoice] plugin mis-configured");
-							m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
-							return;
-						}
-						m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
-
-						m_loginInfo = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
-
-						if( (string) m_loginInfo[".response.level0.body.status"] == "Ok" )
+                        if (String.IsNullOrEmpty(m_vivoxServer) ||
+                            String.IsNullOrEmpty(m_vivoxSipDomain) ||
+                            String.IsNullOrEmpty(m_vivoxAdminUser) ||
+                            String.IsNullOrEmpty(m_vivoxAdminPassword))
                         {
-						    m_log.Info("[VivoxVoice] Admin connection established");
+                            m_log.Error("[VivoxVoice] plugin mis-configured");
+                            m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
+                            return;
+                        }
+                        m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
+
+                        m_loginInfo = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
+
+                        if ((string)m_loginInfo[".response.level0.body.status"] == "Ok")
+                        {
+                            m_log.Info("[VivoxVoice] Admin connection established");
                             m_adminConnected = true;
                             m_log.DebugFormat("[VivoxVoice] Auth token <{0}>", m_authToken);
                         }
                         else
                         {
-						    m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", m_loginInfo[".response.level0.body.status"] );
+                            m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", 
+                                             m_loginInfo[".response.level0.body.status"] );
                         }
-
+                        
                         m_pluginEnabled = true;
-						m_WOF = false;
+                        m_WOF = false;
 
-					}
-					catch (Exception e)
-					{
-						m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
-						m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
-						return;
-					}
-				}
+                    }
+                    catch (Exception e)
+                    {
+                        m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
+                        m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
+                        return;
+                    }
+                }
             }
 
-			if (m_pluginEnabled) scene.EventManager.OnRegisterCaps += OnRegisterCaps;
+            if (m_pluginEnabled) scene.EventManager.OnRegisterCaps += OnRegisterCaps;
 
         }
 
@@ -393,11 +394,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private Hashtable vivox_createChannel(string parent, string channelid, string description)
         {
             string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid);
-            if(parent != null && parent != String.Empty)
+            if (parent != null && parent != String.Empty)
             {
                 requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
             }
-            if(description != null && description != String.Empty)
+            if (description != null && description != String.Empty)
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
             }
@@ -420,36 +421,37 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             int v;
             Hashtable vars = new Hashtable();
 
-            if ( admin )
+            if (admin)
             {
-				m_log.Debug("[VivoxVoice] Retrying admin connection");
+                m_log.Debug("[VivoxVoice] Retrying admin connection");
                 if (!m_adminConnected)
                 {
                      m_loginInfo = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
                 }
  
-				if( (string) m_loginInfo[".response.level0.body.status"] == "Ok" )
+                if ((string) m_loginInfo[".response.level0.body.status"] == "Ok")
                 {
-				    m_log.Info("[VivoxVoice] Admin connection established");
+                    m_log.Info("[VivoxVoice] Admin connection established");
                     m_adminConnected = true;
                 }
                 else
                 {
-				    m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", m_loginInfo[".response.level0.body.status"] );
+                    m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", 
+                                     m_loginInfo[".response.level0.body.status"] );
                     return vars;
                 }
             }
 
-            HttpWebRequest  req = (HttpWebRequest) WebRequest.Create(requrl);            
+            HttpWebRequest  req = (HttpWebRequest)WebRequest.Create(requrl);            
             HttpWebResponse rsp = null;
 
             // Just parameters
-            req.ContentLength=0;
+            req.ContentLength = 0;
 
             // Send request and retrieve the response
-            rsp = (HttpWebResponse) req.GetResponse();
+            rsp = (HttpWebResponse)req.GetResponse();
 
-            XmlReaderSettings        settings = new XmlReaderSettings();
+            XmlReaderSettings settings = new XmlReaderSettings();
 
             settings.ConformanceLevel             = ConformanceLevel.Fragment;
             settings.IgnoreComments               = true;
@@ -465,17 +467,15 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             // we want to extract.
 
             lab = String.Empty;
-
             v = 0;
 
-            while(rdr.Read())
+            while (rdr.Read())
             {
 
                 val = String.Empty;
 
-                switch(rdr.NodeType)
+                switch (rdr.NodeType)
                 {
-
                     case XmlNodeType.Element :
                         lab = String.Format("{0}.{1}", lab,rdr.Name);
                         if (DUMP) m_log.DebugFormat("[VivoxVoice] <{0}>", rdr.Name);
@@ -509,24 +509,22 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     case XmlNodeType.EndElement :
                         if (DUMP) m_log.DebugFormat("[VivoxVoice] </{0}>", rdr.Name);
                         int pi = lab.LastIndexOf('.');
-                        if(pi != -1) lab = lab.Substring(0,pi);
+                        if (pi != -1) lab = lab.Substring(0, pi);
                         break;
                     default :
                         if (DUMP) m_log.DebugFormat("[VivoxVoice] Unrecognized: <{0} [{1}]>", rdr.Name, rdr.Value);
                         break;
                 }
 
-                if(v != 0)
+                if (v != 0)
                 {
                     if (DUMP) m_log.DebugFormat("[VivoxVoice] Adding entry [<{0}>/<{1}>]", lab, val);
                     vars.Add(lab, val);
                     v = 0;
                 }
-
             }
 
             return vars;
-
         }
     }
 }
