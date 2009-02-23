@@ -247,7 +247,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 bool      retry = false;
                 int       code  = -1;
                 string    agentname = agentID.ToString();
-                string    password  = "plugh";
+                string    password  = "plughplugh";
 
                 do
                 {
@@ -259,53 +259,53 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     if (vresp.Contains(".response.level0.body.code"))
                     {
 
-                        code = (int) vresp[".response.level0.body.code"];
+                        code = Convert.ToInt32(vresp[".response.level0.body.code"]);
 
                         switch(code)
                         {
                             case 201 : // Account expired
-                                m_log.Error("[VivoxVoice] Get account information failed : expired credentials");
+                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : expired credentials");
                                 retry = false; // [AMW] Change to true when login performed.
                                 // [AMW] ToDO: Repeat Admin Login
                                 break;
                             case 202 : // Missing credentials
-                                m_log.Error("[VivoxVoice] Get account information failed : missing credentials");
+                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : missing credentials");
                                 break;
                             case 212 : // Not authorized
-                                m_log.Error("[VivoxVoice] Get account information failed : not authorized");
+                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : not authorized");
                                 break;
                             case 300 : // Required parameter missing
-                                m_log.Error("[VivoxVoice] Get account information failed : parameter missing");
+                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : parameter missing");
                                 break;
                             case 403 : // Account does not exist
                                 vresp = vivox_createAccount(agentname,password);
                                 if (vresp.Contains(".response.level0.body.code"))
                                 {
-                                    code = (int) vresp[".response.level0.body.code"];
+                                    code = Convert.ToInt32(vresp[".response.level0.body.code"]);
                                     switch(code)
                                     {
                                         case 201 : // Account expired
-                                            m_log.Error("[VivoxVoice] Create account information failed : expired credetnials");
+                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : expired credetnials");
                                             retry = false; // [AMW] Change to true when login performed.
                                             // [AMW] ToDO: Repeat Admin Login
                                             break;
                                         case 202 : // Missing credentials
-                                            m_log.Error("[VivoxVoice] Create account information failed : missing credentials");
+                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : missing credentials");
                                             break;
                                         case 212 : // Not authorized
-                                            m_log.Error("[VivoxVoice] Create account information failed : not authorized");
+                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : not authorized");
                                             break;
                                         case 300 : // Required parameter missing
-                                            m_log.Error("[VivoxVoice] Create account information failed : parameter missing");
+                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : parameter missing");
                                             break;
                                         case 400 : // Create failed
-                                            m_log.Error("[VivoxVoice] Create account information failed : create failed");
+                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : create failed");
                                             break;
                                     }
                                 }
                                 break;
                             case 404 : // Failed to retrieve account
-                                m_log.Error("[VivoxVoice] Get account information failed : retrieve failed");
+                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : retrieve failed");
                                 // [AMW] Sleep and retry for a fixed period? Or just abandon?
                                 break;
                         }
@@ -333,7 +333,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 // generate nonce
                 // string voicePassword = "$1$" + Util.Md5Hash(DateTime.UtcNow.ToLongTimeString() + m_vivoxSalt);
-                string voicePassword = "$1$" + Util.Md5Hash(password);
+                // string voicePassword = "$1$" + Util.Md5Hash(password);
+                // string voicePassword = password;
+                string voicePassword = "$1"+password;
                 // XXX: update vivox user account with new password
 
                 // create LLSD response to client
@@ -460,11 +462,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// Returns a hash table containing values returned from the request.
         /// </summary>
 
-        private static readonly string m_vivox_getacct_p = "http://{0}/api2/viv_get_acct.php?userid={1}&pwd={2}&user_name={3}";
+        private static readonly string m_vivox_getacct_p = "http://{0}/api2/viv_get_acct.php?auth_token={1}&user_name={2}";
 
         private Hashtable vivox_getAccountInfo(string user)
         {
-            string requrl = String.Format(m_vivox_getacct_p, m_vivoxServer, m_vivoxAdminUser, m_vivoxAdminPassword, user);
+            string requrl = String.Format(m_vivox_getacct_p, m_vivoxServer, m_authToken, user);
             return VivoxCall(requrl, true);
         }
 
@@ -475,11 +477,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// demographic data.
         /// </summary>
 
-        private static readonly string m_vivox_newacct_p = "http://{0}/api2/viv_adm_acct_new.php?username={1}&pwd={2}";
+        private static readonly string m_vivox_newacct_p = "http://{0}/api2/viv_adm_acct_new.php?username={1}&pwd={2}&auth_token={3}";
 
         private Hashtable vivox_createAccount(string user, string password)
         {
-            string requrl = String.Format(m_vivox_newacct_p, m_vivoxServer, user, password);
+            string requrl = String.Format(m_vivox_newacct_p, m_vivoxServer, user, password, m_authToken);
             return VivoxCall(requrl, true);
         }
 
@@ -487,11 +489,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// Change the user's password.
         /// </summary>
 
-        private static readonly string m_vivox_password_p = "http://{0}/api2/viv_adm_password.php?username={1}&new_pwd={2}";
+        private static readonly string m_vivox_password_p = "http://{0}/api2/viv_adm_password.php?user_name={1}&new_pwd={2}&auth_token={3}";
 
         private Hashtable vivox_password(string user, string password)
         {
-            string requrl = String.Format(m_vivox_password_p, m_vivoxServer, user, password);
+            string requrl = String.Format(m_vivox_password_p, m_vivoxServer, user, password, m_authToken);
             return VivoxCall(requrl, true);
         }
 
@@ -589,6 +591,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
 
             }
+
+            m_log.DebugFormat("[VivoxVoice] Sending request <{0}>", requrl);
 
             HttpWebRequest  req = (HttpWebRequest)WebRequest.Create(requrl);            
             HttpWebResponse rsp = null;
