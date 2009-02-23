@@ -271,8 +271,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 LandData land = m_scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
 
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo =
-                // [AMW-temp]    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
-                    new LLSDParcelVoiceInfoResponse("sip:confctl-6093@vd1.vivox.com", land.LocalID, creds);
+                    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
+                    // new LLSDParcelVoiceInfoResponse("sip:confctl-6093@vd1.vivox.com", land.LocalID, creds);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
 
