@@ -31,6 +31,7 @@ using System.Net;
 using System.Text;
 using System.Xml;
 using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using OpenMetaverse;
 using log4net;
@@ -65,9 +66,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxServer;
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
-        private static string m_vivoxSipDomain;
         private static string m_vivoxSalt;
         private static Hashtable m_loginInfo;
+
+        private static Dictionary<UUID, string> m_region2Channel = new Dictionary<UUID, string>();
 
         private string m_authToken
         {
@@ -117,11 +119,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                         m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                         m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
-                        m_vivoxSipDomain = m_config.GetString("vivox_sip_domain", String.Empty);
                         m_vivoxSalt = m_config.GetString("vivox_salt", String.Empty);
 
                         if (String.IsNullOrEmpty(m_vivoxServer) ||
-                            String.IsNullOrEmpty(m_vivoxSipDomain) ||
                             String.IsNullOrEmpty(m_vivoxAdminUser) ||
                             String.IsNullOrEmpty(m_vivoxAdminPassword))
                         {
@@ -298,15 +298,23 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
+                string channel;
+                // TODO: non-persistent channel time out after 5
+                // hours, need to check for existence?
+                if (m_region2Channel.ContainsKey(scene.RegionInfo.RegionID))
+                {
+                    channel = m_region2Channel[scene.RegionInfo.RegionID];
+                }
+                else
+                {
+                    // XXX: invoke with null for the first shot
+                    Hashtable h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                    channel = "foobar-foobar-foobar";
+                }
 
-                // XXX: check for existence of region channel: create
-                //      it if does not exist
-                string channel = "foobar-foobar-foobar";
                 // fill in the response
-
-                // setup response to client
                 Hashtable creds = new Hashtable();
-                creds["channel_uri"] = String.Format("sip:{0}@{1}", channel, m_vivoxSipDomain);
+                creds["channel_uri"] = String.Format("sip:{0}", channel);
 
                 string regionName = scene.RegionInfo.RegionName;
                 ScenePresence avatar = scene.GetScenePresence(agentID);
@@ -315,7 +323,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo =
                     new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
-                    // new LLSDParcelVoiceInfoResponse("sip:confctl-6093@vd1.vivox.com", land.LocalID, creds);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
 
