@@ -423,25 +423,26 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             if (admin)
             {
-		m_log.Debug("[VivoxVoice] Retrying admin connection");
+                m_log.Debug("[VivoxVoice] Retrying admin connection");
 
                 lock(vlock)
                 {
-					if (!m_adminConnected)
-					{
-						 m_loginInfo = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
-					}
-	 
-					if( (string) m_loginInfo[".response.level0.body.status"] == "Ok" )
-					{
-						m_log.Info("[VivoxVoice] Admin connection established");
-						m_adminConnected = true;
-					}
-					else
-					{
-						m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", m_loginInfo[".response.level0.body.status"] );
-						return vars;
-					}
+                    if (!m_adminConnected)
+                    {
+                         m_loginInfo = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
+                    }
+     
+                    if ((string) m_loginInfo[".response.level0.body.status"] == "Ok")
+                    {
+                        m_log.Info("[VivoxVoice] Admin connection established");
+                        m_adminConnected = true;
+                    }
+                    else
+                    {
+                        m_log.WarnFormat("[VivoxVoice] Admin connection failed, status code = {0}", 
+                                         m_loginInfo[".response.level0.body.status"] );
+                        return vars;
+                    }
                 }
 
             }
