@@ -252,68 +252,68 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 do
                 {
 
-				    vresp = vivox_getAccountInfo(agentname);
+                    vresp = vivox_getAccountInfo(agentname);
 
-				    // If the request was recognized, then this should be set to something
+                    // If the request was recognized, then this should be set to something
 
- 				    if (vresp.Contains(".response.level0.body.code"))
-				    {
+                    if (vresp.Contains(".response.level0.body.code"))
+                    {
 
                         code = (int) vresp[".response.level0.body.code"];
 
-				  	    switch(code)
-					    {
-						    case 201 : // Account expired
+                        switch(code)
+                        {
+                            case 201 : // Account expired
                                 m_log.Error("[VivoxVoice] Get account information failed : expired credetnials");
                                 retry = false; // [AMW] Change to true when login performed.
                                 // [AMW] ToDO: Repeat Admin Login
-							    break;
-						    case 202 : // Missing credentials
+                                break;
+                            case 202 : // Missing credentials
                                 m_log.Error("[VivoxVoice] Get account information failed : missing credentials");
-							    break;
-						    case 212 : // Not authorized
+                                break;
+                            case 212 : // Not authorized
                                 m_log.Error("[VivoxVoice] Get account information failed : not authorized");
-							    break;
-						    case 300 : // Required parameter missing
+                                break;
+                            case 300 : // Required parameter missing
                                 m_log.Error("[VivoxVoice] Get account information failed : parameter missing");
-							    break;
-						    case 403 : // Account does not exist
+                                break;
+                            case 403 : // Account does not exist
                                 vresp = vivox_createAccount(agentname,password);
-								if (vresp.Contains(".response.level0.body.code"))
+                                if (vresp.Contains(".response.level0.body.code"))
                                 {
                                     code = (int) vresp[".response.level0.body.code"];
                                     switch(code)
                                     {
-										case 201 : // Account expired
-											m_log.Error("[VivoxVoice] Create account information failed : expired credetnials");
-											retry = false; // [AMW] Change to true when login performed.
-											// [AMW] ToDO: Repeat Admin Login
-											break;
-										case 202 : // Missing credentials
-											m_log.Error("[VivoxVoice] Create account information failed : missing credentials");
-											break;
-										case 212 : // Not authorized
-											m_log.Error("[VivoxVoice] Create account information failed : not authorized");
-											break;
-										case 300 : // Required parameter missing
-											m_log.Error("[VivoxVoice] Create account information failed : parameter missing");
-											break;
-										case 400 : // Create failed
-											m_log.Error("[VivoxVoice] Create account information failed : create failed");
-											break;
+                                        case 201 : // Account expired
+                                            m_log.Error("[VivoxVoice] Create account information failed : expired credetnials");
+                                            retry = false; // [AMW] Change to true when login performed.
+                                            // [AMW] ToDO: Repeat Admin Login
+                                            break;
+                                        case 202 : // Missing credentials
+                                            m_log.Error("[VivoxVoice] Create account information failed : missing credentials");
+                                            break;
+                                        case 212 : // Not authorized
+                                            m_log.Error("[VivoxVoice] Create account information failed : not authorized");
+                                            break;
+                                        case 300 : // Required parameter missing
+                                            m_log.Error("[VivoxVoice] Create account information failed : parameter missing");
+                                            break;
+                                        case 400 : // Create failed
+                                            m_log.Error("[VivoxVoice] Create account information failed : create failed");
+                                            break;
                                     }
                                 }
-							    break;
-						    case 404 : // Failed to retrieve account
+                                break;
+                            case 404 : // Failed to retrieve account
                                 m_log.Error("[VivoxVoice] Get account information failed : retrieve failed");
                                 // [AMW] Sleep and retry for a fixed period? Or just abandon?
-							    break;
-					    }
-				    }
+                                break;
+                        }
+                    }
 
                 }  while (retry);
 
- 				if (code != 0)
+                if (code != 0)
                 {
                     // [AMW] Failed to obtain account information
                 }
@@ -377,23 +377,39 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
-                string channel;
+                string channel_uri;
                 // TODO: non-persistent channel time out after 5
                 // hours, need to check for existence?
                 if (m_region2Channel.ContainsKey(scene.RegionInfo.RegionID))
                 {
-                    channel = m_region2Channel[scene.RegionInfo.RegionID];
+                    channel_uri = m_region2Channel[scene.RegionInfo.RegionID];
                 }
                 else
                 {
                     // XXX: invoke with null for the first shot
                     Hashtable h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                    channel = "foobar-foobar-foobar";
+                    if (!h.ContainsKey(".response.level0.body.chan_id"))
+                    {
+                        throw new Exception("vivox channel id not available");
+                    }
+                    if (!h.ContainsKey(".response.level0.body.chan_uri"))
+                    {
+                        throw new Exception("vivox channel uri not available");
+                    }
+
+                    string channel_id = (string)h[".response.level0.body.chan_id"];
+                    channel_uri = (string)h[".response.level0.body.chan_uri"];
+                    m_region2Channel[scene.RegionInfo.RegionID] = channel_uri;
+
+                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: new channel: region {0} \"{1}\" chan_id {2} channel_uri {3}", 
+                                      scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_id, channel_uri);
                 }
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
+                                  scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
 
                 // fill in the response
                 Hashtable creds = new Hashtable();
-                creds["channel_uri"] = String.Format("sip:{0}", channel);
+                creds["channel_uri"] = channel_uri;
 
                 string regionName = scene.RegionInfo.RegionName;
                 ScenePresence avatar = scene.GetScenePresence(agentID);
