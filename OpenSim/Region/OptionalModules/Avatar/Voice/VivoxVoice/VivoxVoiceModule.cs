@@ -69,8 +69,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxSalt;
         private static Hashtable m_loginInfo;
 
-        private static Dictionary<UUID, string> m_region2Channel = new Dictionary<UUID, string>();
-
         private string m_authToken
         {
             get
@@ -380,38 +378,29 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 lock (vlock)
                 {
-                    // TODO: non-persistent channel time out after 5
-                    // hours, need to check for existence?
-                    if (m_region2Channel.ContainsKey(scene.RegionInfo.RegionID))
+                    // try retrieving it in case it already exists
+                    // from a previous life
+                    Hashtable h = vivox_getChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                    if (!h.ContainsKey(".response.level0.body.level2.uri"))
                     {
-                        channel_uri = m_region2Channel[scene.RegionInfo.RegionID];
+                        // it does not exist yet, create it.
+                        h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                    }
+                
+                    // extract the channel_uri
+                    if (h.ContainsKey(".response.level0.body.chan_uri"))
+                    {
+                        channel_uri = (string)h[".response.level0.body.chan_uri"];
+                    }
+                    else if (h.ContainsKey(".response.level0.body.level2.uri"))
+                    {
+                        channel_uri = (string)h[".response.level0.body.level2.uri"];
                     }
                     else
                     {
-                        // try retrieving it in case it already exists
-                        // from a previous life
-                        Hashtable h = vivox_getChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                        if (!h.ContainsKey(".response.level0.body.level2.uri"))
-                        {
-                            // it does not exist yet, create it.
-                            h = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                        }
-
-                        if (h.ContainsKey(".response.level0.body.chan_uri"))
-                        {
-                            channel_uri = (string)h[".response.level0.body.chan_uri"];
-                        }
-                        else if (h.ContainsKey(".response.level0.body.level2.uri"))
-                        {
-                            channel_uri = (string)h[".response.level0.body.level2.uri"];
-                        }
-                        else
-                        {
-                            throw new Exception("vivox channel uri not available");
-                        }
-
-                        m_region2Channel[scene.RegionInfo.RegionID] = channel_uri;
+                        throw new Exception("vivox channel uri not available");
                     }
+                    
                     m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
                                       scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
                 }
