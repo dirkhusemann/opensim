@@ -81,7 +81,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         }
         
         private IConfig m_config;
-        private Scene m_scene;
+        // private Scene m_scene;
 
         // private int m_asterisk_timeout;
         // private string m_confDomain;
@@ -90,7 +90,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         public void Initialise(Scene scene, IConfigSource config)
         {
-            m_scene = scene;
+            // m_scene = scene;
             m_config = config.Configs["VivoxVoice"];
 
             if (null == m_config)
@@ -158,10 +158,18 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
             }
 
-            if (m_pluginEnabled) scene.EventManager.OnRegisterCaps += OnRegisterCaps;
-
+            if (m_pluginEnabled) 
+            {
+                // we need to capture scene in an anonymous method
+                // here as we need in the callbacks
+                scene.EventManager.OnRegisterCaps += delegate(UUID agentID, Caps caps)
+                    {
+                        OnRegisterCaps(scene, agentID, caps);
+                    };
+            }
+            
         }
-
+        
         public void PostInitialise()
         {
         }
@@ -179,10 +187,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         {
             get { return true; }
         }
-
         #endregion
 
-        public void OnRegisterCaps(UUID agentID, Caps caps)
+         public void OnRegisterCaps(Scene scene, UUID agentID, Caps caps)
         {
 
             m_log.DebugFormat("[VivoxVoice] OnRegisterCaps: agentID {0} caps {1}", agentID, caps);
@@ -193,7 +200,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
                                                        {
-                                                           return ParcelVoiceInfoRequest(request, path, param,
+                                                           return ParcelVoiceInfoRequest(scene, request, path, param,
                                                                                          agentID, caps);
                                                        }));
             caps.RegisterHandler("ProvisionVoiceAccountRequest",
@@ -201,7 +208,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                        delegate(string request, string path, string param,
                                                                 OSHttpRequest httpRequest, OSHttpResponse httpResponse)
                                                        {
-                                                           return ProvisionVoiceAccountRequest(request, path, param,
+                                                           return ProvisionVoiceAccountRequest(scene, request, path, param,
                                                                                                agentID, caps);
                                                        }));
         }
@@ -215,7 +222,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// <param name="agentID"></param>
         /// <param name="caps"></param>
         /// <returns></returns>
-        public string ProvisionVoiceAccountRequest(string request, string path, string param,
+        public string ProvisionVoiceAccountRequest(Scene scene, string request, string path, string param,
                                                    UUID agentID, Caps caps)
         {
             // XXX we need to
@@ -242,7 +249,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // string voiceUser = "x" + Convert.ToBase64String(Encoding.UTF8.GetBytes("ibm1"));
                 voiceUser = voiceUser.Replace('+', '-').Replace('/', '_');
 
-                CachedUserInfo userInfo = m_scene.CommsManager.UserProfileCacheService.GetUserDetails(agentID);
+                CachedUserInfo userInfo = scene.CommsManager.UserProfileCacheService.GetUserDetails(agentID);
                 if (null == userInfo) throw new Exception("cannot get user details");
 
                 // generate nonce
@@ -277,7 +284,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// <param name="agentID"></param>
         /// <param name="caps"></param>
         /// <returns></returns>
-        public string ParcelVoiceInfoRequest(string request, string path, string param,
+        public string ParcelVoiceInfoRequest(Scene scene, string request, string path, string param,
                                              UUID agentID, Caps caps)
         {
             // XXX: 
@@ -301,10 +308,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 Hashtable creds = new Hashtable();
                 creds["channel_uri"] = String.Format("sip:{0}@{1}", channel, m_vivoxSipDomain);
 
-                string regionName = m_scene.RegionInfo.RegionName;
-                ScenePresence avatar = m_scene.GetScenePresence(agentID);
-                if (null == m_scene.LandChannel) throw new Exception("land data not yet available");
-                LandData land = m_scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
+                string regionName = scene.RegionInfo.RegionName;
+                ScenePresence avatar = scene.GetScenePresence(agentID);
+                if (null == scene.LandChannel) throw new Exception("land data not yet available");
+                LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
 
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo =
                     new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
