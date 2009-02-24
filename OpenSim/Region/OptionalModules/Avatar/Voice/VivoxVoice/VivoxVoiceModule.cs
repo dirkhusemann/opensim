@@ -229,63 +229,68 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     resp = VivoxGetAccountInfo(agentname);
                     if (XmlFind(resp, "response.level0.status", out code))
                     {
-                        // If the request was recognized, then this should be set to something
-                        switch (code)
+                        if (code == "ERR") 
                         {
-                            case "201" : // Account expired
-                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : expired credentials");
-                                m_adminConnected = false;
-                                retry = DoAdminLogin();
-                                break;
-
-                            case "202" : // Missing credentials
-                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : missing credentials");
-                                break;
-
-                            case "212" : // Not authorized
-                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : not authorized");
-                                break;
-
-                            case "300" : // Required parameter missing
-                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : parameter missing");
-                                break;
-
-                            case "403" : // Account does not exist
-                            case "ERR":
-                                resp = VivoxCreateAccount(agentname,password);
-                                if (XmlFind(resp, "response.level0.status", out code))
+                            if (XmlFind(resp, "response.level0.body.code", out code)) 
+                            {
+                                // If the request was recognized, then this should be set to something
+                                switch (code)
                                 {
-                                    switch (code)
-                                    {
-                                        case "201" : // Account expired
-                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : expired credentials");
-                                            m_adminConnected = false;
-                                            retry = DoAdminLogin();
-                                            break;
+                                    case "201" : // Account expired
+                                        m_log.ErrorFormat("[VivoxVoice] Get account information failed : expired credentials");
+                                        m_adminConnected = false;
+                                        retry = DoAdminLogin();
+                                        break;
 
-                                        case "202" : // Missing credentials
-                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : missing credentials");
-                                            break;
+                                    case "202" : // Missing credentials
+                                        m_log.ErrorFormat("[VivoxVoice] Get account information failed : missing credentials");
+                                        break;
 
-                                        case "212" : // Not authorized
-                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : not authorized");
-                                            break;
+                                    case "212" : // Not authorized
+                                        m_log.ErrorFormat("[VivoxVoice] Get account information failed : not authorized");
+                                        break;
 
-                                        case "300" : // Required parameter missing
-                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : parameter missing");
-                                            break;
+                                    case "300" : // Required parameter missing
+                                        m_log.ErrorFormat("[VivoxVoice] Get account information failed : parameter missing");
+                                        break;
 
-                                        case "400" : // Create failed
-                                            m_log.ErrorFormat("[VivoxVoice] Create account information failed : create failed");
-                                            break;
-                                    }
+                                    case "403" : // Account does not exist
+                                        resp = VivoxCreateAccount(agentname,password);
+                                        if (XmlFind(resp, "response.level0.status", out code))
+                                        {
+                                            switch (code)
+                                            {
+                                                case "201" : // Account expired
+                                                    m_log.ErrorFormat("[VivoxVoice] Create account information failed : expired credentials");
+                                                    m_adminConnected = false;
+                                                    retry = DoAdminLogin();
+                                                    break;
+                                                    
+                                                case "202" : // Missing credentials
+                                                    m_log.ErrorFormat("[VivoxVoice] Create account information failed : missing credentials");
+                                                    break;
+                                                    
+                                                case "212" : // Not authorized
+                                                    m_log.ErrorFormat("[VivoxVoice] Create account information failed : not authorized");
+                                                    break;
+                                                    
+                                                case "300" : // Required parameter missing
+                                                    m_log.ErrorFormat("[VivoxVoice] Create account information failed : parameter missing");
+                                                    break;
+                                                    
+                                                case "400" : // Create failed
+                                                    m_log.ErrorFormat("[VivoxVoice] Create account information failed : create failed");
+                                                    break;
+                                            }
+                                        }
+                                        break;
+                                        
+                                    case "404" : // Failed to retrieve account
+                                        m_log.ErrorFormat("[VivoxVoice] Get account information failed : retrieve failed");
+                                        // [AMW] Sleep and retry for a fixed period? Or just abandon?
+                                        break;
                                 }
-                                break;
-
-                            case "404" : // Failed to retrieve account
-                                m_log.ErrorFormat("[VivoxVoice] Get account information failed : retrieve failed");
-                                // [AMW] Sleep and retry for a fixed period? Or just abandon?
-                                break;
+                            }
                         }
                     }
                 }  while (retry);
