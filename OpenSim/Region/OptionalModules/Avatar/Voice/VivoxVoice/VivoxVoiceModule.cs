@@ -67,6 +67,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
         private static bool   m_vivoxChannelEncrypt;
+        private static string m_vivoxChannelType;
         private static string m_authToken = String.Empty;
         
         private IConfig m_config;
@@ -100,6 +101,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                         m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                         m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+                        m_vivoxChannelType = m_config.GetString("vivox_channel_type", "channel");
                         m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
 
                         m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
@@ -503,6 +505,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if(m_vivoxChannelEncrypt)
             {
                 requrl = String.Format("{0}&chan_encrypt_audio=1", requrl);
+            }
+            if(m_vivoxChannelType != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
             }
             return VivoxCall(requrl, true);
         }
