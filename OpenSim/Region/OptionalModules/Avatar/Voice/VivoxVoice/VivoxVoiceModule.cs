@@ -59,7 +59,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
 
         // Control info, e.g. vivox server, admin user, admin password
-
         private static bool   m_WOF            = true;
         private static bool   m_pluginEnabled  = false;
         private static bool   m_adminConnected = false;
@@ -70,8 +69,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_authToken = String.Empty;
         
         private IConfig m_config;
-
-        #region IRegionModule Members
 
         public void Initialise(Scene scene, IConfigSource config)
         {
@@ -92,14 +89,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             m_log.Info("[VivoxVoice] plugin enabled");
 
-           lock (vlock)
+            // retrieve configuration variables
+            lock (vlock)
             {
-               if (m_WOF)
+                if (m_WOF)
                 {
-
                     try
                     {
-
                         m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                         m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                         m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
@@ -135,13 +131,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (m_pluginEnabled) 
             {
                 // we need to capture scene in an anonymous method
-                // here as we need in the callbacks
+                // here as we need it later in the callbacks
                 scene.EventManager.OnRegisterCaps += delegate(UUID agentID, Caps caps)
                 {
                         OnRegisterCaps(scene, agentID, caps);
                 };
             }
-            
         }
         
         public void PostInitialise()
@@ -150,7 +145,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         public void Close()
         {
-            vivox_logout();
+            VivoxLogout();
         }
 
         public string Name
@@ -162,22 +157,30 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         {
             get { return true; }
         }
-        #endregion
 
+        // <summary>
+        // OnRegisterCaps is invoked via the scene.EventManager
+        // everytime OpenSim hands out capabilities to a client
+        // (login, region crossing). We contribute two capabilities to
+        // the set of capabilities handed back to the client:
+        // ProvisionVoiceAccountRequest and ParcelVoiceInfoRequest.
+        // 
+        // ProvisionVoiceAccountRequest allow the client to obtain the
+        // voice account credentials for the avatar it is controlling
+        // (e.g., user name, password, etc).
+        // 
+        // ParcelVoiceInfoRequest is invoked whenever the client
+        // changes from one region to another.
+        //
+        // Note that OnRegisterCaps is called here via a closure delegate
+        // containing the scene of the respective region (see
+        // Initialise()).
+        // </summary>
         public void OnRegisterCaps(Scene scene, UUID agentID, Caps caps)
         {
-
             m_log.DebugFormat("[VivoxVoice] OnRegisterCaps: agentID {0} caps {1}", agentID, caps);
 
             string capsBase = "/CAPS/" + caps.CapsObjectPath;
-            caps.RegisterHandler("ParcelVoiceInfoRequest",
-                                 new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
-                                                       delegate(string request, string path, string param,
-                                                                OSHttpRequest httpRequest, OSHttpResponse httpResponse)
-                                                       {
-                                                           return ParcelVoiceInfoRequest(scene, request, path, param,
-                                                                                         agentID, caps);
-                                                       }));
             caps.RegisterHandler("ProvisionVoiceAccountRequest",
                                  new RestStreamHandler("POST", capsBase + m_provisionVoiceAccountRequestPath,
                                                        delegate(string request, string path, string param,
@@ -185,6 +188,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                        {
                                                            return ProvisionVoiceAccountRequest(scene, request, path, param,
                                                                                                agentID, caps);
+                                                       }));
+            caps.RegisterHandler("ParcelVoiceInfoRequest",
+                                 new RestStreamHandler("POST", capsBase + m_parcelVoiceInfoRequestPath,
+                                                       delegate(string request, string path, string param,
+                                                                OSHttpRequest httpRequest, OSHttpResponse httpResponse)
+                                                       {
+                                                           return ParcelVoiceInfoRequest(scene, request, path, param,
+                                                                                         agentID, caps);
                                                        }));
         }
 
@@ -197,14 +208,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// <param name="agentID"></param>
         /// <param name="caps"></param>
         /// <returns></returns>
-
         public string ProvisionVoiceAccountRequest(Scene scene, string request, string path, string param,
                                                    UUID agentID, Caps caps)
         {
-
             try
             {
-
                 m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
@@ -218,63 +226,67 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 do
                 {
-
-                    resp = vivox_getAccountInfo(agentname);
-
-                    if ( Find(resp, "response.level0.status", out code))
+                    resp = VivoxGetAccountInfo(agentname);
+                    if (XmlFind(resp, "response.level0.status", out code))
                     {
-
-                         // If the request was recognized, then this should be set to something
-
-                       switch (code)
+                        // If the request was recognized, then this should be set to something
+                        switch (code)
                         {
                             case "201" : // Account expired
                                 m_log.ErrorFormat("[VivoxVoice] Get account information failed : expired credentials");
                                 m_adminConnected = false;
                                 retry = DoAdminLogin();
                                 break;
+
                             case "202" : // Missing credentials
                                 m_log.ErrorFormat("[VivoxVoice] Get account information failed : missing credentials");
                                 break;
+
                             case "212" : // Not authorized
                                 m_log.ErrorFormat("[VivoxVoice] Get account information failed : not authorized");
                                 break;
+
                             case "300" : // Required parameter missing
                                 m_log.ErrorFormat("[VivoxVoice] Get account information failed : parameter missing");
                                 break;
+
                             case "403" : // Account does not exist
-                                resp = vivox_createAccount(agentname,password);
-                                if ( Find(resp, "response.level0.status", out code))
+                                resp = VivoxCreateAccount(agentname,password);
+                                if (XmlFind(resp, "response.level0.status", out code))
                                 {
-                                switch (code)
+                                    switch (code)
                                     {
                                         case "201" : // Account expired
                                             m_log.ErrorFormat("[VivoxVoice] Create account information failed : expired credentials");
                                             m_adminConnected = false;
                                             retry = DoAdminLogin();
                                             break;
+
                                         case "202" : // Missing credentials
                                             m_log.ErrorFormat("[VivoxVoice] Create account information failed : missing credentials");
                                             break;
+
                                         case "212" : // Not authorized
                                             m_log.ErrorFormat("[VivoxVoice] Create account information failed : not authorized");
                                             break;
+
                                         case "300" : // Required parameter missing
                                             m_log.ErrorFormat("[VivoxVoice] Create account information failed : parameter missing");
                                             break;
+
                                         case "400" : // Create failed
                                             m_log.ErrorFormat("[VivoxVoice] Create account information failed : create failed");
                                             break;
                                     }
                                 }
                                 break;
+
                             case "404" : // Failed to retrieve account
                                 m_log.ErrorFormat("[VivoxVoice] Get account information failed : retrieve failed");
                                 // [AMW] Sleep and retry for a fixed period? Or just abandon?
                                 break;
                         }
                     }
-
                 }  while (retry);
 
                 if (code != "OK")
@@ -284,8 +296,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
           
                 // Unconditionally change the password on each request
-
-                vivox_password(agentname, password);
+                VivoxPassword(agentname, password);
 
                 LLSDVoiceAccountResponse voiceAccountResponse =
                     new LLSDVoiceAccountResponse(agentname, password, m_vivoxServer, m_vivoxVoiceAccountApi);
@@ -314,7 +325,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// <param name="agentID"></param>
         /// <param name="caps"></param>
         /// <returns></returns>
-
         public string ParcelVoiceInfoRequest(Scene scene, string request, string path, string param,
                                              UUID agentID, Caps caps)
         {
@@ -323,10 +333,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             //       create it and cache it
             // - send it to the client
             // - send channel_uri: as "sip:regionID@m_sipDomain"
-
             try
             {
-
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
@@ -334,29 +342,27 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 lock (vlock)
                 {
-                    // try retrieving it in case it already exists
+                    // try retrieving the channel_uri in case it already exists
                     // from a previous life
-                    XmlElement resp = vivox_getChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                    XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
 
-                    if ( ! Find( resp, "response.level0.body.level2.uri", out channel_uri))
+                    if (!XmlFind(resp, "response.level0.body.level2.uri", out channel_uri))
                     {
-                        // it does not exist yet, create it.
-                        resp = vivox_createChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                        // channel_uri does not exist yet, create it...
+                        resp = VivoxCreateChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
                 
-						// extract the channel_uri
-
-						if ( ! Find( resp, "response.level0.body.chan_uri", out channel_uri))
-						{
-							throw new Exception("vivox channel uri not available");
-						}
-
+                        // ...and extract it
+                        if (!XmlFind(resp, "response.level0.body.chan_uri", out channel_uri))
+                        {
+                            throw new Exception("vivox channel uri not available");
+                        }
                     }
                     
                     m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
                                       scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
                 }
 
-                // fill in the response
+                // fill in our response to the client
                 Hashtable creds = new Hashtable();
                 creds["channel_uri"] = channel_uri;
 
@@ -382,43 +388,46 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
         }
 
+
+        private static readonly string m_vivoxLoginPath = "http://{0}/api2/viv_signin.php?userid={1}&pwd={2}";
+
         /// <summary>
         /// Perform administrative login for Vivox.
         /// Returns a hash table containing values returned from the request.
         /// </summary>
-
-        private static readonly string m_vivox_login_p = "http://{0}/api2/viv_signin.php?userid={1}&pwd={2}";
-
-        private XmlElement vivox_login(string name, string password)
+        private XmlElement VivoxLogin(string name, string password)
         {
-            string requrl = String.Format(m_vivox_login_p, m_vivoxServer, name, password);
+            string requrl = String.Format(m_vivoxLoginPath, m_vivoxServer, name, password);
             return VivoxCall(requrl, false);
         }
+
+
+        private static readonly string m_vivoxLogoutPath = "http://{0}/api2/viv_signout.php?auth_token={1}";
 
         /// <summary>
         /// Perform administrative logout for Vivox.
         /// </summary>
-
-        private static readonly string m_vivox_logout_p = "http://{0}/api2/viv_signout.php?auth_token={1}";
-
-        private XmlElement vivox_logout()
+        private XmlElement VivoxLogout()
         {
-            string requrl = String.Format(m_vivox_logout_p, m_vivoxServer, m_authToken);
+            string requrl = String.Format(m_vivoxLogoutPath, m_vivoxServer, m_authToken);
             return VivoxCall(requrl, false);
         }
+
+
+        private static readonly string m_vivoxGetAccountPath = "http://{0}/api2/viv_get_acct.php?auth_token={1}&user_name={2}";
 
         /// <summary>
         /// Retrieve account information for the specified user.
         /// Returns a hash table containing values returned from the request.
         /// </summary>
-
-        private static readonly string m_vivox_getacct_p = "http://{0}/api2/viv_get_acct.php?auth_token={1}&user_name={2}";
-
-        private XmlElement vivox_getAccountInfo(string user)
+        private XmlElement VivoxGetAccountInfo(string user)
         {
-            string requrl = String.Format(m_vivox_getacct_p, m_vivoxServer, m_authToken, user);
+            string requrl = String.Format(m_vivoxGetAccountPath, m_vivoxServer, m_authToken, user);
             return VivoxCall(requrl, true);
         }
+
+
+        private static readonly string m_vivoxNewAccountPath = "http://{0}/api2/viv_adm_acct_new.php?username={1}&pwd={2}&auth_token={3}";
 
         /// <summary>
         /// Creates a new account.
@@ -426,29 +435,26 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// is user name and password. We *can* supply a lot more
         /// demographic data.
         /// </summary>
-
-        private static readonly string m_vivox_newacct_p = "http://{0}/api2/viv_adm_acct_new.php?username={1}&pwd={2}&auth_token={3}";
-
-        private XmlElement vivox_createAccount(string user, string password)
+        private XmlElement VivoxCreateAccount(string user, string password)
         {
-            string requrl = String.Format(m_vivox_newacct_p, m_vivoxServer, user, password, m_authToken);
+            string requrl = String.Format(m_vivoxNewAccountPath, m_vivoxServer, user, password, m_authToken);
             return VivoxCall(requrl, true);
         }
+
+
+        private static readonly string m_vivoxPasswordPath = "http://{0}/api2/viv_adm_password.php?user_name={1}&new_pwd={2}&auth_token={3}";
 
         /// <summary>
         /// Change the user's password.
         /// </summary>
-
-        private static readonly string m_vivox_password_p = "http://{0}/api2/viv_adm_password.php?user_name={1}&new_pwd={2}&auth_token={3}";
-
-        private XmlElement vivox_password(string user, string password)
+        private XmlElement VivoxPassword(string user, string password)
         {
-            string requrl = String.Format(m_vivox_password_p, m_vivoxServer, user, password, m_authToken);
+            string requrl = String.Format(m_vivoxPasswordPath, m_vivoxServer, user, password, m_authToken);
             return VivoxCall(requrl, true);
         }
 
 
-        private static readonly string m_vivox_channel_p = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}&auth_token={3}";
+        private static readonly string m_vivoxChannelPath = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_name={2}&auth_token={3}";
 
         /// <summary>
         /// Create a channel.
@@ -459,11 +465,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// initially create channels under the umbrella of a parent ID based upon
         /// the region name. That way we have a context for side channels, if those
         /// are required in a later phase.
+        /// 
         /// In this case the call handles parent and description as optional values.
         /// </summary>
-        private XmlElement vivox_createChannel(string parent, string channelid, string description)
+        private XmlElement VivoxCreateChannel(string parent, string channelId, string description)
         {
-            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "create", channelid, m_authToken);
+            string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "create", channelId, m_authToken);
             if (parent != null && parent != String.Empty)
             {
                 requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
@@ -486,10 +493,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// are required in a later phase.
         /// In this case the call handles parent and description as optional values.
         /// </summary>
-
-        private XmlElement vivox_getChannel(string parent, string channelid, string description)
+        private XmlElement VivoxGetChannel(string parent, string channelid, string description)
         {
-            string requrl = String.Format(m_vivox_channel_p, m_vivoxServer, "get", channelid, m_authToken);
+            string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "get", channelid, m_authToken);
             if (parent != null && parent != String.Empty)
             {
                 requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
@@ -508,24 +514,20 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// The outcome of the call can be determined by examining the 
         /// status value in the hash table.
         /// </summary>
-
         private XmlElement VivoxCall(string requrl, bool admin)
         {
-
             // If this is an admin call, and admin is not connected,
             // and the admin id cannot be connected, then fail.
-
             if (admin && !m_adminConnected && !DoAdminLogin())
                 return null;
 
             // Otherwise prepare the request
-
             m_log.DebugFormat("[VivoxVoice] Sending request <{0}>", requrl);
 
             HttpWebRequest  req = (HttpWebRequest)WebRequest.Create(requrl);            
             HttpWebResponse rsp = null;
 
-            // Just parameters
+            // We are sending just parameters, no content
             req.ContentLength = 0;
 
             // Send request and retrieve the response
@@ -536,43 +538,40 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             doc.Load(rdr);
             rdr.Close();
 
-            // If we're debugging server responses
-
-            if (DUMP) Scan(doc.DocumentElement,0);
+            // If we're debugging server responses, dump the whole
+            // load now
+            if (DUMP) XmlScanl(doc.DocumentElement,0);
 
             return doc.DocumentElement;
-
         }
 
         /// <summary>
         /// Login has been factored in this way because it gets called
         /// from several places in the module, and we want it to work 
-        /// the smae way each time.
+        /// the same way each time.
         /// </summary>
-
         private bool DoAdminLogin()
         {
-
             m_log.Debug("[VivoxVoice] Establishing admin connection");
 
-           lock (vlock)
+            lock (vlock)
             {
                 if (!m_adminConnected)
                 {
                     string status = "Unknown";
                     XmlElement resp = null;
 
-                    resp = vivox_login(m_vivoxAdminUser, m_vivoxAdminPassword);
+                    resp = VivoxLogin(m_vivoxAdminUser, m_vivoxAdminPassword);
  
-                    if (Find(resp, "response.level0.body.status", out status)) 
+                    if (XmlFind(resp, "response.level0.body.status", out status)) 
                     {
                         if (status == "Ok")
                         {
                             m_log.Info("[VivoxVoice] Admin connection established");
-                            if (Find( resp, "response.level0.body.auth_token", out m_authToken))
+                            if (XmlFind(resp, "response.level0.body.auth_token", out m_authToken))
                             {
                                 if (DUMP) m_log.DebugFormat("[VivoxVoice] Auth Token <{0}>", 
-                                        m_authToken);
+                                                            m_authToken);
                                 m_adminConnected = true;
                             }
                         }
@@ -586,40 +585,42 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
 
             return m_adminConnected;
-
         }
 
         /// <summary>
-        /// The Scan routine is provided ot aid in the
+        /// The XmlScan routine is provided to aid in the
         /// reverse engineering of incompletely 
         /// documented packets returned by the Vivox
         /// voice server. It is only called if the 
         /// DUMP switch is set.
         /// </summary>
-
-        private void Scan(XmlElement e, int index)
+        private void XmlScanl(XmlElement e, int index)
         {
-           if (e.HasChildNodes)
+            if (e.HasChildNodes)
             {
                 m_log.DebugFormat("<{0}>".PadLeft(index+5), e.Name);
                 XmlNodeList children = e.ChildNodes;
-               foreach (XmlNode node in children)
+                foreach (XmlNode node in children)
                    switch (node.NodeType)
-                    {
+                   {
                         case XmlNodeType.Element :
-                            Scan((XmlElement) node, index+1);
+                            XmlScanl((XmlElement)node, index+1);
                             break;
                         case XmlNodeType.Text :
                             m_log.DebugFormat("\"{0}\"".PadLeft(index+5), node.Value);
                             break;
                         default :
                             break;
-                    }
+                   }
                 m_log.DebugFormat("</{0}>".PadLeft(index+6), e.Name);
             }
             else
+            {
                 m_log.DebugFormat("<{0}/>".PadLeft(index+6), e.Name);
+            }
         }
+
+        private static readonly char[] C_POINT = {'.'};
 
         /// <summary>
         /// The Find method is passed an element whose
@@ -632,43 +633,40 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// of the search's success. The search is performed
         /// by the recursive Search method.
         /// </summary>
-
-        private static readonly char[] C_POINT = {'.'};
-
-        private bool Find(XmlElement root, string tag, int nth, out string result)
+        private bool XmlFind(XmlElement root, string tag, int nth, out string result)
         {
-           if (root == null || tag == null || tag == String.Empty)
+            if (root == null || tag == null || tag == String.Empty)
             { 
                 result = String.Empty;
                 return false;
             }
-            return Search(root,tag.Split(C_POINT),0, ref nth, out result);
+            return XmlSearch(root,tag.Split(C_POINT),0, ref nth, out result);
         }
 
-        private bool Find(XmlElement root, string tag, out string result)
+        private bool XmlFind(XmlElement root, string tag, out string result)
         {
-           int nth = 0;
-           if (root == null || tag == null || tag == String.Empty)
+            int nth = 0;
+            if (root == null || tag == null || tag == String.Empty)
             { 
                 result = String.Empty;
                 return false;
             }
-            return Search(root,tag.Split(C_POINT),0, ref nth, out result);
+            return XmlSearch(root,tag.Split(C_POINT),0, ref nth, out result);
         }
 
         /// <summary>
-        /// The search element is initially called by Find, and the
+        /// XmlSearch is initially called by XmlFind, and then
         /// recursively called by itself until the document
-        /// supplied to Find is exhausted, or the name hierarchy
-        /// is matched. If the hierarchy is matched, the value is
-        /// returned in result, and true returned as the function's
-        /// value. Otehrwise the result is set to the empty string and
+        /// supplied to XmlFind is either exhausted or the name hierarchy
+        /// is matched. 
+        ///
+        /// If the hierarchy is matched, the value is returned in
+        /// result, and true returned as the function's
+        /// value. Otherwise the result is set to the empty string and
         /// false is returned.
         /// </summary>
-
-        private bool Search(XmlElement e, string[] tags, int index, ref int nth, out string result)
+        private bool XmlSearch(XmlElement e, string[] tags, int index, ref int nth, out string result)
         {
-
             if (index == tags.Length || e.Name != tags[index])
             {
                 result = String.Empty;
@@ -677,7 +675,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 
             if (tags.Length-index == 1)
             {
-                if(nth == 0)
+                if (nth == 0)
                 {
                     result = e.InnerText;
                     return true;
@@ -693,14 +691,15 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (e.HasChildNodes)
             {
                 XmlNodeList children = e.ChildNodes;
-            foreach (XmlNode node in children)
+                foreach (XmlNode node in children)
                 {
                    switch (node.NodeType)
-                    {
+                   {
                         case XmlNodeType.Element :
-                            if ( Search((XmlElement) node, tags, index+1, ref nth, out result))
+                            if (XmlSearch((XmlElement)node, tags, index+1, ref nth, out result))
                                 return true;
                             break;
+
                         default :
                             break;
                     }
@@ -709,8 +708,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             result = String.Empty;
             return false;
-
         }
-
     }
 }
