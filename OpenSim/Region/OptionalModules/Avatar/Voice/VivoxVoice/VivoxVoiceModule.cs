@@ -256,7 +256,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                                     case "403" : // Account does not exist
                                         resp = VivoxCreateAccount(agentname,password);
-                                        if (XmlFind(resp, "response.level0.status", out code))
+                                        if (XmlFind(resp, "response.level0.body.code", out code))
                                         {
                                             switch (code)
                                             {
