@@ -57,6 +57,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
         private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
+        private static readonly string m_chatSessionRequestPath = "0009/";
 
         // Control info, e.g. vivox server, admin user, admin password
         private static bool   m_WOF            = true;
@@ -132,10 +133,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
 
                 string chan_id;
-			    XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), null);
+                XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), null);
                 if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                 {
-			        VivoxDeleteChannel(null, chan_id);
+                    VivoxDeleteChannel(null, chan_id);
                 }
 
             }
@@ -209,11 +210,20 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                                                            return ParcelVoiceInfoRequest(scene, request, path, param,
                                                                                          agentID, caps);
                                                        }));
+            caps.RegisterHandler("ChatSessionRequest",
+                                 new RestStreamHandler("POST", capsBase + m_chatSessionRequestPath,
+                                                       delegate(string request, string path, string param,
+                                                                OSHttpRequest httpRequest, OSHttpResponse httpResponse)
+                                                       {
+                                                           return ChatSessionRequest(scene, request, path, param,
+                                                                                     agentID, caps);
+                                                       }));
         }
 
         /// <summary>
         /// Callback for a client request for Voice Account Details
         /// </summary>
+        /// <param name="scene">current scene object of the client</param>
         /// <param name="request"></param>
         /// <param name="path"></param>
         /// <param name="param"></param>
@@ -311,7 +321,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 if (code != "OK")
                 {
-                    m_log.DebugFormat("[CAPS][PROVISIONVOICE]: Get Account Request failed");
+                    m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: Get Account Request failed");
                     throw new Exception("Unable to execute request");
                 }
           
@@ -323,14 +333,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
 
-                m_log.DebugFormat("[CAPS][PROVISIONVOICE]: {0}", r);
+                m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: {0}", r);
 
                 return r;
             }
             catch (Exception e)
             {
-                m_log.ErrorFormat("[VivoxVoice][CAPS][PROVISIONVOICE]: {0}, retry later", e.Message);
-                m_log.DebugFormat("[VivoxVoice][CAPS][PROVISIONVOICE]: {0} failed", e.ToString());
+                m_log.ErrorFormat("[VivoxVoice][PROVISIONVOICE]: {0}, retry later", e.Message);
+                m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: {0} failed", e.ToString());
 
                 return "<llsd>undef</llsd>";
             }
@@ -339,6 +349,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// <summary>
         /// Callback for a client request for ParcelVoiceInfo
         /// </summary>
+        /// <param name="scene">current scene object of the client</param>
         /// <param name="request"></param>
         /// <param name="path"></param>
         /// <param name="param"></param>
@@ -401,11 +412,30 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
             catch (Exception e)
             {
-                m_log.ErrorFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0}, retry later", e.Message);
-                m_log.DebugFormat("[VivoxVoice][CAPS][PARCELVOICE]: {0} failed", e.ToString());
+                m_log.ErrorFormat("[VivoxVoice][PARCELVOICE]: {0}, retry later", e.Message);
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0} failed", e.ToString());
 
                 return "<llsd>undef</llsd>";
             }
+        }
+
+
+        /// <summary>
+        /// Callback for a client request for ParcelVoiceInfo
+        /// </summary>
+        /// <param name="scene">current scene object of the client</param>
+        /// <param name="request"></param>
+        /// <param name="path"></param>
+        /// <param name="param"></param>
+        /// <param name="agentID"></param>
+        /// <param name="caps"></param>
+        /// <returns></returns>
+        public string ChatSessionRequest(Scene scene, string request, string path, string param,
+                                         UUID agentID, Caps caps)
+        {
+            m_log.DebugFormat("[VivoxVoice][CHATSESSION]: request: {0}, path: {1}, param: {2}",
+                              request, path, param);
+            return "<llsd>true</llsd>";
         }
 
 
