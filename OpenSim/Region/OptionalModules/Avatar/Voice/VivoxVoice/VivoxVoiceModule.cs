@@ -64,6 +64,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static bool   m_pluginEnabled  = false;
         private static bool   m_adminConnected = false;
         private static string m_vivoxServer;
+        private static string m_vivoxVoiceAccountApi;
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
         private static string m_authToken = String.Empty;
@@ -102,6 +103,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                         m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                         m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+
+                        m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
 
                         if (String.IsNullOrEmpty(m_vivoxServer) ||
                             String.IsNullOrEmpty(m_vivoxAdminUser) ||
@@ -285,7 +288,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 vivox_password(agentname, password);
 
                 LLSDVoiceAccountResponse voiceAccountResponse =
-                    new LLSDVoiceAccountResponse(agentname, password);
+                    new LLSDVoiceAccountResponse(agentname, password, m_vivoxServer, m_vivoxVoiceAccountApi);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
 
