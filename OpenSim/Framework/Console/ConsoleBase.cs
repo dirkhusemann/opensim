@@ -126,7 +126,7 @@ namespace OpenSim.Framework.Console
                 if (!dict.ContainsKey(helpPart))
                     break;
                 
-                //System.Console.WriteLine("Found {0}", helpParts[0]);
+                //m_log.Debug("Found {0}", helpParts[0]);
                 
                 if (dict[helpPart] is Dictionary<string, Object>)
                     dict = (Dictionary<string, object>)dict[helpPart]; 
@@ -799,16 +799,25 @@ namespace OpenSim.Framework.Console
             }
         }
 
-        private void ContextHelp()
+        private bool ContextHelp()
         {
             string[] words = Parser.Parse(cmdline.ToString());
 
-            string[] opts = Commands.FindNextOption(words, cmdline.ToString().EndsWith(" "));
+            bool trailingSpace = cmdline.ToString().EndsWith(" ");
+
+            // Allow ? through while typing a URI
+            //
+            if (words.Length > 0 && words[words.Length-1].StartsWith("http") && !trailingSpace)
+                return false;
+
+            string[] opts = Commands.FindNextOption(words, trailingSpace);
 
             if (opts[0].StartsWith("Command help:"))
                 Output(opts[0]);
             else
                 Output(String.Format("Options: {0}", String.Join(" ", opts)));
+
+            return true;
         }
 
         public void Prompt()
@@ -923,8 +932,8 @@ namespace OpenSim.Framework.Console
 
                     if (c == '?' && isCommand)
                     {
-                        ContextHelp();
-                        continue;
+                        if (ContextHelp())
+                            continue;
                     }
 
                     cmdline.Insert(cp, c);

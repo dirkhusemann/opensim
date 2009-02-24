@@ -32,6 +32,7 @@ using System.Runtime.Remoting.Lifetime;
 using System.Text;
 using System.Threading;
 using Nini.Config;
+using log4net;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
 using OpenSim;
@@ -57,6 +58,7 @@ using LSL_List = OpenSim.Region.ScriptEngine.Shared.LSL_Types.list;
 using LSL_Rotation = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Quaternion;
 using LSL_String = OpenSim.Region.ScriptEngine.Shared.LSL_Types.LSLString;
 using LSL_Vector = OpenSim.Region.ScriptEngine.Shared.LSL_Types.Vector3;
+using System.Reflection;
 
 namespace OpenSim.Region.ScriptEngine.Shared.Api
 {
@@ -65,6 +67,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
     /// </summary>
     public class LSL_Api : MarshalByRefObject, ILSL_Api, IScriptApi
     {
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         protected IScriptEngine m_ScriptEngine;
         protected SceneObjectPart m_host;
         protected uint m_localID;
@@ -80,7 +83,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         private bool m_automaticLinkPermission=false;
         private IMessageTransferModule m_TransferModule = null;
 
-        //private static readonly log4net.ILog m_log = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        //private static readonly ILog m_log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
         public void Initialize(IScriptEngine ScriptEngine, SceneObjectPart host, uint localID, UUID itemID)
         {
@@ -1134,7 +1137,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Integer llGetStatus(int status)
         {
             m_host.AddScriptLPS(1);
-            // Console.WriteLine(m_host.ToString() + " status is " + m_host.GetEffectiveObjectFlags().ToString());
+            // m_log.Debug(m_host.ToString() + " status is " + m_host.GetEffectiveObjectFlags().ToString());
             switch (status)
             {
                 case ScriptBaseClass.STATUS_PHYSICS:
@@ -2705,8 +2708,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             msg.fromAgentID = new Guid(m_host.UUID.ToString()); // fromAgentID.Guid;
             msg.toAgentID = new Guid(user); // toAgentID.Guid;
             msg.imSessionID = new Guid(friendTransactionID.ToString()); // This is the item we're mucking with here
-//            Console.WriteLine("[Scripting IM]: From:" + msg.fromAgentID.ToString() + " To: " + msg.toAgentID.ToString() + " Session:" + msg.imSessionID.ToString() + " Message:" + message);
-//            Console.WriteLine("[Scripting IM]: Filling Session: " + msg.imSessionID.ToString());
+//            m_log.Debug("[Scripting IM]: From:" + msg.fromAgentID.ToString() + " To: " + msg.toAgentID.ToString() + " Session:" + msg.imSessionID.ToString() + " Message:" + message);
+//            m_log.Debug("[Scripting IM]: Filling Session: " + msg.imSessionID.ToString());
             msg.timestamp = (uint)Util.UnixTimeSinceEpoch();// timestamp;
             //if (client != null)
             //{
@@ -7881,7 +7884,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
             catch(Exception e)
             {
-                Console.WriteLine("[LSL_API]: llRequestSimulatorData" + e.ToString());
+                m_log.Error("[LSL_API]: llRequestSimulatorData" + e.ToString());
                 return UUID.Zero.ToString();
             }
         }
@@ -8688,9 +8691,17 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             Dictionary<string, string> httpHeaders = new Dictionary<string, string>();
 
-            httpHeaders["X-SecondLife-Shard"] = "OpenSim";
+            string shard = "OpenSim";
+            IConfigSource config = new IniConfigSource(Application.iniFilePath);
+            if (config.Configs["Network"] != null)
+            {
+                shard = config.Configs["Network"].GetString("user_server_url", shard);
+                shard = config.Configs["Network"].GetString("shard", shard);
+            }
+
+            httpHeaders["X-SecondLife-Shard"] = shard;
             httpHeaders["X-SecondLife-Object-Name"] = m_host.Name;
-            httpHeaders["X-SecondLife-Object-Key"] = m_itemID.ToString();
+            httpHeaders["X-SecondLife-Object-Key"] = m_host.UUID.ToString();
             httpHeaders["X-SecondLife-Region"] = string.Format("{0} ({1}, {2})", regionInfo.RegionName, regionInfo.RegionLocX, regionInfo.RegionLocY);
             httpHeaders["X-SecondLife-Local-Position"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000})", position.X, position.Y, position.Z);
             httpHeaders["X-SecondLife-Local-Velocity"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000})", velocity.X, velocity.Y, velocity.Z);
@@ -9059,7 +9070,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         System.Text.ASCIIEncoding enc =
                             new System.Text.ASCIIEncoding();
                         string data = enc.GetString(a.Data);
-                        //Console.WriteLine(data);
+                        //m_log.Debug(data);
                         NotecardCache.Cache(id, data);
                         AsyncCommands.
                                 DataserverPlugin.DataserverReply(id.ToString(),
@@ -9105,7 +9116,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         System.Text.ASCIIEncoding enc =
                             new System.Text.ASCIIEncoding();
                         string data = enc.GetString(a.Data);
-                        //Console.WriteLine(data);
+                        //m_log.Debug(data);
                         NotecardCache.Cache(id, data);
                         AsyncCommands.
                                 DataserverPlugin.DataserverReply(id.ToString(),

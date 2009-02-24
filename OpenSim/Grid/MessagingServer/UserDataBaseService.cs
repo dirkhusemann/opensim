@@ -31,13 +31,13 @@ using OpenSim.Framework.Communications;
 
 namespace OpenSim.Grid.MessagingServer
 {
-    class UserManager : UserManagerBase
+    public class UserDataBaseService : UserManagerBase
     {
         /// <summary>
         /// Constructor.
         /// </summary>
         /// Passing null to parent because we never use any function that requires an interservice inventory call.
-        public UserManager()
+        public UserDataBaseService()
             : base(null)
         {
         }

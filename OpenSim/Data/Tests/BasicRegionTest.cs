@@ -36,11 +36,14 @@ using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
+using log4net;
+using System.Reflection;
 
 namespace OpenSim.Data.Tests
 {
     public class BasicRegionTest
     {
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         public IRegionDataStore db;
         public UUID zero = UUID.Zero;
         public UUID region1;
@@ -139,7 +142,7 @@ namespace OpenSim.Data.Tests
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception in storing object {0} {1}", sog.ToString(), e);
+                m_log.Error(e.ToString());
                 Assert.Fail();
             }
                     
@@ -149,7 +152,7 @@ namespace OpenSim.Data.Tests
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception in storing object {0} {1}", sog2.ToString(), e);
+                m_log.Error(e.ToString());
                 Assert.Fail();
             }
 
@@ -649,8 +652,9 @@ namespace OpenSim.Data.Tests
             Assert.That(t.GroupID,Is.EqualTo(sog.RootPart.GroupID));
             // Where is this group permissions??
             // Assert.That(t.GroupPermissions,Is.EqualTo());
-            Assert.That(t.InvType,Is.EqualTo(invtype));
-            Assert.That(t.ItemID,Is.EqualTo(id));
+            Assert.That(t.Type,Is.EqualTo(assettype));
+            Assert.That(t.InvType, Is.EqualTo(invtype));
+            Assert.That(t.ItemID, Is.EqualTo(id));
             Assert.That(t.LastOwnerID, Is.EqualTo(sog.RootPart.LastOwnerID));
             Assert.That(t.NextPermissions, Is.EqualTo(nextperm));
             // Ownership changes when you drop an object into an object

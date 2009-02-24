@@ -38,6 +38,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Communications.Capabilities;
+using OpenSim.Framework.Servers;
 
 namespace OpenSim.Grid.UserServer
 {
@@ -61,6 +62,8 @@ namespace OpenSim.Grid.UserServer
         public UserConfig m_config;
         private readonly IRegionProfileService m_regionProfileService;
 
+        protected BaseHttpServer m_httpServer;
+
         public UserLoginService(
             UserManagerBase userManager, IInterServiceInventoryServices inventoryService,
             LibraryRootFolder libraryRootFolder,
@@ -70,6 +73,29 @@ namespace OpenSim.Grid.UserServer
             m_config = config;
             m_inventoryService = inventoryService;
             m_regionProfileService = regionProfileService;
+        }
+
+        public void RegisterHandlers(BaseHttpServer httpServer, bool registerLLSDHandler, bool registerOpenIDHandlers)
+        {
+            m_httpServer = httpServer;
+
+            m_httpServer.AddXmlRPCHandler("login_to_simulator", XmlRpcLoginMethod);
+            m_httpServer.AddHTTPHandler("login", ProcessHTMLLogin);
+            m_httpServer.AddXmlRPCHandler("set_login_params", XmlRPCSetLoginParams);
+
+            if (registerLLSDHandler)
+            {
+                m_httpServer.SetDefaultLLSDHandler(LLSDLoginMethod);
+            }
+
+            if (registerOpenIDHandlers)
+            {
+                // Handler for OpenID avatar identity pages
+                m_httpServer.AddStreamHandler(new OpenIdStreamHandler("GET", "/users/", this));
+                // Handlers for the OpenID endpoint server
+                m_httpServer.AddStreamHandler(new OpenIdStreamHandler("POST", "/openid/server/", this));
+                m_httpServer.AddStreamHandler(new OpenIdStreamHandler("GET", "/openid/server/", this));
+            }
         }
         
         public  void  setloginlevel(int level)
@@ -401,10 +427,13 @@ namespace OpenSim.Grid.UserServer
                 if (appearance != null)
                 {
                     loginParams["appearance"] = appearance.ToHashTable();
-                    m_log.DebugFormat("[LOGIN]: Found appearance for {0}, {1}", user.FirstName, user.SurName);
+                    m_log.DebugFormat("[LOGIN]: Found appearance for {0} {1}", user.FirstName, user.SurName);
                 }
                 else
-                    m_log.DebugFormat("[LOGIN]: Appearance not for {0}, {1}", user.FirstName, user.SurName);
+                {
+                    m_log.DebugFormat("[LOGIN]: Appearance not for {0} {1}. Creating default.", user.FirstName, user.SurName);
+                    appearance = new AvatarAppearance(user.ID);
+                }
 
                 ArrayList SendParams = new ArrayList();
                 SendParams.Add(loginParams);

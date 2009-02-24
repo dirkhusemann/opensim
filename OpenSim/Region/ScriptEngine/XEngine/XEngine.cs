@@ -125,11 +125,6 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             get { return m_Scene; }
         }
 
-        public ILog Log
-        {
-            get { return m_log; }
-        }
-
         public static List<XEngine> ScriptEngines
         {
             get { return m_ScriptEngines; }
@@ -483,7 +478,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             SceneObjectPart part = m_Scene.GetSceneObjectPart(localID);
             if (part == null)
             {
-                Log.Error("[Script] SceneObjectPart unavailable. Script NOT started.");
+                m_log.Error("[Script] SceneObjectPart unavailable. Script NOT started.");
                 m_ScriptErrorMessage += "SceneObjectPart unavailable. Script NOT started.\n";
                 m_ScriptFailCount++;
                 return false;
@@ -519,6 +514,38 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                         m_AddingAssemblies[assembly] = 1;
                     } else {
                         m_AddingAssemblies[assembly]++;
+                    }
+                }
+
+                string[] warnings = m_Compiler.GetWarnings();
+
+                if (warnings != null && warnings.Length != 0)
+                {
+                    if (presence != null && (!postOnRez))
+                        presence.ControllingClient.SendAgentAlertMessage("Script saved with warnings, check debug window!", false);
+
+                    foreach (string warning in warnings)
+                    {
+                        try
+                        {
+                            // DISPLAY WARNING INWORLD
+                            string text = "Warning:\n" + warning;
+                            if (text.Length > 1000)
+                                text = text.Substring(0, 1000);
+                            World.SimChat(Utils.StringToBytes(text),
+                                          ChatTypeEnum.DebugChannel, 2147483647,
+                                          part.AbsolutePosition,
+                                          part.Name, part.UUID, false);
+                        }
+                        catch (Exception e2) // LEGIT: User Scripting
+                        {
+                            m_log.Error("[XEngine]: " +
+                                    "Error displaying warning in-world: " +
+                                    e2.ToString());
+                            m_log.Error("[XEngine]: " +
+                                    "Warning:\r\n" +
+                                    warning);
+                        }
                     }
                 }
             }
