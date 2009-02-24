@@ -66,6 +66,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxVoiceAccountApi;
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
+        private static bool   m_vivoxChannelEncrypt;
         private static string m_authToken = String.Empty;
         
         private IConfig m_config;
@@ -99,6 +100,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                         m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                         m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+                        m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
 
                         m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
 
@@ -113,8 +115,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                         m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
 
+                        // Get admin rights and cleanup any residual channel definition
+
                         DoAdminLogin();
-    
+
                         m_pluginEnabled = true;
                         m_WOF = false;
 
@@ -126,6 +130,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         return;
                     }
                 }
+
+                string chan_id;
+			    XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), null);
+                if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                {
+			        VivoxDeleteChannel(null, chan_id);
+                }
+
             }
 
             if (m_pluginEnabled) 
@@ -227,9 +239,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 do
                 {
                     resp = VivoxGetAccountInfo(agentname);
+
                     if (XmlFind(resp, "response.level0.status", out code))
                     {
-                        if (code == "ERR") 
+                        if (code != "OK") 
                         {
                             if (XmlFind(resp, "response.level0.body.code", out code)) 
                             {
@@ -256,7 +269,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                                     case "403" : // Account does not exist
                                         resp = VivoxCreateAccount(agentname,password);
-                                        if (XmlFind(resp, "response.level0.body.code", out code))
+                                        // Note: This REALLY MUST BE status. Create Account does not return code.
+                                        if (XmlFind(resp, "response.level0.status", out code))
                                         {
                                             switch (code)
                                             {
@@ -474,6 +488,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// 
         /// In this case the call handles parent and description as optional values.
         /// </summary>
+
         private XmlElement VivoxCreateChannel(string parent, string channelId, string description)
         {
             string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "create", channelId, m_authToken);
@@ -484,6 +499,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (description != null && description != String.Empty)
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
+            }
+            if(m_vivoxChannelEncrypt)
+            {
+                requrl = String.Format("{0}&chan_encrypt_audio=1", requrl);
             }
             return VivoxCall(requrl, true);
         }
@@ -499,6 +518,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// are required in a later phase.
         /// In this case the call handles parent and description as optional values.
         /// </summary>
+
         private XmlElement VivoxGetChannel(string parent, string channelid, string description)
         {
             string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "get", channelid, m_authToken);
@@ -509,6 +529,30 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (description != null && description != String.Empty)
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
+            }
+            return VivoxCall(requrl, true);
+        }
+
+        /// <summary>
+        /// Delete a channel.
+        /// Once again, there a multitude of options possible. In the simplest case 
+        /// we specify only the name and get a non-persistent cannel in return. Non
+        /// persistent means that the channel gets deleted if no-one uses it for
+        /// 5 hours. To accomodate future requirements, it may be a good idea to
+        /// initially create channels under the umbrella of a parent ID based upon
+        /// the region name. That way we have a context for side channels, if those
+        /// are required in a later phase.
+        /// In this case the call handles parent and description as optional values.
+        /// </summary>
+
+        private static readonly string m_vivoxChannelDel = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_id={2}&auth_token={3}";
+
+        private XmlElement VivoxDeleteChannel(string parent, string channelid)
+        {
+            string requrl = String.Format(m_vivoxChannelDel, m_vivoxServer, "delete", channelid, m_authToken);
+            if (parent != null && parent != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
             }
             return VivoxCall(requrl, true);
         }
