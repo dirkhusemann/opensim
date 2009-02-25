@@ -40,7 +40,7 @@ using OpenSim.Framework.Communications;
 using OpenSim.Framework.Servers;
 using OpenSim.Grid.Framework;
 
-namespace OpenSim.Grid.GridServer
+namespace OpenSim.Grid.GridServer.Modules
 {
     public class GridXmlRpcModule
     {

@@ -40,7 +40,7 @@ using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Communications.Capabilities;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.UserServer
+namespace OpenSim.Grid.UserServer.Modules
 {
     public delegate void UserLoggedInAtLocation(UUID agentID, UUID sessionID, UUID RegionID,
                                                 ulong regionhandle, float positionX, float positionY, float positionZ,

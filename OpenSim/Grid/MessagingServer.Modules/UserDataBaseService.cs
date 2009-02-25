@@ -29,7 +29,7 @@ using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.MessagingServer.Modules
 {
     public class UserDataBaseService : UserManagerBase
     {

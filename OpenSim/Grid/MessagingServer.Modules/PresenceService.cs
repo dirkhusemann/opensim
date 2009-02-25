@@ -25,9 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.MessagingServer.Modules
 {
-    public class WorkUnitBase
+    class PresenceService
     {
     }
 }

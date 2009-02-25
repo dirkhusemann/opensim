@@ -36,7 +36,7 @@ using DotNetOpenId.Provider;
 using OpenSim.Framework;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.UserServer
+namespace OpenSim.Grid.UserServer.Modules
 {
     /// <summary>
     /// Temporary, in-memory store for OpenID associations

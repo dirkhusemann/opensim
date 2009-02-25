@@ -35,6 +35,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
 using OpenSim.Grid.Framework;
+using OpenSim.Grid.GridServer.Modules;
 
 namespace OpenSim.Grid.GridServer
 {
@@ -216,7 +217,7 @@ namespace OpenSim.Grid.GridServer
         }
 
         #region IUGAIMCore
-        private readonly Dictionary<Type, object> m_moduleInterfaces = new Dictionary<Type, object>();
+        protected Dictionary<Type, object> m_moduleInterfaces = new Dictionary<Type, object>();
 
         /// <summary>
         /// Register an Module interface.

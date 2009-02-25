@@ -36,7 +36,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.UserServer
+namespace OpenSim.Grid.UserServer.Modules
 {
     public delegate void logOffUser(UUID AgentID);
 
@@ -247,6 +247,9 @@ namespace OpenSim.Grid.UserServer
             if (requestData.Contains("avatar_name"))
             {
                 string query = (string) requestData["avatar_name"];
+
+                if (null == query)
+                    return CreateUnknownUserErrorResponse();
 
                 // Regex objAlphaNumericPattern = new Regex("[^a-zA-Z0-9]");
 

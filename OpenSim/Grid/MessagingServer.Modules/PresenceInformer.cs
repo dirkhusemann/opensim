@@ -32,7 +32,7 @@ using log4net;
 using Nwc.XmlRpc;
 using OpenSim.Data;
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.MessagingServer.Modules
 {
     public delegate RegionProfileData GetRegionData(ulong region_handle);
     public delegate void Done(PresenceInformer obj);

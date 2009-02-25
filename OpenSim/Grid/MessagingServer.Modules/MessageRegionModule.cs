@@ -40,7 +40,7 @@ using OpenSim.Framework;
 using OpenSim.Grid.Framework;
 using Timer = System.Timers.Timer;
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.MessagingServer.Modules
 {
     public class MessageRegionModule : IMessageRegionService
     {
