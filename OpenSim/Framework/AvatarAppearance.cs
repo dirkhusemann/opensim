@@ -241,6 +241,11 @@ namespace OpenSim.Framework
         }
 
         public AvatarAppearance()
+            : this(UUID.Zero)
+        {
+        }
+
+        public AvatarAppearance(UUID owner)
         {
             m_wearables = new AvatarWearable[MAX_WEARABLES];
             for (int i = 0; i < MAX_WEARABLES; i++)
@@ -249,7 +254,7 @@ namespace OpenSim.Framework
                 m_wearables[i] = new AvatarWearable();
             }
             m_serial = 0;
-            m_owner = UUID.Zero;
+            m_owner = owner;
             m_visualparams = new byte[VISUALPARAM_COUNT];
             SetDefaultWearables();
             m_texture = GetDefaultTexture();
@@ -286,7 +291,18 @@ namespace OpenSim.Framework
                            + 0.07f * (float)m_visualparams[78] / 255.0f    // Shoe platform height
                            + 0.3836f * (float)m_visualparams[125] / 255.0f    // Leg length
                            - m_avatarHeight / 2) * 0.3f - 0.04f;
-            //System.Console.WriteLine("[APPEARANCE]: Height {0} Hip offset {1}", m_avatarHeight, m_hipOffset);
+            //m_log.Debug(">>>>>>> [APPEARANCE]: Height {0} Hip offset {1}", m_avatarHeight, m_hipOffset);
+            //m_log.Debug("------------- Set Appearance Texture ---------------");
+            //Primitive.TextureEntryFace[] faces = Texture.FaceTextures;
+            //foreach (Primitive.TextureEntryFace face in faces)
+            //{
+            //    if (face != null)
+            //        m_log.Debug("  ++ " + face.TextureID);
+            //    else
+            //        m_log.Debug("  ++ NULL ");
+            //}
+            //m_log.Debug("----------------------------");
+
         }
 
         public virtual void SetWearable(int wearableId, AvatarWearable wearable)
@@ -334,7 +350,7 @@ namespace OpenSim.Framework
 
             m_avatarHeight = (float)info.GetValue("m_avatarHeight", typeof(float));
 
-            //System.Console.WriteLine("AvatarAppearance Deserialize END");
+            //m_log.Debug("AvatarAppearance Deserialize END");
         }
 
         // this is used for OGS1

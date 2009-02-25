@@ -218,6 +218,43 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
                         localID, itemID, "on_rez", new DetectParams[0],
                         new object[] { new LSL_Types.LSLInteger(startParam) });
                 }
+
+                string[] warnings = LSLCompiler.GetWarnings();
+
+                if (warnings != null && warnings.Length != 0)
+                {
+                    if (presence != null && (!postOnRez))
+                        presence.ControllingClient.SendAgentAlertMessage(
+                                "Script saved with warnings, check debug window!",
+                                false);
+
+                    foreach (string warning in warnings)
+                    {
+                        try
+                        {
+                            // DISPLAY WARNING INWORLD
+                            string text = "Warning:\n" + warning;
+                            if (text.Length > 1100)
+                                text = text.Substring(0, 1099);
+
+                            World.SimChat(Utils.StringToBytes(text),
+                                    ChatTypeEnum.DebugChannel, 2147483647,
+                                    m_host.AbsolutePosition, m_host.Name, m_host.UUID,
+                                    false);
+                        }
+                        catch (Exception e2) // LEGIT: User Scripting
+                        {
+                            m_log.Error("[" +
+                                    m_scriptEngine.ScriptEngineName +
+                                    "]: Error displaying warning in-world: " +
+                                    e2.ToString());
+                            m_log.Error("[" +
+                                    m_scriptEngine.ScriptEngineName + "]: " +
+                                    "Warning:\r\n" +
+                                    warning);
+                        }
+                    }
+                }
             }
             catch (Exception e) // LEGIT: User Scripting
             {
@@ -240,14 +277,14 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
                 }
                 catch (Exception e2) // LEGIT: User Scripting
                 {
-                    m_scriptEngine.Log.Error("[" +
-                            m_scriptEngine.ScriptEngineName +
-                            "]: Error displaying error in-world: " +
-                            e2.ToString());
-                    m_scriptEngine.Log.Error("[" +
-                            m_scriptEngine.ScriptEngineName + "]: " +
-                            "Errormessage: Error compiling script:\r\n" + 
-                            e2.Message.ToString());
+                    m_log.Error("[" +
+                                m_scriptEngine.ScriptEngineName +
+                                "]: Error displaying error in-world: " +
+                                e2.ToString());
+                    m_log.Error("[" +
+                                m_scriptEngine.ScriptEngineName + "]: " +
+                                "Errormessage: Error compiling script:\r\n" + 
+                                e2.Message.ToString());
                 }
             }
         }
@@ -258,8 +295,8 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
             if (id == null)
                 return;
 
-            m_scriptEngine.Log.DebugFormat("[{0}]: Unloading script",
-                    m_scriptEngine.ScriptEngineName);
+            m_log.DebugFormat("[{0}]: Unloading script",
+                              m_scriptEngine.ScriptEngineName);
 
             // Stop long command on script
             AsyncCommandManager.RemoveScript(m_scriptEngine, localID, itemID);
@@ -280,11 +317,11 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
             }
             catch (Exception e) // LEGIT: User Scripting
             {
-                m_scriptEngine.Log.Error("[" +
-                        m_scriptEngine.ScriptEngineName +
-                        "]: Exception stopping script localID: " +
-                        localID + " LLUID: " + itemID.ToString() +
-                        ": " + e.ToString());
+                m_log.Error("[" +
+                            m_scriptEngine.ScriptEngineName +
+                            "]: Exception stopping script localID: " +
+                            localID + " LLUID: " + itemID.ToString() +
+                            ": " + e.ToString());
             }
         }
 
@@ -379,10 +416,10 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
                     }
                     else if (item.Action == LUType.Load)
                     {
-                        m_scriptEngine.Log.DebugFormat("[{0}]: Loading script",
-                                m_scriptEngine.ScriptEngineName);
+                        m_log.DebugFormat("[{0}]: Loading script",
+                                          m_scriptEngine.ScriptEngineName);
                         _StartScript(item.localID, item.itemID, item.script,
-                                item.startParam, item.postOnRez);
+                                     item.startParam, item.postOnRez);
                     }
                 }
             }
@@ -414,13 +451,14 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
             {
                 if ((LUQueue.Count >= LoadUnloadMaxQueueSize) && m_started)
                 {
-                    m_scriptEngine.Log.Error("[" +
-                            m_scriptEngine.ScriptEngineName +
-                            "]: ERROR: Load/unload queue item count is at " +
-                            LUQueue.Count +
-                            ". Config variable \"LoadUnloadMaxQueueSize\" "+
-                            "is set to " + LoadUnloadMaxQueueSize +
-                            ", so ignoring new script.");
+                    m_log.Error("[" +
+                                m_scriptEngine.ScriptEngineName +
+                                "]: ERROR: Load/unload queue item count is at " +
+                                LUQueue.Count +
+                                ". Config variable \"LoadUnloadMaxQueueSize\" "+
+                                "is set to " + LoadUnloadMaxQueueSize +
+                                ", so ignoring new script.");
+
                     return;
                 }
 

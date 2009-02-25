@@ -10,11 +10,11 @@
     ; Http proxy support for llHTTPRequest and dynamic texture loading
     ; Set HttpProxy to the URL for your proxy server if you would like
     ; to proxy llHTTPRequests through a firewall
-    HttpProxy = "http://proxy.com"
+    ; HttpProxy = "http://proxy.com"
     ; Set HttpProxyExceptions to a list of regular expressions for 
     ; URLs that you don't want going through the proxy such as servers
     ; inside your firewall, separate patterns with a ';'
-    HttpProxyExceptions = ".mydomain.com;localhost"
+    ; HttpProxyExceptions = ".mydomain.com;localhost"
 
     ; Set this to true if you are connecting your OpenSimulator regions to a grid
     ; Set this to false if you are running OpenSimulator in standalone mode
@@ -322,6 +322,10 @@ InterregionComms = "RESTComms"
     ; user_send_key and user_recv_key, too
     messaging_server_url = "http://127.0.0.1:8006"
 
+    ; What is reported as the "X-Secondlife-Shard"
+    ; Defaults to the user server url if not set
+    ; The old default is "OpenSim", set here fro compatibility
+    shard = "OpenSim"
 
 [ClientStack.LindenUDP]
     ; This is the multiplier applied to all client throttles for outgoing UDP network data

@@ -526,7 +526,7 @@ namespace OpenSim.Region.Framework.Scenes
                         }
                         else
                         {
-                            Console.WriteLine("found unexpected element: " + reader.Name);
+                            m_log.Warn("found unexpected element: " + reader.Name);
                             reader.Read();
                         }
                         break;
@@ -1733,12 +1733,12 @@ namespace OpenSim.Region.Framework.Scenes
                     //return;
                 //}
 
-                if ((Util.GetDistanceTo(lastPhysGroupPos, AbsolutePosition) > 0.02) && UsePhysics)
+                if (Util.DistanceLessThan(lastPhysGroupPos, AbsolutePosition, 0.02) && UsePhysics)
                 {
                     m_rootPart.UpdateFlag = 1;
                     lastPhysGroupPos = AbsolutePosition;
                 }
-                    //foreach (SceneObjectPart part in m_parts.Values)
+                //foreach (SceneObjectPart part in m_parts.Values)
                     //{
                         //if (part.UpdateFlag == 0) part.UpdateFlag = 1;
                     //}

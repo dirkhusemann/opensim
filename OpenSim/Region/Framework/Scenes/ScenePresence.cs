@@ -71,7 +71,7 @@ namespace OpenSim.Region.Framework.Scenes
     {
 //        ~ScenePresence()
 //        {
-//            System.Console.WriteLine("[ScenePresence] Destructor called");
+//            m_log.Debug("[ScenePresence] Destructor called");
 //        }
 
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
@@ -409,7 +409,7 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("[SCENEPRESENCE]: ABSOLUTE POSITION " + e.Message);
+                        m_log.Error("[SCENEPRESENCE]: ABSOLUTE POSITION " + e.Message);
                     }
                 }
 
@@ -449,7 +449,7 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("[SCENEPRESENCE]: VELOCITY " + e.Message);
+                        m_log.Error("[SCENEPRESENCE]: VELOCITY " + e.Message);
                     }
                 }
 
@@ -525,20 +525,20 @@ namespace OpenSim.Region.Framework.Scenes
             DropOldNeighbours(old);
             Scene.CapsModule.SetChildrenSeed(UUID, seeds);
             KnownRegions = seeds;
-            //Console.WriteLine(" ++++++++++AFTER+++++++++++++ ");
+            //m_log.Debug(" ++++++++++AFTER+++++++++++++ ");
             //DumpKnownRegions();
         }
 
         public void DumpKnownRegions()
         {
-            Console.WriteLine("================ KnownRegions {0} ================", Scene.RegionInfo.RegionName);
+            m_log.Info("================ KnownRegions "+Scene.RegionInfo.RegionName+" ================");
             foreach (KeyValuePair<ulong, string> kvp in KnownRegions)
             {
                 uint x, y;
                 Utils.LongToUInts(kvp.Key, out x, out y);
                 x = x / Constants.RegionSize;
                 y = y / Constants.RegionSize;
-                Console.WriteLine(" >> {0}, {1}: {2}", x, y, kvp.Value);
+                m_log.Info(" >> "+x+", "+y+": "+kvp.Value);
             }
         }
 
@@ -635,6 +635,19 @@ namespace OpenSim.Region.Framework.Scenes
             Dir_Vectors[4] = new Vector3(0, 0, 1); //UP
             Dir_Vectors[5] = new Vector3(0, 0, -1); //DOWN
             Dir_Vectors[5] = new Vector3(0, 0, -0.5f); //DOWN_Nudge
+        }
+
+        private Vector3[] GetWalkDirectionVectors()
+        {
+            Vector3[] vector = new Vector3[6];
+            vector[0] = new Vector3(m_CameraUpAxis.Z, 0, -m_CameraAtAxis.Z); //FORWARD
+            vector[1] = new Vector3(-m_CameraUpAxis.Z, 0, m_CameraAtAxis.Z); //BACK
+            vector[2] = new Vector3(0, 1, 0); //LEFT
+            vector[3] = new Vector3(0, -1, 0); //RIGHT
+            vector[4] = new Vector3(m_CameraAtAxis.Z, 0, m_CameraUpAxis.Z); //UP
+            vector[5] = new Vector3(-m_CameraAtAxis.Z, 0, -m_CameraUpAxis.Z); //DOWN
+            vector[5] = new Vector3(-m_CameraAtAxis.Z, 0, -m_CameraUpAxis.Z); //DOWN_Nudge
+            return vector;
         }
 
         #endregion
@@ -854,7 +867,7 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 m_log.ErrorFormat("[SCENE PRESENCE]: null appearance in MakeRoot in {0}", Scene.RegionInfo.RegionName);
                 // emergency; this really shouldn't happen
-                m_appearance = new AvatarAppearance();
+                m_appearance = new AvatarAppearance(UUID);
             }
             
             // Don't send an animation pack here, since on a region crossing this will sometimes cause a flying 
@@ -991,7 +1004,7 @@ namespace OpenSim.Region.Framework.Scenes
                 if (m_knownChildRegions.ContainsKey(regionHandle))
                 {
                     m_knownChildRegions.Remove(regionHandle);
-                   //Console.WriteLine(" !!! removing known region {0} in {1}. Count = {2}", regionHandle, Scene.RegionInfo.RegionName, m_knownChildRegions.Count);
+                   //m_log.Debug(" !!! removing known region {0} in {1}. Count = {2}", regionHandle, Scene.RegionInfo.RegionName, m_knownChildRegions.Count);
                 }
             }
         }
@@ -1066,7 +1079,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             //if (m_isChildAgent)
             //{
-            //    // Console.WriteLine("DEBUG: HandleAgentUpdate: child agent");
+            //    // m_log.Debug("DEBUG: HandleAgentUpdate: child agent");
             //    return;
             //}
 
@@ -1192,6 +1205,11 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     bool bAllowUpdateMoveToPosition = false;
                     bool bResetMoveToPosition = false;
+
+                    Vector3[] dirVectors;
+                    if (m_physicsActor.Flying) dirVectors = Dir_Vectors;
+                    else dirVectors = GetWalkDirectionVectors();
+
                     foreach (Dir_ControlFlags DCF in Enum.GetValues(typeof (Dir_ControlFlags)))
                     {
                         if ((flags & (uint) DCF) != 0)
@@ -1200,7 +1218,7 @@ namespace OpenSim.Region.Framework.Scenes
                             DCFlagKeyPressed = true;
                             try
                             {
-                                agent_control_v3 += Dir_Vectors[i];
+                                agent_control_v3 += dirVectors[i];
                             }
                             catch (IndexOutOfRangeException)
                             {
@@ -1406,7 +1424,7 @@ namespace OpenSim.Region.Framework.Scenes
             catch (Exception ex)
             {
                 //Why did I get this error?
-                Console.WriteLine("[SCENEPRESENCE]: DoMoveToPosition" + ex.ToString());
+               m_log.Error("[SCENEPRESENCE]: DoMoveToPosition" + ex.ToString());
             }
         }
 
@@ -1481,6 +1499,7 @@ namespace OpenSim.Region.Framework.Scenes
                         part.SetAvatarOnSitTarget(UUID.Zero);
 
                     m_parentPosition = part.GetWorldPosition();
+                    ControllingClient.SendClearFollowCamProperties(part.ParentUUID);
                 }
 
                 if (m_physicsActor == null)
@@ -1923,7 +1942,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             if (m_isChildAgent)
             {
-                Console.WriteLine("DEBUG: AddNewMovement: child agent");
+                m_log.Debug("DEBUG: AddNewMovement: child agent");
                 return;
             }
 
@@ -2029,17 +2048,22 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="remoteClient"></param>
         public void SendTerseUpdateToClient(IClientAPI remoteClient)
         {
-            m_perfMonMS = System.Environment.TickCount;
+            // If the client is inactive, it's getting its updates from another
+            // server.
+            if (remoteClient.IsActive)
+            {
+                m_perfMonMS = System.Environment.TickCount;
 
-            Vector3 pos = m_pos;
-            Vector3 vel = Velocity;
-            Quaternion rot = m_bodyRot;
-            pos.Z -= m_appearance.HipOffset;
-            remoteClient.SendAvatarTerseUpdate(m_regionHandle, (ushort)(m_scene.TimeDilation * (float)ushort.MaxValue), LocalId, new Vector3(pos.X, pos.Y, pos.Z),
-                                               new Vector3(vel.X, vel.Y, vel.Z), rot);
+                Vector3 pos = m_pos;
+                Vector3 vel = Velocity;
+                Quaternion rot = m_bodyRot;
+                pos.Z -= m_appearance.HipOffset;
+                remoteClient.SendAvatarTerseUpdate(m_regionHandle, (ushort)(m_scene.TimeDilation * (float)ushort.MaxValue), LocalId, new Vector3(pos.X, pos.Y, pos.Z),
+                                                   new Vector3(vel.X, vel.Y, vel.Z), rot);
 
-            m_scene.AddAgentTime(System.Environment.TickCount - m_perfMonMS);
-            m_scene.AddAgentUpdates(1);
+                m_scene.AddAgentTime(System.Environment.TickCount - m_perfMonMS);
+                m_scene.AddAgentUpdates(1);
+            }
         }
 
         /// <summary>
@@ -2507,8 +2531,8 @@ namespace OpenSim.Region.Framework.Scenes
                         x = x / Constants.RegionSize;
                         y = y / Constants.RegionSize;
 
-                        //Console.WriteLine("---> x: " + x + "; newx:" + newRegionX + "; Abs:" + (int)Math.Abs((int)(x - newRegionX)));
-                        //Console.WriteLine("---> y: " + y + "; newy:" + newRegionY + "; Abs:" + (int)Math.Abs((int)(y - newRegionY)));
+                        //m_log.Debug("---> x: " + x + "; newx:" + newRegionX + "; Abs:" + (int)Math.Abs((int)(x - newRegionX)));
+                        //m_log.Debug("---> y: " + y + "; newy:" + newRegionY + "; Abs:" + (int)Math.Abs((int)(y - newRegionY)));
                         if (Util.IsOutsideView(x, newRegionX, y, newRegionY))
                         {
                             byebyeRegions.Add(handle);
@@ -2561,7 +2585,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void ChildAgentDataUpdate(AgentData cAgentData)
         {
-            //Console.WriteLine("   >>> ChildAgentDataUpdate <<< " + Scene.RegionInfo.RegionName);
+            //m_log.Debug("   >>> ChildAgentDataUpdate <<< " + Scene.RegionInfo.RegionName);
             if (!IsChildAgent)
                 return;
 
@@ -2577,7 +2601,7 @@ namespace OpenSim.Region.Framework.Scenes
             if (!IsChildAgent)
                 return;
 
-            //Console.WriteLine("   >>> ChildAgentPositionUpdate <<< " + rRegionX + "-" + rRegionY);
+            //m_log.Debug("   >>> ChildAgentPositionUpdate <<< " + rRegionX + "-" + rRegionY);
             int shiftx = ((int)rRegionX - (int)tRegionX) * (int)Constants.RegionSize;
             int shifty = ((int)rRegionY - (int)tRegionY) * (int)Constants.RegionSize;
 
@@ -2646,20 +2670,31 @@ namespace OpenSim.Region.Framework.Scenes
 
             try
             {
+                // We might not pass the Wearables in all cases...
+                // They're only needed so that persistent changes to the appearance
+                // are preserved in the new region where the user is moving to.
+                // But in Hypergrid we might not let this happen.
                 int i = 0;
-                UUID[] textures = new UUID[m_appearance.Wearables.Length * 2];
+                UUID[] wears = new UUID[m_appearance.Wearables.Length * 2];
                 foreach (AvatarWearable aw in m_appearance.Wearables)
                 {
                     if (aw != null)
                     {
-                        textures[i++] = aw.ItemID;
-                        textures[i++] = aw.AssetID;
+                        wears[i++] = aw.ItemID;
+                        wears[i++] = aw.AssetID;
                     }
                     else
-                        m_log.DebugFormat("[SCENE PRESENCE]: Null wearable in CopyTo");
+                    {
+                        wears[i++] = UUID.Zero;
+                        wears[i++] = UUID.Zero;                        
+                    }
                 }
-                cAgent.AgentTextures = textures;
+                cAgent.Wearables = wears;
+
                 cAgent.VisualParams = m_appearance.VisualParams;
+
+                if (m_appearance.Texture != null)
+                    cAgent.AgentTextures = m_appearance.Texture.ToBytes();
             }
             catch (Exception e)
             {
@@ -2707,17 +2742,21 @@ namespace OpenSim.Region.Framework.Scenes
             uint i = 0;
             try
             {
-                AvatarWearable[] wearables = new AvatarWearable[cAgent.AgentTextures.Length / 2];
-                Primitive.TextureEntry te = new Primitive.TextureEntry(UUID.Random());
-                for (uint n = 0; n < cAgent.AgentTextures.Length; n += 2)
+                AvatarWearable[] wears = new AvatarWearable[cAgent.Wearables.Length / 2];
+                for (uint n = 0; n < cAgent.Wearables.Length; n += 2)
                 {
-                    UUID itemId = cAgent.AgentTextures[n];
-                    UUID assetId = cAgent.AgentTextures[n + 1];
-                    wearables[i] = new AvatarWearable(itemId, assetId);
-                    te.CreateFace(i++).TextureID = assetId;
+                    UUID itemId = cAgent.Wearables[n];
+                    UUID assetId = cAgent.Wearables[n + 1];
+                    wears[i++] = new AvatarWearable(itemId, assetId);
                 }
-                m_appearance.Wearables = wearables;
-                m_appearance.SetAppearance(te.ToBytes(), new List<byte>(cAgent.VisualParams));
+                m_appearance.Wearables = wears;
+
+                byte[] te = null; 
+                if (cAgent.AgentTextures != null)
+                    te = cAgent.AgentTextures;
+                else
+                    te = AvatarAppearance.GetDefaultTexture().ToBytes(); 
+                m_appearance.SetAppearance(te, new List<byte>(cAgent.VisualParams));
             }
             catch (Exception e)
             {
@@ -2812,7 +2851,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             protected ScenePartUpdate(SerializationInfo info, StreamingContext context)
             {
-                //System.Console.WriteLine("ScenePartUpdate Deserialize BGN");
+                //m_log.Debug("ScenePartUpdate Deserialize BGN");
 
                 if (info == null)
                 {
@@ -2823,7 +2862,7 @@ namespace OpenSim.Region.Framework.Scenes
                 LastFullUpdateTime = (uint)info.GetValue("LastFullUpdateTime", typeof(uint));
                 LastTerseUpdateTime = (uint)info.GetValue("LastTerseUpdateTime", typeof(uint));
 
-                //System.Console.WriteLine("ScenePartUpdate Deserialize END");
+                //m_log.Debug("ScenePartUpdate Deserialize END");
             }
 
             [SecurityPermission(SecurityAction.LinkDemand,
@@ -3080,7 +3119,7 @@ namespace OpenSim.Region.Framework.Scenes
         protected ScenePresence(SerializationInfo info, StreamingContext context)
             : base (info, context)
         {
-            //System.Console.WriteLine("ScenePresence Deserialize BGN");
+            //m_log.Debug("ScenePresence Deserialize BGN");
 
             if (info == null)
             {
@@ -3235,7 +3274,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             m_state = (byte)info.GetValue("m_state", typeof(byte));
 
-            //System.Console.WriteLine("ScenePresence Deserialize END");
+            //m_log.Debug("ScenePresence Deserialize END");
         }
 
         [SecurityPermission(SecurityAction.LinkDemand,

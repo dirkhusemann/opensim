@@ -36,24 +36,56 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.UserServer
+namespace OpenSim.Grid.UserServer.Modules
 {
     public delegate void logOffUser(UUID AgentID);
 
-    public class UserManager : UserManagerBase
+    public class UserManager 
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         public event logOffUser OnLogOffUser;
         private logOffUser handlerLogOffUser;
+
+        private UserDataBaseService m_userDataBaseService;
+        private BaseHttpServer m_httpServer;
         
         /// <summary>
-        /// Constructor
+        /// 
         /// </summary>
-        /// <param name="interServiceInventoryService"></param>
-        public UserManager(IInterServiceInventoryServices interServiceInventoryService)
-            : base(interServiceInventoryService)
-        {}
+        /// <param name="userDataBaseService"></param>
+        public UserManager( UserDataBaseService userDataBaseService)
+        {
+            m_userDataBaseService = userDataBaseService;
+        }
+
+        public void Initialise()
+        {
+
+        }
+
+        public void PostInitialise()
+        {
+
+        }
+
+        public void RegisterHandlers(BaseHttpServer httpServer)
+        {
+            m_httpServer = httpServer;
+
+            m_httpServer.AddXmlRPCHandler("get_user_by_name", XmlRPCGetUserMethodName);
+            m_httpServer.AddXmlRPCHandler("get_user_by_uuid", XmlRPCGetUserMethodUUID);
+            m_httpServer.AddXmlRPCHandler("get_avatar_picker_avatar", XmlRPCGetAvatarPickerAvatar);
+
+            m_httpServer.AddXmlRPCHandler("update_user_current_region", XmlRPCAtRegion);
+            m_httpServer.AddXmlRPCHandler("logout_of_simulator", XmlRPCLogOffUserMethodUUID);
+            m_httpServer.AddXmlRPCHandler("get_agent_by_uuid", XmlRPCGetAgentMethodUUID);
+            m_httpServer.AddXmlRPCHandler("check_auth_session", XmlRPCCheckAuthSession);
+
+            m_httpServer.AddXmlRPCHandler("update_user_profile", XmlRpcResponseXmlRPCUpdateUserProfile);
+
+            m_httpServer.AddStreamHandler(new RestStreamHandler("DELETE", "/usersessions/", RestDeleteUserSessionMethod));
+        }
 
         /// <summary>
         /// Deletes an active agent session
@@ -100,26 +132,6 @@ namespace OpenSim.Grid.UserServer
                 responseData["avatarid" + i] = returnUsers[i].AvatarID.ToString();
                 responseData["firstname" + i] = returnUsers[i].firstName;
                 responseData["lastname" + i] = returnUsers[i].lastName;
-            }
-            response.Value = responseData;
-
-            return response;
-        }
-
-        public XmlRpcResponse FriendListItemListtoXmlRPCResponse(List<FriendListItem> returnUsers)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable responseData = new Hashtable();
-            // Query Result Information
-
-            responseData["avcount"] = returnUsers.Count.ToString();
-
-            for (int i = 0; i < returnUsers.Count; i++)
-            {
-                responseData["ownerID" + i] = returnUsers[i].FriendListOwner.ToString();
-                responseData["friendID" + i] = returnUsers[i].Friend.ToString();
-                responseData["ownerPerms" + i] = returnUsers[i].FriendListOwnerPerms.ToString();
-                responseData["friendPerms" + i] = returnUsers[i].FriendPerms.ToString();
             }
             response.Value = responseData;
 
@@ -185,7 +197,7 @@ namespace OpenSim.Grid.UserServer
             if (requestData.Contains("avquery") && requestData.Contains("queryid"))
             {
                 queryID = new UUID((string) requestData["queryid"]);
-                returnAvatar = GenerateAgentPickerRequestResponse(queryID, (string) requestData["avquery"]);
+                returnAvatar = m_userDataBaseService.GenerateAgentPickerRequestResponse(queryID, (string) requestData["avquery"]);
             }
 
             m_log.InfoFormat("[AVATARINFO]: Servicing Avatar Query: " + (string) requestData["avquery"]);
@@ -211,11 +223,11 @@ namespace OpenSim.Grid.UserServer
 
                 if (avatarUUID != UUID.Zero)
                 {
-                    UserProfileData userProfile = GetUserProfile(avatarUUID);
+                    UserProfileData userProfile = m_userDataBaseService.GetUserProfile(avatarUUID);
                     userProfile.CurrentAgent.Region = regionUUID;
                     userProfile.CurrentAgent.Handle = (ulong) Convert.ToInt64((string) requestData["region_handle"]);
                     //userProfile.CurrentAgent.
-                    CommitAgent(ref userProfile);
+                    m_userDataBaseService.CommitAgent(ref userProfile);
                     //setUserProfile(userProfile);
 
 
@@ -223,138 +235,6 @@ namespace OpenSim.Grid.UserServer
                 }
             }
             responseData.Add("returnString", returnstring);
-            response.Value = responseData;
-            return response;
-        }
-
-        public XmlRpcResponse XmlRpcResponseXmlRPCAddUserFriend(XmlRpcRequest request)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            Hashtable responseData = new Hashtable();
-            string returnString = "FALSE";
-            // Query Result Information
-
-            if (requestData.Contains("ownerID") && requestData.Contains("friendID") &&
-                requestData.Contains("friendPerms"))
-            {
-                // UserManagerBase.AddNewuserFriend
-                AddNewUserFriend(new UUID((string) requestData["ownerID"]),
-                                 new UUID((string) requestData["friendID"]),
-                                 (uint) Convert.ToInt32((string) requestData["friendPerms"]));
-                returnString = "TRUE";
-            }
-            responseData["returnString"] = returnString;
-            response.Value = responseData;
-            return response;
-        }
-
-        public XmlRpcResponse XmlRpcResponseXmlRPCRemoveUserFriend(XmlRpcRequest request)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            Hashtable responseData = new Hashtable();
-            string returnString = "FALSE";
-            // Query Result Information
-
-            if (requestData.Contains("ownerID") && requestData.Contains("friendID"))
-            {
-                // UserManagerBase.AddNewuserFriend
-                RemoveUserFriend(new UUID((string) requestData["ownerID"]),
-                                 new UUID((string) requestData["friendID"]));
-                returnString = "TRUE";
-            }
-            responseData["returnString"] = returnString;
-            response.Value = responseData;
-            return response;
-        }
-
-        public XmlRpcResponse XmlRpcResponseXmlRPCUpdateUserFriendPerms(XmlRpcRequest request)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            Hashtable responseData = new Hashtable();
-            string returnString = "FALSE";
-
-            if (requestData.Contains("ownerID") && requestData.Contains("friendID") &&
-                requestData.Contains("friendPerms"))
-            {
-                UpdateUserFriendPerms(new UUID((string) requestData["ownerID"]),
-                                      new UUID((string) requestData["friendID"]),
-                                      (uint) Convert.ToInt32((string) requestData["friendPerms"]));
-                // UserManagerBase.
-                returnString = "TRUE";
-            }
-            responseData["returnString"] = returnString;
-            response.Value = responseData;
-            return response;
-        }
-
-        public XmlRpcResponse XmlRpcResponseXmlRPCGetUserFriendList(XmlRpcRequest request)
-        {
-            // XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            // Hashtable responseData = new Hashtable();
-
-            List<FriendListItem> returndata = new List<FriendListItem>();
-
-            if (requestData.Contains("ownerID"))
-            {
-                returndata = GetUserFriendList(new UUID((string) requestData["ownerID"]));
-            }
-
-            return FriendListItemListtoXmlRPCResponse(returndata);
-        }
-
-        public XmlRpcResponse XmlRPCGetAvatarAppearance(XmlRpcRequest request)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            AvatarAppearance appearance;
-            Hashtable responseData;
-            if (requestData.Contains("owner"))
-            {
-                appearance = GetUserAppearance(new UUID((string) requestData["owner"]));
-                if (appearance == null)
-                {
-                    responseData = new Hashtable();
-                    responseData["error_type"] = "no appearance";
-                    responseData["error_desc"] = "There was no appearance found for this avatar";
-                }
-                else
-                {
-                    responseData = appearance.ToHashTable();
-                }
-            }
-            else
-            {
-                responseData = new Hashtable();
-                responseData["error_type"] = "unknown_avatar";
-                responseData["error_desc"] = "The avatar appearance requested is not in the database";
-            }
-
-            response.Value = responseData;
-            return response;
-        }
-
-        public XmlRpcResponse XmlRPCUpdateAvatarAppearance(XmlRpcRequest request)
-        {
-            XmlRpcResponse response = new XmlRpcResponse();
-            Hashtable requestData = (Hashtable) request.Params[0];
-            Hashtable responseData;
-            if (requestData.Contains("owner"))
-            {
-                AvatarAppearance appearance = new AvatarAppearance(requestData);
-                UpdateUserAppearance(new UUID((string) requestData["owner"]), appearance);
-                responseData = new Hashtable();
-                responseData["returnString"] = "TRUE";
-            }
-            else
-            {
-                responseData = new Hashtable();
-                responseData["error_type"] = "unknown_avatar";
-                responseData["error_desc"] = "The avatar appearance requested is not in the database";
-            }
             response.Value = responseData;
             return response;
         }
@@ -368,13 +248,16 @@ namespace OpenSim.Grid.UserServer
             {
                 string query = (string) requestData["avatar_name"];
 
+                if (null == query)
+                    return CreateUnknownUserErrorResponse();
+
                 // Regex objAlphaNumericPattern = new Regex("[^a-zA-Z0-9]");
 
                 string[] querysplit = query.Split(' ');
 
                 if (querysplit.Length == 2)
                 {
-                    userProfile = GetUserProfile(querysplit[0], querysplit[1]);
+                    userProfile = m_userDataBaseService.GetUserProfile(querysplit[0], querysplit[1]);
                     if (userProfile == null)
                     {
                         return CreateUnknownUserErrorResponse();
@@ -399,14 +282,14 @@ namespace OpenSim.Grid.UserServer
             Hashtable requestData = (Hashtable) request.Params[0];
             UserProfileData userProfile;
             //CFK: this clogs the UserServer log and is not necessary at this time.
-            //CFK: Console.WriteLine("METHOD BY UUID CALLED");
+            //CFK: m_log.Debug("METHOD BY UUID CALLED");
             if (requestData.Contains("avatar_uuid"))
             {
                 try
                 {
                     UUID guess = new UUID((string) requestData["avatar_uuid"]);
 
-                    userProfile = GetUserProfile(guess);
+                    userProfile = m_userDataBaseService.GetUserProfile(guess);
                 }
                 catch (FormatException)
                 {
@@ -432,7 +315,7 @@ namespace OpenSim.Grid.UserServer
             Hashtable requestData = (Hashtable) request.Params[0];
             UserProfileData userProfile;
             //CFK: this clogs the UserServer log and is not necessary at this time.
-            //CFK: Console.WriteLine("METHOD BY UUID CALLED");
+            //CFK: m_log.Debug("METHOD BY UUID CALLED");
             if (requestData.Contains("avatar_uuid"))
             {
                 UUID guess;
@@ -444,7 +327,7 @@ namespace OpenSim.Grid.UserServer
                     return CreateUnknownUserErrorResponse();
                 }
 
-                userProfile = GetUserProfile(guess);
+                userProfile = m_userDataBaseService.GetUserProfile(guess);
 
                 if (userProfile == null)
                 {
@@ -497,7 +380,7 @@ namespace OpenSim.Grid.UserServer
                 {
                     return CreateUnknownUserErrorResponse();
                 }
-                userProfile = GetUserProfile(guess_aid);
+                userProfile = m_userDataBaseService.GetUserProfile(guess_aid);
                 if (userProfile != null && userProfile.CurrentAgent != null &&
                     userProfile.CurrentAgent.SessionID == guess_sid)
                 {
@@ -529,7 +412,7 @@ namespace OpenSim.Grid.UserServer
             }
 
             UUID UserUUID = new UUID((string) requestData["avatar_uuid"]);
-            UserProfileData userProfile = GetUserProfile(UserUUID);
+            UserProfileData userProfile = m_userDataBaseService.GetUserProfile(UserUUID);
             if (null == userProfile)
             {
                 return CreateUnknownUserErrorResponse();
@@ -703,7 +586,7 @@ namespace OpenSim.Grid.UserServer
             }
 
             // call plugin!
-            bool ret = UpdateUserProfile(userProfile);
+            bool ret = m_userDataBaseService.UpdateUserProfile(userProfile);
             responseData["returnString"] = ret.ToString();
             response.Value = responseData;
             return response;
@@ -734,7 +617,7 @@ namespace OpenSim.Grid.UserServer
                     if (handlerLogOffUser != null)
                         handlerLogOffUser(userUUID);
 
-                    LogOffUser(userUUID, RegionID, regionhandle, position, lookat);
+                    m_userDataBaseService.LogOffUser(userUUID, RegionID, regionhandle, position, lookat);
                 }
                 catch (FormatException)
                 {
@@ -752,35 +635,21 @@ namespace OpenSim.Grid.UserServer
 
         #endregion
 
-        public override UserProfileData SetupMasterUser(string firstName, string lastName)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override UserProfileData SetupMasterUser(string firstName, string lastName, string password)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
-
-        public override UserProfileData SetupMasterUser(UUID uuid)
-        {
-            throw new Exception("The method or operation is not implemented.");
-        }
 
         public void HandleAgentLocation(UUID agentID, UUID regionID, ulong regionHandle)
         {
-            UserProfileData userProfile = GetUserProfile(agentID);
+            UserProfileData userProfile = m_userDataBaseService.GetUserProfile(agentID);
             if (userProfile != null)
             {
                 userProfile.CurrentAgent.Region = regionID;
                 userProfile.CurrentAgent.Handle = regionHandle;
-                CommitAgent(ref userProfile);
+                m_userDataBaseService.CommitAgent(ref userProfile);
             }
         }
 
         public void HandleAgentLeaving(UUID agentID, UUID regionID, ulong regionHandle)
         {
-            UserProfileData userProfile = GetUserProfile(agentID);
+            UserProfileData userProfile = m_userDataBaseService.GetUserProfile(agentID);
             if (userProfile != null)
             {
                 if (userProfile.CurrentAgent.Region == regionID)
@@ -797,7 +666,7 @@ namespace OpenSim.Grid.UserServer
                         userAgent.Handle = regionHandle;
                         userProfile.LastLogin = userAgent.LogoutTime;
 
-                        CommitAgent(ref userProfile);
+                        m_userDataBaseService.CommitAgent(ref userProfile);
 
                         handlerLogOffUser = OnLogOffUser;
                         if (handlerLogOffUser != null)
@@ -809,12 +678,12 @@ namespace OpenSim.Grid.UserServer
 
         public void HandleRegionStartup(UUID regionID)
         {
-            LogoutUsers(regionID);
+            m_userDataBaseService.LogoutUsers(regionID);
         }
 
         public void HandleRegionShutdown(UUID regionID)
         {
-            LogoutUsers(regionID);
+            m_userDataBaseService.LogoutUsers(regionID);
         }   
     }
 }

@@ -198,41 +198,46 @@ namespace OpenSim
             // Only enable logins to the regions once we have completely finished starting up (apart from scripts)
             m_commsManager.GridService.RegionLoginsEnabled = true;
 
-            List<string> topics = GetHelpTopics();
-
-            foreach (string topic in topics)
+            // If console exists add plugin commands.
+            if (m_console != null)
             {
-                m_console.Commands.AddCommand("plugin", false, "help " + topic,
-                        "help " + topic,
-                        "Get help on plugin command '" + topic + "'",
-                        HandleCommanderHelp);
+                List<string> topics = GetHelpTopics();
 
-                m_console.Commands.AddCommand("plugin", false, topic,
-                        topic,
-                        "Execute subcommand for plugin '" + topic + "'",
-                        null);
-
-                ICommander commander = null;
-                
-                Scene s = SceneManager.CurrentOrFirstScene;
-
-                if (s != null && s.GetCommanders() != null)
+                foreach (string topic in topics)
                 {
-                    if (s.GetCommanders().ContainsKey(topic))
-                        commander = s.GetCommanders()[topic];
-                }
+                    m_console.Commands.AddCommand("plugin", false, "help " + topic,
+                            "help " + topic,
+                            "Get help on plugin command '" + topic + "'",
+                            HandleCommanderHelp);
 
-                if (commander == null)
-                    continue;
+                    m_console.Commands.AddCommand("plugin", false, topic,
+                            topic,
+                            "Execute subcommand for plugin '" + topic + "'",
+                            null);
 
-                foreach (string command in commander.Commands.Keys)
-                {
-                    m_console.Commands.AddCommand(topic, false,
-                            topic + " " + command,
-                            topic + " " + commander.Commands[command].ShortHelp(),
-                            String.Empty, HandleCommanderCommand);
+                    ICommander commander = null;
+
+                    Scene s = SceneManager.CurrentOrFirstScene;
+
+                    if (s != null && s.GetCommanders() != null)
+                    {
+                        if (s.GetCommanders().ContainsKey(topic))
+                            commander = s.GetCommanders()[topic];
+                    }
+
+                    if (commander == null)
+                        continue;
+
+                    foreach (string command in commander.Commands.Keys)
+                    {
+                        m_console.Commands.AddCommand(topic, false,
+                                topic + " " + command,
+                                topic + " " + commander.Commands[command].ShortHelp(),
+                                String.Empty, HandleCommanderCommand);
+                    }
                 }
             }
+
         }
 
         private void HandleCommanderCommand(string module, string[] cmd)
@@ -556,8 +561,12 @@ namespace OpenSim
         {
             int port = regionInfo.InternalEndPoint.Port;
 
-            // set initial originRegionID to RegionID in RegionInfo. (it needs for loding prims)
-            regionInfo.originRegionID = regionInfo.RegionID;
+            // set initial RegionID to originRegionID in RegionInfo. (it needs for loding prims)
+            // Commented this out because otherwise regions can't register with
+            // the grid as there is already another region with the same UUID
+            // at those coordinates. This is required for the load balancer to work.
+            // --Mike, 2009.02.25
+            //regionInfo.originRegionID = regionInfo.RegionID;
 
             // set initial ServerURI
             regionInfo.ServerURI = "http://" + regionInfo.ExternalHostName + ":" + regionInfo.InternalEndPoint.Port;

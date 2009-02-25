@@ -31,6 +31,8 @@ using System.Collections.Generic;
 using OpenSim.Framework;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
+using log4net;
+using System.Reflection;
 
 namespace OpenSim.Region.Framework.Scenes
 {
@@ -205,41 +207,9 @@ namespace OpenSim.Region.Framework.Scenes
         }
     }
 
-    //public class AgentAnimationData
-    //{
-    //    public UUID Animation;
-    //    public UUID ObjectID;
-
-    //    public AgentAnimationData(UUID anim, UUID obj)
-    //    {
-    //        Animation = anim;
-    //        ObjectID = obj;
-    //    }
-
-    //    public AgentAnimationData(OSDMap args)
-    //    {
-    //        UnpackUpdateMessage(args);
-    //    }
-
-    //    public OSDMap PackUpdateMessage()
-    //    {
-    //        OSDMap anim = new OSDMap();
-    //        anim["animation"] = OSD.FromUUID(Animation);
-    //        anim["object_id"] = OSD.FromUUID(ObjectID);
-    //        return anim;
-    //    }
-
-    //    public void UnpackUpdateMessage(OSDMap args)
-    //    {
-    //        if (args["animation"] != null)
-    //            Animation = args["animation"].AsUUID();
-    //        if (args["object_id"] != null)
-    //            ObjectID = args["object_id"].AsUUID();
-    //    }
-    //}
-
     public class AgentData : IAgentData
     {
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private UUID m_id;
         public UUID AgentID
         {
@@ -273,16 +243,17 @@ namespace OpenSim.Region.Framework.Scenes
         public bool AlwaysRun;
         public UUID PreyAgent;
         public Byte AgentAccess;
-        public UUID[] AgentTextures;
         public UUID ActiveGroupID;
 
         public AgentGroupData[] Groups;
         public Animation[] Anims;
 
         public UUID GranterID;
-        public Dictionary<string, string> NVPairs;
 
+        // Appearance
+        public byte[] AgentTextures;
         public byte[] VisualParams;
+        public UUID[] Wearables;
 
         public string CallbackURI;
 
@@ -322,14 +293,6 @@ namespace OpenSim.Region.Framework.Scenes
             args["prey_agent"] = OSD.FromUUID(PreyAgent);
             args["agent_access"] = OSD.FromString(AgentAccess.ToString());
 
-            if ((AgentTextures != null) && (AgentTextures.Length > 0))
-            {
-                OSDArray textures = new OSDArray(AgentTextures.Length);
-                foreach (UUID uuid in AgentTextures)
-                    textures.Add(OSD.FromUUID(uuid));
-                args["agent_textures"] = textures;
-            }
-
             args["active_group_id"] = OSD.FromUUID(ActiveGroupID);
 
             if ((Groups != null) && (Groups.Length > 0))
@@ -348,10 +311,29 @@ namespace OpenSim.Region.Framework.Scenes
                 args["animations"] = anims;
             }
 
+            //if ((AgentTextures != null) && (AgentTextures.Length > 0))
+            //{
+            //    OSDArray textures = new OSDArray(AgentTextures.Length);
+            //    foreach (UUID uuid in AgentTextures)
+            //        textures.Add(OSD.FromUUID(uuid));
+            //    args["agent_textures"] = textures;
+            //}
+
+            if ((AgentTextures != null) && (AgentTextures.Length > 0))
+                args["texture_entry"] = OSD.FromBinary(AgentTextures);
+
             if ((VisualParams != null) && (VisualParams.Length > 0))
                 args["visual_params"] = OSD.FromBinary(VisualParams);
 
-            // Last few fields are still missing: granter and NVPais
+            // We might not pass this in all cases...
+            if ((Wearables != null) && (Wearables.Length > 0))
+            {
+                OSDArray wears = new OSDArray(Wearables.Length);
+                foreach (UUID uuid in Wearables)
+                    wears.Add(OSD.FromUUID(uuid));
+                args["wearables"] = wears;
+            }
+
 
             if ((CallbackURI != null) && (!CallbackURI.Equals("")))
                 args["callback_uri"] = OSD.FromString(CallbackURI);
@@ -438,15 +420,6 @@ namespace OpenSim.Region.Framework.Scenes
             if (args["agent_access"] != null)
                 Byte.TryParse(args["agent_access"].AsString(), out AgentAccess);
 
-            if ((args["agent_textures"] != null) && (args["agent_textures"]).Type == OSDType.Array)
-            {
-                OSDArray textures = (OSDArray)(args["agent_textures"]);
-                AgentTextures = new UUID[textures.Count];
-                int i = 0;
-                foreach (OSD o in textures)
-                    AgentTextures[i++] = o.AsUUID();
-            }
-
             if (args["active_group_id"] != null)
                 ActiveGroupID = args["active_group_id"].AsUUID();
 
@@ -478,9 +451,30 @@ namespace OpenSim.Region.Framework.Scenes
                 }
             }
 
+            //if ((args["agent_textures"] != null) && (args["agent_textures"]).Type == OSDType.Array)
+            //{
+            //    OSDArray textures = (OSDArray)(args["agent_textures"]);
+            //    AgentTextures = new UUID[textures.Count];
+            //    int i = 0;
+            //    foreach (OSD o in textures)
+            //        AgentTextures[i++] = o.AsUUID();
+            //}
+
+            if (args["texture_entry"] != null)
+                AgentTextures = args["texture_entry"].AsBinary();
+
             if (args["visual_params"] != null)
                 VisualParams = args["visual_params"].AsBinary();
 
+            if ((args["wearables"] != null) && (args["wearables"]).Type == OSDType.Array)
+            {
+                OSDArray wears = (OSDArray)(args["wearables"]);
+                Wearables = new UUID[wears.Count];
+                int i = 0;
+                foreach (OSD o in wears)
+                    Wearables[i++] = o.AsUUID();
+            }
+            
             if (args["callback_uri"] != null)
                 CallbackURI = args["callback_uri"].AsString();
         }
@@ -496,10 +490,10 @@ namespace OpenSim.Region.Framework.Scenes
 
         public void Dump()
         {
-            System.Console.WriteLine("------------ AgentData ------------");
-            System.Console.WriteLine("UUID: " + AgentID);
-            System.Console.WriteLine("Region: " + RegionHandle);
-            System.Console.WriteLine("Position: " + Position);
+            m_log.Info("------------ AgentData ------------");
+            m_log.Info("UUID: " + AgentID);
+            m_log.Info("Region: " + RegionHandle);
+            m_log.Info("Position: " + Position);
         }
     }
 

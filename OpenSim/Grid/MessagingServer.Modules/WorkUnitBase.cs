@@ -25,72 +25,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System.Collections.Generic;
-using OpenMetaverse;
-
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.MessagingServer.Modules
 {
-    // This is a wrapper for a List<UUID> so it can be happily stored in a hashtable.
-    public class PresenceBackreferenceEntry
+    public class WorkUnitBase
     {
-        List<UUID> AgentList = new List<UUID>();
-
-        public PresenceBackreferenceEntry()
-        {
-
-        }
-
-        public void Add(UUID item)
-        {
-            lock (AgentList)
-            {
-                AgentList.Add(item);
-            }
-        }
-
-        public UUID getitem(int index)
-        {
-            UUID result = UUID.Zero;
-            lock (AgentList)
-            {
-                if (index > 0 && index < AgentList.Count)
-                {
-                    result = AgentList[index];
-                }
-            }
-            return result;
-        }
-
-        public int Count
-        {
-            get
-            {
-                int count = 0;
-                lock (AgentList)
-                {
-                    count = AgentList.Count;
-                }
-                return count;
-            }
-        }
-
-        public void Remove(UUID item)
-        {
-            lock (AgentList)
-            {
-                if (AgentList.Contains(item))
-                    AgentList.Remove(item);
-            }
-        }
-
-        public bool contains(UUID item)
-        {
-            bool result = false;
-            lock (AgentList)
-            {
-                result = AgentList.Contains(item);
-            }
-            return result;
-        }
     }
 }

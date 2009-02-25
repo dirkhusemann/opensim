@@ -32,7 +32,7 @@ using log4net;
 using OpenMetaverse;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.Framework
 {
     public class XMPPHTTPStreamHandler : BaseStreamHandler
     {

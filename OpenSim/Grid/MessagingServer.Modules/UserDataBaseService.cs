@@ -25,9 +25,51 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-namespace OpenSim.Grid.MessagingServer
+using OpenMetaverse;
+using OpenSim.Framework;
+using OpenSim.Framework.Communications;
+
+namespace OpenSim.Grid.MessagingServer.Modules
 {
-    public class WorkUnitBase
+    public class UserDataBaseService : UserManagerBase
     {
+        /// <summary>
+        /// Constructor.
+        /// </summary>
+        /// Passing null to parent because we never use any function that requires an interservice inventory call.
+        public UserDataBaseService()
+            : base(null)
+        {
+        }
+        
+        public UserAgentData GetUserAgentData(UUID AgentID)
+        {
+            UserProfileData userProfile = GetUserProfile(AgentID);
+
+            if (userProfile != null)
+            {
+                return userProfile.CurrentAgent;
+            }
+
+            return null;
+        }
+
+        public override UserProfileData SetupMasterUser(string firstName, string lastName)
+        {
+            //throw new Exception("The method or operation is not implemented.");
+            return null;
+        }
+
+        public override UserProfileData SetupMasterUser(string firstName, string lastName, string password)
+        {
+            //throw new Exception("The method or operation is not implemented.");
+            return null;
+        }
+
+        public override UserProfileData SetupMasterUser(UUID uuid)
+        {
+            //throw new Exception("The method or operation is not implemented.");
+            return null;
+        }
     }
 }

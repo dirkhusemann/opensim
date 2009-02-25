@@ -9,7 +9,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the OpenSim Project nor the
+ *     * Neither the name of the OpenSimulator Project nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -25,51 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using OpenMetaverse;
-using OpenSim.Framework;
-using OpenSim.Framework.Communications;
+using System;
+using System.Collections.Generic;
+using OpenSim.Framework.Servers;
 
-namespace OpenSim.Grid.MessagingServer
+namespace OpenSim.Grid.Framework
 {
-    class UserManager : UserManagerBase
+    public interface IGridMessagingMapper
     {
-        /// <summary>
-        /// Constructor.
-        /// </summary>
-        /// Passing null to parent because we never use any function that requires an interservice inventory call.
-        public UserManager()
-            : base(null)
-        {
-        }
-        
-        public UserAgentData GetUserAgentData(UUID AgentID)
-        {
-            UserProfileData userProfile = GetUserProfile(AgentID);
-
-            if (userProfile != null)
-            {
-                return userProfile.CurrentAgent;
-            }
-
-            return null;
-        }
-
-        public override UserProfileData SetupMasterUser(string firstName, string lastName)
-        {
-            //throw new Exception("The method or operation is not implemented.");
-            return null;
-        }
-
-        public override UserProfileData SetupMasterUser(string firstName, string lastName, string password)
-        {
-            //throw new Exception("The method or operation is not implemented.");
-            return null;
-        }
-
-        public override UserProfileData SetupMasterUser(UUID uuid)
-        {
-            //throw new Exception("The method or operation is not implemented.");
-            return null;
-        }
+        List<MessageServerInfo> GetMessageServersList();
+        void RegisterMessageServer(MessageServerInfo m);
+        void DeRegisterMessageServer(MessageServerInfo m);
     }
 }
