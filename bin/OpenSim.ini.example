@@ -697,6 +697,11 @@ InterregionComms = "RESTComms"
     ; vivox admin password
     vivox_admin_password = VoiceG4te
 
+    ; channel type: "channel" or "positional"
+    ; - positional: spatial sound
+    ; - channel: normal "conference call", no spatial sound
+    vivox_channel_type = positional
+
 
 ; Uncomment the following to control the progression of daytime
 ; in the Sim.  The defaults are what is shown below
