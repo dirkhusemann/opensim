@@ -28,50 +28,35 @@
 using System.Collections.Generic;
 using OpenMetaverse;
 
-namespace OpenSim.Region.CoreModules.World.Archiver
+namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
 {
     /// <summary>
-    /// Constants for the archiving module
+    /// Constants for the inventory archiving module
     /// </summary>
-    public class ArchiveConstants
-    {
+    public class InventoryArchiveConstants
+    {            
         /// <summary>
-        /// The location of the archive control file
+        /// Path for the inventory data
         /// </summary>
-        public static readonly string CONTROL_FILE_PATH = "archive.xml";
-
+        public static readonly string INVENTORY_PATH = "inventory/";
+        
         /// <summary>
         /// Path for the assets held in an archive
         /// </summary>
         public static readonly string ASSETS_PATH = "assets/";
 
         /// <summary>
-        /// Path for the prims file
-        /// </summary>
-        public static readonly string OBJECTS_PATH = "objects/";
-
-        /// <summary>
-        /// Path for terrains.  Technically these may be assets, but I think it's quite nice to split them out.
-        /// </summary>
-        public static readonly string TERRAINS_PATH = "terrains/";
-        
-        /// <summary>
-        /// Path for region settings.
-        /// </summary>
-        public static readonly string SETTINGS_PATH = "settings/";
-
-        /// <summary>
         /// The character the separates the uuid from extension information in an archived asset filename
         /// </summary>
         public static readonly string ASSET_EXTENSION_SEPARATOR = "_";
-
+        
         /// <summary>
         /// Extensions used for asset types in the archive
         /// </summary>
         public static readonly IDictionary<sbyte, string> ASSET_TYPE_TO_EXTENSION = new Dictionary<sbyte, string>();
         public static readonly IDictionary<string, sbyte> EXTENSION_TO_ASSET_TYPE = new Dictionary<string, sbyte>();
 
-        static ArchiveConstants()
+        static InventoryArchiveConstants()
         {
             ASSET_TYPE_TO_EXTENSION[(sbyte)AssetType.Animation]           = ASSET_EXTENSION_SEPARATOR + "animation.bvh";
             ASSET_TYPE_TO_EXTENSION[(sbyte)AssetType.Bodypart]            = ASSET_EXTENSION_SEPARATOR + "bodypart.txt";
@@ -118,6 +103,6 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             EXTENSION_TO_ASSET_TYPE[ASSET_EXTENSION_SEPARATOR + "texture.jp2"]              = (sbyte)AssetType.Texture;
             EXTENSION_TO_ASSET_TYPE[ASSET_EXTENSION_SEPARATOR + "texture.tga"]              = (sbyte)AssetType.TextureTGA;
             EXTENSION_TO_ASSET_TYPE[ASSET_EXTENSION_SEPARATOR + "trashfolder.txt"]          = (sbyte)AssetType.TrashFolder;
-        }
+        }        
     }
 }

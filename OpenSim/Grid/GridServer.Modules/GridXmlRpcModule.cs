@@ -47,11 +47,11 @@ namespace OpenSim.Grid.GridServer.Modules
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private GridDBService m_gridDBService;
-        private IUGAIMCore m_gridCore;
+        private IGridServiceCore m_gridCore;
 
         protected GridConfig m_config;
 
-        protected IGridMessagingMapper m_messagingServerMapper;
+        protected IMessagingServerDiscovery m_messagingServerMapper;
         /// <value>
         /// Used to notify old regions as to which OpenSim version to upgrade to
         /// </value>
@@ -69,7 +69,7 @@ namespace OpenSim.Grid.GridServer.Modules
         {
         }
 
-        public void Initialise(string opensimVersion, GridDBService gridDBService, IUGAIMCore gridCore, GridConfig config)
+        public void Initialise(string opensimVersion, GridDBService gridDBService, IGridServiceCore gridCore, GridConfig config)
         {
             m_opensimVersion = opensimVersion;
             m_gridDBService = gridDBService;
@@ -80,8 +80,8 @@ namespace OpenSim.Grid.GridServer.Modules
 
         public void PostInitialise()
         {
-            IGridMessagingMapper messagingModule;
-            if (m_gridCore.TryGet<IGridMessagingMapper>(out messagingModule))
+            IMessagingServerDiscovery messagingModule;
+            if (m_gridCore.TryGet<IMessagingServerDiscovery>(out messagingModule))
             {
                 m_messagingServerMapper = messagingModule;
             }

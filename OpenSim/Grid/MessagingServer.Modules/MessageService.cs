@@ -49,15 +49,15 @@ namespace OpenSim.Grid.MessagingServer.Modules
         private MessageServerConfig m_cfg;
         private UserDataBaseService m_userDataBaseService;
 
-        private IUGAIMCore m_messageCore;
+        private IGridServiceCore m_messageCore;
 
-        private IMessageUserServerService m_userServerModule;
-        private IMessageRegionService m_regionModule;
+        private IInterServiceUserService m_userServerModule;
+        private IMessageRegionLookup m_regionModule;
 
         // a dictionary of all current presences this server knows about
         private Dictionary<UUID, UserPresenceData> m_presences = new Dictionary<UUID,UserPresenceData>();
 
-        public MessageService(MessageServerConfig cfg, IUGAIMCore messageCore, UserDataBaseService userDataBaseService)
+        public MessageService(MessageServerConfig cfg, IGridServiceCore messageCore, UserDataBaseService userDataBaseService)
         {
             m_cfg = cfg;
             m_messageCore = messageCore;
@@ -76,14 +76,14 @@ namespace OpenSim.Grid.MessagingServer.Modules
   
         public void PostInitialise()
         {
-            IMessageUserServerService messageUserServer;
-            if (m_messageCore.TryGet<IMessageUserServerService>(out messageUserServer))
+            IInterServiceUserService messageUserServer;
+            if (m_messageCore.TryGet<IInterServiceUserService>(out messageUserServer))
             {
                 m_userServerModule = messageUserServer;
             }
 
-            IMessageRegionService messageRegion;
-            if (m_messageCore.TryGet<IMessageRegionService>(out messageRegion))
+            IMessageRegionLookup messageRegion;
+            if (m_messageCore.TryGet<IMessageRegionLookup>(out messageRegion))
             {
                 m_regionModule = messageRegion;
             }

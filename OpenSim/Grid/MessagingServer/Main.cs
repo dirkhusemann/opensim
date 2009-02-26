@@ -41,7 +41,7 @@ namespace OpenSim.Grid.MessagingServer
 {
     /// <summary>
     /// </summary>
-    public class OpenMessage_Main : BaseOpenSimServer , IUGAIMCore
+    public class OpenMessage_Main : BaseOpenSimServer , IGridServiceCore
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -49,7 +49,7 @@ namespace OpenSim.Grid.MessagingServer
         private MessageService msgsvc;
 
         private MessageRegionModule m_regionModule;
-        private MessageUserServerModule m_userServerModule;
+        private InterMessageUserServerModule m_userServerModule;
 
         private UserDataBaseService m_userDataBaseService;
 
@@ -132,7 +132,7 @@ namespace OpenSim.Grid.MessagingServer
             //Register the database access service so modules can fetch it
            // RegisterInterface<UserDataBaseService>(m_userDataBaseService);
 
-            m_userServerModule = new MessageUserServerModule(Cfg, this);
+            m_userServerModule = new InterMessageUserServerModule(Cfg, this);
             m_userServerModule.Initialise();
 
             msgsvc = new MessageService(Cfg, this, m_userDataBaseService);

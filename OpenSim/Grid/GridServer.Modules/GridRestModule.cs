@@ -46,14 +46,14 @@ namespace OpenSim.Grid.GridServer.Modules
          private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private GridDBService m_gridDBService;
-        private IUGAIMCore m_gridCore;
+        private IGridServiceCore m_gridCore;
 
         protected GridConfig m_config;
 
         /// <value>
         /// Used to notify old regions as to which OpenSim version to upgrade to
         /// </value>
-        private string m_opensimVersion;
+        //private string m_opensimVersion;
 
         protected BaseHttpServer m_httpServer;
 
@@ -67,9 +67,9 @@ namespace OpenSim.Grid.GridServer.Modules
         {
         }
 
-        public void Initialise(string opensimVersion, GridDBService gridDBService, IUGAIMCore gridCore, GridConfig config)
+        public void Initialise(string opensimVersion, GridDBService gridDBService, IGridServiceCore gridCore, GridConfig config)
         {
-            m_opensimVersion = opensimVersion;
+            //m_opensimVersion = opensimVersion;
             m_gridDBService = gridDBService;
             m_gridCore = gridCore;
             m_config = config;

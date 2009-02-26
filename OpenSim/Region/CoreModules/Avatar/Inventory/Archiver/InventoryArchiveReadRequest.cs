@@ -77,7 +77,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
             this.commsManager = commsManager;
         }        
 
-        protected InventoryItemBase loadInvItem(string path, string contents)
+        protected InventoryItemBase LoadInvItem(string contents)
         {
             InventoryItemBase item = new InventoryItemBase();
             StringReader sr = new StringReader(contents);
@@ -183,9 +183,9 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
                 }
             }
 
-            InventoryFolderImpl inventoryFolder = m_userInfo.RootFolder.FindFolderByPath(m_invPath);
+            InventoryFolderImpl rootDestinationFolder = m_userInfo.RootFolder.FindFolderByPath(m_invPath);
 
-            if (null == inventoryFolder)
+            if (null == rootDestinationFolder)
             {
                 // TODO: Later on, automatically create this folder if it does not exist
                 m_log.ErrorFormat("[INVENTORY ARCHIVER]: Inventory path {0} does not exist", m_invPath);
@@ -199,19 +199,20 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
             TarArchiveReader.TarEntryType entryType;
             while ((data = archive.ReadEntry(out filePath, out entryType)) != null)
             {
-                if (entryType == TarArchiveReader.TarEntryType.TYPE_DIRECTORY) {
+                if (entryType == TarArchiveReader.TarEntryType.TYPE_DIRECTORY) 
+                {
                     m_log.WarnFormat("[INVENTORY ARCHIVER]: Ignoring directory entry {0}", filePath);
                 } 
-                else if (filePath.StartsWith(ArchiveConstants.ASSETS_PATH))
+                else if (filePath.StartsWith(InventoryArchiveConstants.ASSETS_PATH))
                 {
                     if (LoadAsset(filePath, data))
                         successfulAssetRestores++;
                     else
                         failedAssetRestores++;
                 }
-                else
+                else if (filePath.StartsWith(InventoryArchiveConstants.INVENTORY_PATH))
                 {
-                    InventoryItemBase item = loadInvItem(filePath, m_asciiEncoding.GetString(data));
+                    InventoryItemBase item = LoadInvItem(m_asciiEncoding.GetString(data));
 
                     if (item != null)
                     {
@@ -220,11 +221,48 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
                         
                         item.Creator = m_userInfo.UserProfile.ID;
                         item.Owner = m_userInfo.UserProfile.ID;
+                        
+                        filePath = filePath.Substring(InventoryArchiveConstants.INVENTORY_PATH.Length);
+                        filePath = filePath.Remove(filePath.LastIndexOf("/"));
+                        
+                        m_log.DebugFormat("[INVENTORY ARCHIVER]: Loading to file path {0}", filePath);
+                        
+                        string[] rawFolders = filePath.Split(new char[] { '/' });
+                        
+                        // Find the folders that do exist along the path given
+                        int i = 0;
+                        bool noFolder = false;
+                        InventoryFolderImpl foundFolder = rootDestinationFolder;
+                        while (!noFolder && i < rawFolders.Length)
+                        {
+                            InventoryFolderImpl folder = foundFolder.FindFolderByPath(rawFolders[i]);
+                            if (null != folder)
+                            {
+                                m_log.DebugFormat("[INVENTORY ARCHIVER]: Found folder {0}", folder.Name);
+                                foundFolder = folder;
+                                i++;
+                            }
+                            else
+                            {
+                                noFolder = true;
+                            }                                   
+                        }
+                        
+                        // Create any folders that did not previously exist
+                        while (i < rawFolders.Length)
+                        {
+                            m_log.DebugFormat("[INVENTORY ARCHIVER]: Creating folder {0}", rawFolders[i]);
+                            
+                            UUID newFolderId = UUID.Random();
+                            m_userInfo.CreateFolder(
+                                rawFolders[i++], newFolderId, (ushort)AssetType.Folder, foundFolder.ID);
+                            foundFolder = foundFolder.GetChildFolder(newFolderId);
+                        }                        
 
                         // Reset folder ID to the one in which we want to load it
-                        // TODO: Properly restore entire folder structure.  At the moment all items are dumped in this
-                        // single folder no matter where in the saved folder structure they are.
-                        item.Folder = inventoryFolder.ID;
+                        item.Folder = foundFolder.ID;
+                        
+                        //item.Folder = rootDestinationFolder.ID;
 
                         m_userInfo.AddItem(item);
                         successfulItemRestores++;
@@ -251,14 +289,14 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
         {
             //IRegionSerialiser serialiser = scene.RequestModuleInterface<IRegionSerialiser>();
             // Right now we're nastily obtaining the UUID from the filename
-            string filename = assetPath.Remove(0, ArchiveConstants.ASSETS_PATH.Length);
-            int i = filename.LastIndexOf(ArchiveConstants.ASSET_EXTENSION_SEPARATOR);
+            string filename = assetPath.Remove(0, InventoryArchiveConstants.ASSETS_PATH.Length);
+            int i = filename.LastIndexOf(InventoryArchiveConstants.ASSET_EXTENSION_SEPARATOR);
 
             if (i == -1)
             {
                 m_log.ErrorFormat(
                    "[INVENTORY ARCHIVER]: Could not find extension information in asset path {0} since it's missing the separator {1}.  Skipping",
-                    assetPath, ArchiveConstants.ASSET_EXTENSION_SEPARATOR);
+                    assetPath, InventoryArchiveConstants.ASSET_EXTENSION_SEPARATOR);
 
                 return false;
             }
@@ -266,11 +304,11 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
             string extension = filename.Substring(i);
             string uuid = filename.Remove(filename.Length - extension.Length);
 
-            if (ArchiveConstants.EXTENSION_TO_ASSET_TYPE.ContainsKey(extension))
+            if (InventoryArchiveConstants.EXTENSION_TO_ASSET_TYPE.ContainsKey(extension))
             {
-                sbyte assetType = ArchiveConstants.EXTENSION_TO_ASSET_TYPE[extension];
+                sbyte assetType = InventoryArchiveConstants.EXTENSION_TO_ASSET_TYPE[extension];
 
-                m_log.DebugFormat("[INVENTORY ARCHIVER]: Importing asset {0}, type {1}", uuid, assetType);
+                //m_log.DebugFormat("[INVENTORY ARCHIVER]: Importing asset {0}, type {1}", uuid, assetType);
 
                 AssetBase asset = new AssetBase(new UUID(uuid), "RandomName");
 

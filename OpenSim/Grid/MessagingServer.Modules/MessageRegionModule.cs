@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -42,20 +42,20 @@ using Timer = System.Timers.Timer;
 
 namespace OpenSim.Grid.MessagingServer.Modules
 {
-    public class MessageRegionModule : IMessageRegionService
+    public class MessageRegionModule : IMessageRegionLookup
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private MessageServerConfig m_cfg;
 
-        private IMessageUserServerService m_userServerModule;
+        private IInterServiceUserService m_userServerModule;
 
-        private IUGAIMCore m_messageCore;
+        private IGridServiceCore m_messageCore;
 
         // a dictionary of all current regions this server knows about
         private Dictionary<ulong, RegionProfileData> m_regionInfoCache = new Dictionary<ulong, RegionProfileData>();
 
-        public MessageRegionModule(MessageServerConfig config, IUGAIMCore messageCore)
+        public MessageRegionModule(MessageServerConfig config, IGridServiceCore messageCore)
         {
             m_cfg = config;
             m_messageCore = messageCore;
@@ -63,13 +63,13 @@ namespace OpenSim.Grid.MessagingServer.Modules
 
         public void Initialise()
         {
-            m_messageCore.RegisterInterface<IMessageRegionService>(this);
+            m_messageCore.RegisterInterface<IMessageRegionLookup>(this);
         }
 
         public void PostInitialise()
         {
-            IMessageUserServerService messageUserServer;
-            if (m_messageCore.TryGet<IMessageUserServerService>(out messageUserServer))
+            IInterServiceUserService messageUserServer;
+            if (m_messageCore.TryGet<IInterServiceUserService>(out messageUserServer))
             {
                 m_userServerModule = messageUserServer;
             }

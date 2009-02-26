@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -57,14 +57,13 @@ namespace OpenSim.Grid.UserServer
 
         protected UUID m_lastCreatedUser = UUID.Random();
 
-        protected IUGAIMCore m_core;
+        protected IGridServiceCore m_core;
 
-        public UserServerCommandModule( UserLoginService loginService)
+        public UserServerCommandModule()
         {
-            m_loginService = loginService;
         }
 
-        public void Initialise(IUGAIMCore core)
+        public void Initialise(IGridServiceCore core)
         {
             m_core = core;
         }
@@ -83,8 +82,15 @@ namespace OpenSim.Grid.UserServer
                 m_userDataBaseService = userDBservice;
             }
 
+            UserLoginService loginService;
+            if (m_core.TryGet<UserLoginService>(out loginService))
+            {
+                m_loginService = loginService;
+            }
+
             ConsoleBase console;
-            if ((m_core.TryGet<ConsoleBase>(out console)) && (m_cfg != null) && (m_userDataBaseService != null))
+            if ((m_core.TryGet<ConsoleBase>(out console)) && (m_cfg != null)
+                && (m_userDataBaseService != null) && (m_loginService != null))
             {
                 RegisterConsoleCommands(console);
             }
@@ -235,10 +241,12 @@ namespace OpenSim.Grid.UserServer
             m_userDataBaseService.ResetUserPassword(firstName, lastName, newPassword);
         }
 
+        /*
         private void HandleTestCommand(string module, string[] cmd)
         {
             m_log.Info("test command received");
         }
+        */
 
         private void HandleLoginCommand(string module, string[] cmd)
         {
