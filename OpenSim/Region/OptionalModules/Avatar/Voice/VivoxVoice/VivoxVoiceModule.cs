@@ -71,7 +71,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxChannelType;
         private static string m_authToken = String.Empty;
         
+        // Instance values (unique to a region)
+
         private IConfig m_config;
+        private string  m_parentId = String.Empty;
 
         public void Initialise(Scene scene, IConfigSource config)
         {
@@ -134,12 +137,36 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     }
                 }
 
-                string chan_id;
+                string chan_type;
                 string sceneUUID = scene.RegionInfo.RegionID.ToString();
-                XmlElement resp = VivoxGetChannel(sceneUUID, sceneUUID, null);
-                if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                string sceneName  = scene.RegionInfo.RegionName;
+
+                // Test existence of the scene directory
+
+                XmlElement resp = VivoxGetChannel(null, sceneUUID, null);
+
+                // If the scene directory does not exist, create it
+
+                if(!XmlFind(resp, "response.level0.body.level2.id", out m_parentId))
                 {
-                    VivoxDeleteChannel(sceneUUID, chan_id);
+                    VivoxCreateDirectory(null, sceneUUID, sceneName);
+                }
+
+                // Make sure the scene directory is declared to be a directory
+
+                if(XmlFind(resp, "response.level0.body.level2.type", out chan_type))
+                {
+                    if(chan_type != "dir")
+                    {
+                        VivoxDeleteChannel(sceneUUID, m_parentId);
+                        VivoxCreateDirectory(null, sceneUUID, sceneName);
+                        resp = VivoxGetChannel(null, sceneUUID, null);
+                        if(!XmlFind(resp, "response.level0.body.level2.id", out m_parentId))
+                        {
+                            m_log.Error("[VivoxVoice] Directory not created");
+                            m_parentId = String.Empty;
+                        }
+                    }
                 }
 
             }
@@ -375,6 +402,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 ScenePresence avatar = scene.GetScenePresence(agentID);
                 if (null == scene.LandChannel) throw new Exception("land data not yet available");
+
                 LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
 
                 // obtain the channel_uri
@@ -423,18 +451,35 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         private string RegionGetOrCreateChannel(Scene scene, LandData land)
         {
-            string channelUri = null;
-            string sceneUUID = scene.RegionInfo.RegionID.ToString();
-            string sceneName = scene.RegionInfo.RegionName;
 
+            string channelUri = null;
+            string sceneUUID  = scene.RegionInfo.RegionID.ToString();
+            string landUUID   = land.GlobalID.ToString();
+            string landName   = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
+
+            // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
+            // as the directory ID. Otherwise, it reflects the parcel's ID.
+
+            if (land.LocalID != 1)
+            {
+                landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
+                landUUID = land.GlobalID.ToString();
+            }
+            else
+            {
+                landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, scene.RegionInfo.RegionName);
+                landUUID = scene.RegionInfo.RegionID.ToString();
+            }
+                    
             lock (vlock)
             {
-                // try retrieving the region channel_uri in case it already exists
-                XmlElement resp = VivoxGetChannel(sceneUUID, sceneUUID, sceneName);
+
+                XmlElement resp = VivoxGetChannel(m_parentId, landUUID, landName);
+
                 if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
                 {
                     // channelUri does not exist yet, create it...
-                    resp = VivoxCreateChannel(sceneUUID, sceneUUID, sceneName);
+                    resp = VivoxCreateChannel(m_parentId, landUUID, landName);
                 
                     // ...and extract it
                     if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
@@ -442,35 +487,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         throw new Exception("vivox channel uri not available");
                     }
                 }
-                m_log.DebugFormat("[VivoxVoice]: Region \"{0}\": retrieved region channel_uri {1} ", 
-                                  sceneName, channelUri);
 
-                // check whether we need to create a parcel voice channel
-                // (we associate parcel 1 with the region channel
-                if (land.LocalID != 1)
-                {
-                    string landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
-                    string landUUID = land.GlobalID.ToString();
-                    
-                    // try retrieving the region channel_uri in case it already exists
-                    resp = VivoxGetChannel(sceneUUID, landUUID, landName);
-                    if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
-                    {
-                        // channelUri does not exist yet, create it...
-                        resp = VivoxCreateChannel(sceneUUID, landUUID, land.Description);
-                        
-                        // ...and extract it
-                        if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
-                        {
-                            throw new Exception("vivox channel uri not available");
-                        }
-                    }
-                    m_log.DebugFormat("[VivoxVoice]: Region \"{0}\", land \"{1}\" ({2}): retrieved land channel_uri {3} ", 
-                                      sceneName, landName, land.LocalID, channelUri);
-                }
+                m_log.DebugFormat("[VivoxVoice]: Region \"{0}\": retrieved parcel channel_uri {1}:{2} ", 
+                                  landName, m_parentId, channelUri);
+
             }
 
             return channelUri;
+
         }
 
 
@@ -574,6 +598,29 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
             }
+            return VivoxCall(requrl, true);
+        }
+
+        /// <summary>
+        /// Create a directory.
+        /// Create a channel with an unconditional type of "dir" (indicating directory).
+        /// This is used to create an arbitrary name tree for partitioning of the
+        /// channel name space.
+        /// The parent and description are optional values.
+        /// </summary>
+
+        private XmlElement VivoxCreateDirectory(string parent, string dirId, string description)
+        {
+            string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "create", dirId, m_authToken);
+            if (parent != null && parent != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
+            }
+            if (description != null && description != String.Empty)
+            {
+                requrl = String.Format("{0}&chan_desc={1}", requrl, description);
+            }
+            requrl = String.Format("{0}&chan_type={1}", requrl, "dir");
             return VivoxCall(requrl, true);
         }
 
