@@ -188,7 +188,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         public void Close()
         {
-            VivoxLogout();
+            if (m_pluginEnabled)
+                VivoxLogout();
         }
 
         public string Name
