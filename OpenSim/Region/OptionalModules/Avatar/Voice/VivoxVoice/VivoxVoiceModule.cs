@@ -135,10 +135,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
 
                 string chan_id;
-                XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), null);
+                string sceneUUID = scene.RegionInfo.RegionID.ToString();
+                XmlElement resp = VivoxGetChannel(sceneUUID, sceneUUID, null);
                 if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                 {
-                    VivoxDeleteChannel(null, chan_id);
+                    VivoxDeleteChannel(sceneUUID, chan_id);
                 }
 
             }
@@ -371,41 +372,20 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
-                string channel_uri = null;
 
-                lock (vlock)
-                {
-                    // try retrieving the channel_uri in case it already exists
-                    // from a previous life
-                    XmlElement resp = VivoxGetChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
+                ScenePresence avatar = scene.GetScenePresence(agentID);
+                if (null == scene.LandChannel) throw new Exception("land data not yet available");
+                LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
 
-                    if (!XmlFind(resp, "response.level0.body.level2.uri", out channel_uri))
-                    {
-                        // channel_uri does not exist yet, create it...
-                        resp = VivoxCreateChannel(null, scene.RegionInfo.RegionID.ToString(), scene.RegionInfo.RegionName);
-                
-                        // ...and extract it
-                        if (!XmlFind(resp, "response.level0.body.chan_uri", out channel_uri))
-                        {
-                            throw new Exception("vivox channel uri not available");
-                        }
-                    }
-                    
-                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: channel: region {0} \"{1}\": channel_uri {2}", 
-                                      scene.RegionInfo.RegionID, scene.RegionInfo.RegionName, channel_uri);
-                }
+                // obtain the channel_uri
+                string channel_uri = RegionGetOrCreateChannel(scene, land);
 
                 // fill in our response to the client
                 Hashtable creds = new Hashtable();
                 creds["channel_uri"] = channel_uri;
 
-                string regionName = scene.RegionInfo.RegionName;
-                ScenePresence avatar = scene.GetScenePresence(agentID);
-                if (null == scene.LandChannel) throw new Exception("land data not yet available");
-                LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
-
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo =
-                    new LLSDParcelVoiceInfoResponse(regionName, land.LocalID, creds);
+                    new LLSDParcelVoiceInfoResponse(scene.RegionInfo.RegionName, land.LocalID, creds);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(parcelVoiceInfo);
 
@@ -439,6 +419,60 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                               request, path, param);
             return "<llsd>true</llsd>";
         }
+
+
+        private string RegionGetOrCreateChannel(Scene scene, LandData land)
+        {
+            string channelUri = null;
+            string sceneUUID = scene.RegionInfo.RegionID.ToString();
+            string sceneName = scene.RegionInfo.RegionName;
+
+            lock (vlock)
+            {
+                // try retrieving the region channel_uri in case it already exists
+                XmlElement resp = VivoxGetChannel(sceneUUID, sceneUUID, sceneName);
+                if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
+                {
+                    // channelUri does not exist yet, create it...
+                    resp = VivoxCreateChannel(sceneUUID, sceneUUID, sceneName);
+                
+                    // ...and extract it
+                    if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
+                    {
+                        throw new Exception("vivox channel uri not available");
+                    }
+                }
+                m_log.DebugFormat("[VivoxVoice]: Region \"{0}\": retrieved region channel_uri {1} ", 
+                                  sceneName, channelUri);
+
+                // check whether we need to create a parcel voice channel
+                // (we associate parcel 1 with the region channel
+                if (land.LocalID != 1)
+                {
+                    string landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
+                    string landUUID = land.GlobalID.ToString();
+                    
+                    // try retrieving the region channel_uri in case it already exists
+                    resp = VivoxGetChannel(sceneUUID, landUUID, landName);
+                    if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
+                    {
+                        // channelUri does not exist yet, create it...
+                        resp = VivoxCreateChannel(sceneUUID, landUUID, land.Description);
+                        
+                        // ...and extract it
+                        if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
+                        {
+                            throw new Exception("vivox channel uri not available");
+                        }
+                    }
+                    m_log.DebugFormat("[VivoxVoice]: Region \"{0}\", land \"{1}\" ({2}): retrieved land channel_uri {3} ", 
+                                      sceneName, landName, land.LocalID, channelUri);
+                }
+            }
+
+            return channelUri;
+        }
+
 
 
         private static readonly string m_vivoxLoginPath = "http://{0}/api2/viv_signin.php?userid={1}&pwd={2}";
