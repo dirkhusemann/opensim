@@ -49,12 +49,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 {
     public class VivoxVoiceModule : IRegionModule
     {
+
+        // Infrastructure
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
         private static readonly Object vlock  = new Object();
         private static readonly bool DUMP     = true;
 
+        // Capability strings
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
         private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
         private static readonly string m_chatSessionRequestPath = "0009/";
@@ -70,11 +72,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static bool   m_vivoxChannelEncrypt;
         private static string m_vivoxChannelType;
         private static string m_authToken = String.Empty;
+        private static Dictionary<string,string> m_parents = new Dictionary<string,string>();
         
-        // Instance values (unique to a region)
-
         private IConfig m_config;
-        private string  m_parentId = String.Empty;
 
         public void Initialise(Scene scene, IConfigSource config)
         {
@@ -93,81 +93,107 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 return;
             }
 
-            m_log.Info("[VivoxVoice] plugin enabled");
+			// This is only done the FIRST time this method is invoked.
+			if (m_WOF)
+			{
+				try
+				{
+                    // retrieve configuration variables
+					m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
+					m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
+					m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+					m_vivoxChannelType = m_config.GetString("vivox_channel_type", "channel");
+					m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
 
-            // retrieve configuration variables
+					m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
+
+					if (String.IsNullOrEmpty(m_vivoxServer) ||
+						String.IsNullOrEmpty(m_vivoxAdminUser) ||
+						String.IsNullOrEmpty(m_vivoxAdminPassword))
+					{
+						m_log.Error("[VivoxVoice] plugin mis-configured");
+						m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
+						return;
+					}
+
+					m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
+
+					// Get admin rights and cleanup any residual channel definition
+
+					DoAdminLogin();
+
+					m_pluginEnabled = true;
+					m_WOF = false;
+
+					m_log.Info("[VivoxVoice] plugin enabled");
+
+				}
+				catch (Exception e)
+				{
+					m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
+					m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
+					return;
+				}
+			}
+
+            // Everything that follows is done for every region
+
             lock (vlock)
             {
-                if (m_WOF)
-                {
-                    try
-                    {
-                        m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
-                        m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
-                        m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
-                        m_vivoxChannelType = m_config.GetString("vivox_channel_type", "channel");
-                        m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
 
-                        m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
-
-                        if (String.IsNullOrEmpty(m_vivoxServer) ||
-                            String.IsNullOrEmpty(m_vivoxAdminUser) ||
-                            String.IsNullOrEmpty(m_vivoxAdminPassword))
-                        {
-                            m_log.Error("[VivoxVoice] plugin mis-configured");
-                            m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
-                            return;
-                        }
-
-                        m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
-
-                        // Get admin rights and cleanup any residual channel definition
-
-                        DoAdminLogin();
-
-                        m_pluginEnabled = true;
-                        m_WOF = false;
-
-                    }
-                    catch (Exception e)
-                    {
-                        m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
-                        m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
-                        return;
-                    }
-                }
-
-                string chan_type;
+                string chan_id;
                 string sceneUUID = scene.RegionInfo.RegionID.ToString();
                 string sceneName  = scene.RegionInfo.RegionName;
 
-                // Test existence of the scene directory
+                XmlElement resp = VivoxGetChannel(null, sceneUUID+"D");
 
-                XmlElement resp = VivoxGetChannel(null, sceneUUID, null);
+                // Make sure that all local channels are deleted.
+                // So we have to search for the children, and then do an
+                // iteration over the set of chidren identified.
+                // This assumes that there is just one directory per
+                // region.
 
-                // If the scene directory does not exist, create it
-
-                if(!XmlFind(resp, "response.level0.body.level2.id", out m_parentId))
+                if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                 {
-                    VivoxCreateDirectory(null, sceneUUID, sceneName);
-                }
-
-                // Make sure the scene directory is declared to be a directory
-
-                if(XmlFind(resp, "response.level0.body.level2.type", out chan_type))
-                {
-                    if(chan_type != "dir")
+                    XmlElement children = VivoxListChildren(chan_id);
+                    string count;
+                    if(XmlFind(children, "response.level0.channel-search.count", out count))
                     {
-                        VivoxDeleteChannel(sceneUUID, m_parentId);
-                        VivoxCreateDirectory(null, sceneUUID, sceneName);
-                        resp = VivoxGetChannel(null, sceneUUID, null);
-                        if(!XmlFind(resp, "response.level0.body.level2.id", out m_parentId))
+                        int cnum = Convert.ToInt32(count);
+                        for(int i=0; i<cnum; i++)
                         {
-                            m_log.Error("[VivoxVoice] Directory not created");
-                            m_parentId = String.Empty;
+                            string id;
+                            if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                            {
+                                if (!IsOK(VivoxDeleteChannel(chan_id, id)))
+                                    m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, chan_id, id);
+                            } 
                         }
                     }
                 }
+                else
+                {
+                    if (!IsOK(VivoxCreateDirectory(null, sceneUUID+"D", sceneName)))
+                    {
+                        m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
+                            "*", sceneUUID, sceneName);
+                        chan_id = String.Empty;
+                    }
+                    resp = VivoxGetChannel(null, sceneUUID+"D");
+					if(!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+					{
+						m_log.Warn("[VivoxVoice] Create directory (1) failed");
+						chan_id = String.Empty;
+					}
+                }
+
+
+                // Create a dictionary entry unconditionally. This eliminates the
+                // need to check for a parent in the core code. The end result is
+                // the same, if the parent table entry is an empty string, then
+                // region channels will be created as first-level channels.
+
+                lock(m_parents) m_parents.Add(sceneUUID, chan_id);
 
             }
 
@@ -180,6 +206,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         OnRegisterCaps(scene, agentID, caps);
                 };
             }
+
         }
         
         public void PostInitialise()
@@ -397,11 +424,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             // - send channel_uri: as "sip:regionID@m_sipDomain"
             try
             {
-                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
-                                  request, path, param);
-
 
                 ScenePresence avatar = scene.GetScenePresence(agentID);
+
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: request: {0}, path: {1}, param: {2}",
+                                  request, path, param);
+                m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: location: {0} {1} {2}",
+                                  avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y,avatar.AbsolutePosition.Z);
+
                 if (null == scene.LandChannel) throw new Exception("land data not yet available");
 
                 LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
@@ -413,9 +443,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
 
                 // obtain the channel_uri
+
                 string channel_uri = RegionGetOrCreateChannel(scene, land);
 
                 // fill in our response to the client
+
                 Hashtable creds = new Hashtable();
                 creds["channel_uri"] = channel_uri;
 
@@ -426,6 +458,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: {0}", r);
                 return r;
+
             }
             catch (Exception e)
             {
@@ -460,9 +493,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         {
 
             string channelUri = null;
-            string sceneUUID  = scene.RegionInfo.RegionID.ToString();
-            string landUUID   = land.GlobalID.ToString();
-            string landName   = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
+            string landUUID;
+            string landName;
+            string parentId;
+
+            lock(m_parents) parentId = m_parents[scene.RegionInfo.RegionID.ToString()];
 
             // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
             // as the directory ID. Otherwise, it reflects the parcel's ID.
@@ -471,22 +506,24 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
                 landUUID = land.GlobalID.ToString();
+                m_log.DebugFormat("[VivoxVoice]: Assigning parcel channel {0}/{1}", land.LocalID,landUUID);
             }
             else
             {
                 landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, scene.RegionInfo.RegionName);
                 landUUID = scene.RegionInfo.RegionID.ToString();
+                m_log.DebugFormat("[VivoxVoice]: Assigning region channel {0}/{1}", land.LocalID,landUUID);
             }
                     
             lock (vlock)
             {
 
-                XmlElement resp = VivoxGetChannel(m_parentId, landUUID, landName);
+                XmlElement resp = VivoxGetChannel(parentId, landUUID);
 
                 if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
                 {
                     // channelUri does not exist yet, create it...
-                    resp = VivoxCreateChannel(m_parentId, landUUID, landName);
+                    resp = VivoxCreateChannel(parentId, landUUID, landName);
                 
                     // ...and extract it
                     if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
@@ -496,14 +533,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
 
                 m_log.DebugFormat("[VivoxVoice]: Region \"{0}\": retrieved parcel channel_uri {1}:{2} ", 
-                                  landName, m_parentId, channelUri);
+                                  landName, parentId, channelUri);
 
             }
 
             return channelUri;
 
         }
-
 
 
         private static readonly string m_vivoxLoginPath = "http://{0}/api2/viv_signin.php?userid={1}&pwd={2}";
@@ -643,18 +679,26 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// In this case the call handles parent and description as optional values.
         /// </summary>
 
-        private XmlElement VivoxGetChannel(string parent, string channelid, string description)
+        private XmlElement VivoxGetChannel(string parent, string channelid)
         {
             string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "get", channelid, m_authToken);
+
             if (parent != null && parent != String.Empty)
-            {
-                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
-            }
-            if (description != null && description != String.Empty)
-            {
-                requrl = String.Format("{0}&chan_desc={1}", requrl, description);
-            }
-            return VivoxCall(requrl, true);
+                return VivoxGetChild(parent, channelid);
+            else
+                return VivoxCall(requrl, true);
+        }
+
+        private static readonly string m_vivoxChannelById = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_id={2}&auth_token={3}";
+
+        private XmlElement VivoxGetChannelById(string parent, string channelid)
+        {
+            string requrl = String.Format(m_vivoxChannelById, m_vivoxServer, "get", channelid, m_authToken);
+
+            if (parent != null && parent != String.Empty)
+                return VivoxGetChild(parent, channelid);
+            else
+                return VivoxCall(requrl, true);
         }
 
         /// <summary>
@@ -682,12 +726,56 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         }
 
         /// <summary>
+        /// Return information on channels in the given directory
+        /// </summary>
+
+        private static readonly string m_vivoxChannelSearch = "http://{0}/api2/viv_chan_search.php?&cond_chanparent={1}&auth_token={2}";
+
+        private XmlElement VivoxListChildren(string channelid)
+        {
+            string requrl = String.Format(m_vivoxChannelSearch, m_vivoxServer, channelid, m_authToken);
+            return VivoxCall(requrl, true);
+        }
+
+        private XmlElement VivoxGetChild(string parent, string child)
+		{
+
+			XmlElement children = VivoxListChildren(parent);
+			string count;
+
+			if(XmlFind(children, "response.level0.channel-search.count", out count))
+			{
+				int cnum = Convert.ToInt32(count);
+				for(int i=0; i<cnum; i++)
+				{
+					string name;
+					string id;
+					if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.name", i, out name))
+					{
+                        if(name == child)
+                        {
+					        if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                            {
+                                return VivoxGetChannelById(null, id);
+                            }
+                        }
+					} 
+				}
+			}
+
+            // One we *know* does not exist.
+            return VivoxGetChannel(null, Guid.NewGuid().ToString());
+
+		}
+   
+        /// <summary>
         /// This method handles the WEB side of making a request over the
         /// Vivox interface. The returned values are tansferred to a has
         /// table which is returned as the result.
         /// The outcome of the call can be determined by examining the 
         /// status value in the hash table.
         /// </summary>
+
         private XmlElement VivoxCall(string requrl, bool admin)
         {
             // If this is an admin call, and admin is not connected,
@@ -717,6 +805,17 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (DUMP) XmlScanl(doc.DocumentElement,0);
 
             return doc.DocumentElement;
+        }
+
+        /// <summary>
+        /// Just say if it worked.
+        /// </summary>
+
+        private bool IsOK(XmlElement resp)
+        {
+            string status;
+            XmlFind(resp, "response.level0.status", out status);
+            return (status == "OK");
         }
 
         /// <summary>
