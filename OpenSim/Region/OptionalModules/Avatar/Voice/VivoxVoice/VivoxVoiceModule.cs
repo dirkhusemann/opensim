@@ -405,6 +405,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 if (null == scene.LandChannel) throw new Exception("land data not yet available");
 
                 LandData land = scene.GetLandData(avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y);
+                if ((land.Flags & (uint)Parcel.ParcelFlags.AllowVoiceChat) == 0)
+                {
+                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": voice not for parcel \"{0}\"",
+                                      scene.RegionInfo.RegionName, land.Description);
+                    return "<llsd>undef</llsd>";
+                }
 
                 // obtain the channel_uri
                 string channel_uri = RegionGetOrCreateChannel(scene, land);
@@ -461,7 +467,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
             // as the directory ID. Otherwise, it reflects the parcel's ID.
 
-            if (land.LocalID != 1)
+            if (land.LocalID != 1 && (land.Flags & (uint)Parcel.ParcelFlags.UseEstateVoiceChan) == 0)
             {
                 landName = String.Format("{0}:{1}", scene.RegionInfo.RegionName, land.Description);
                 landUUID = land.GlobalID.ToString();

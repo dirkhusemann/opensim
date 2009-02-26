@@ -49,11 +49,15 @@ namespace OpenSim.Framework
         private string _description = String.Empty;
 
 
-        private uint _flags = (uint) Parcel.ParcelFlags.AllowFly | (uint) Parcel.ParcelFlags.AllowLandmark |
-                                (uint) Parcel.ParcelFlags.AllowAPrimitiveEntry |
-                                (uint) Parcel.ParcelFlags.AllowDeedToGroup | (uint) Parcel.ParcelFlags.AllowTerraform |
-                                (uint) Parcel.ParcelFlags.CreateObjects | (uint) Parcel.ParcelFlags.AllowOtherScripts |
-                                (uint) Parcel.ParcelFlags.SoundLocal;
+        private uint _flags = 
+            (uint)Parcel.ParcelFlags.AllowFly | 
+            (uint)Parcel.ParcelFlags.AllowLandmark |
+            (uint)Parcel.ParcelFlags.AllowAPrimitiveEntry |
+            (uint)Parcel.ParcelFlags.AllowDeedToGroup | 
+            (uint)Parcel.ParcelFlags.AllowTerraform |
+            (uint)Parcel.ParcelFlags.CreateObjects | 
+            (uint)Parcel.ParcelFlags.AllowOtherScripts |
+            (uint)Parcel.ParcelFlags.SoundLocal;
 
         private byte _landingType = 0;
         private string _name = "Your Parcel";
