@@ -153,17 +153,17 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // This assumes that there is just one directory per
                 // region.
 
-                if(XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+               if (XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                 {
                     XmlElement children = VivoxListChildren(chan_id);
                     string count;
-                    if(XmlFind(children, "response.level0.channel-search.count", out count))
+                   if (XmlFind(children, "response.level0.channel-search.count", out count))
                     {
                         int cnum = Convert.ToInt32(count);
-                        for(int i=0; i<cnum; i++)
+                       for (int i=0; i<cnum; i++)
                         {
                             string id;
-                            if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                           if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
                             {
                                 if (!IsOK(VivoxDeleteChannel(chan_id, id)))
                                     m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, chan_id, id);
@@ -180,7 +180,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         chan_id = String.Empty;
                     }
                     resp = VivoxGetChannel(null, sceneUUID+"D");
-                    if(!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                   if (!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                     {
                         m_log.Warn("[VivoxVoice] Create directory (1) failed");
                         chan_id = String.Empty;
@@ -193,7 +193,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // the same, if the parent table entry is an empty string, then
                 // region channels will be created as first-level channels.
 
-                lock(m_parents) m_parents.Add(sceneUUID, chan_id);
+               lock (m_parents) m_parents.Add(sceneUUID, chan_id);
 
             }
 
@@ -531,7 +531,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             string landName;
             string parentId;
 
-            lock(m_parents) parentId = m_parents[scene.RegionInfo.RegionID.ToString()];
+           lock (m_parents) parentId = m_parents[scene.RegionInfo.RegionID.ToString()];
 
             // Create parcel voice channel. If no parcel exists, then the voice channel ID is the same
             // as the directory ID. Otherwise, it reflects the parcel's ID.
@@ -668,11 +668,11 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
             }
-            if(m_vivoxChannelEncrypt)
+           if (m_vivoxChannelEncrypt)
             {
                 requrl = String.Format("{0}&chan_encrypt_audio=1", requrl);
             }
-            if(m_vivoxChannelType != String.Empty)
+           if (m_vivoxChannelType != String.Empty)
             {
                 requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
             }
@@ -778,18 +778,18 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             XmlElement children = VivoxListChildren(parent);
             string count;
 
-            if(XmlFind(children, "response.level0.channel-search.count", out count))
+           if (XmlFind(children, "response.level0.channel-search.count", out count))
             {
                 int cnum = Convert.ToInt32(count);
-                for(int i=0; i<cnum; i++)
+               for (int i=0; i<cnum; i++)
                 {
                     string name;
                     string id;
-                    if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.name", i, out name))
+                   if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.name", i, out name))
                     {
-                        if(name == child)
+                       if (name == child)
                         {
-                            if(XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                           if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
                             {
                                 return VivoxGetChannelById(null, id);
                             }
