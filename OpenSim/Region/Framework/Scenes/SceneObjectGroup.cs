@@ -77,6 +77,7 @@ namespace OpenSim.Region.Framework.Scenes
     {
         public Vector3 targetPos;
         public float tolerance;
+        public uint handle;
     }
 
     public delegate void PrimCountTaintedDelegate();
@@ -1617,6 +1618,37 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         /// <summary>
+        /// Uses a PID to attempt to clamp the object on the Z axis at the given height over tau seconds.
+        /// </summary>
+        /// <param name="height">Height to hover.  Height of zero disables hover.</param>
+        /// <param name="hoverType">Determines what the height is relative to </param>
+        /// <param name="tau">Number of seconds over which to reach target</param>
+        public void SetHoverHeight(float height, PIDHoverType hoverType, float tau)
+        {
+            SceneObjectPart rootpart = m_rootPart;
+            if (rootpart != null)
+            {
+                if (rootpart.PhysActor != null)
+                {
+                    if (height != 0f)
+                    {
+                        rootpart.PhysActor.PIDHoverHeight = height;
+                        rootpart.PhysActor.PIDHoverType = hoverType;
+                        rootpart.PhysActor.PIDTau = tau;
+                        rootpart.PhysActor.PIDHoverActive = true;
+                    }
+                    else
+                    {
+                        rootpart.PhysActor.PIDHoverActive = false;
+                    }
+                }
+            }            
+        }
+
+
+
+
+        /// <summary>
         /// Set the owner of the root part.
         /// </summary>
         /// <param name="part"></param>
@@ -2190,7 +2222,6 @@ namespace OpenSim.Region.Framework.Scenes
 
         private void LinkNonRootPart(SceneObjectPart part, Vector3 oldGroupPosition, Quaternion oldGroupRotation, int linkNum)
         {
-
             Quaternion parentRot = oldGroupRotation;
             Quaternion oldRot = part.RotationOffset;
             Quaternion worldRot = parentRot * oldRot;
@@ -2861,6 +2892,7 @@ namespace OpenSim.Region.Framework.Scenes
             waypoint.targetPos = target;
             waypoint.tolerance = tolerance;
             uint handle = m_scene.AllocateLocalId();
+            waypoint.handle = handle;
             lock (m_targets)
             {
                 m_targets.Add(handle, waypoint);
@@ -2897,12 +2929,11 @@ namespace OpenSim.Region.Framework.Scenes
                                 // trigger at_target
                                 if (m_scriptListens_atTarget)
                                 {
-                                    // Reusing att.tolerance to hold the index of the target in the targets dictionary
-                                    // to avoid deadlocking the sim.
                                     at_target = true;
                                     scriptPosTarget att = new scriptPosTarget();
                                     att.targetPos = target.targetPos;
-                                    att.tolerance = (float)idx;
+                                    att.tolerance = target.tolerance;
+                                    att.handle = target.handle;
                                     atTargets.Add(idx, att);
                                 }
                             }
@@ -2926,11 +2957,7 @@ namespace OpenSim.Region.Framework.Scenes
                             foreach (uint target in atTargets.Keys)
                             {
                                 scriptPosTarget att = atTargets[target];
-                                // Reusing att.tolerance to hold the index of the target in the targets dictionary
-                                // to avoid deadlocking the sim.
-                                m_scene.TriggerAtTargetEvent(localids[ctr], (uint)att.tolerance, att.targetPos, m_rootPart.GroupPosition);
-
-
+                                m_scene.TriggerAtTargetEvent(localids[ctr], att.handle, att.targetPos, m_rootPart.GroupPosition);
                             }
                         }
                         return;

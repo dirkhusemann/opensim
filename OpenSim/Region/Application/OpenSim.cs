@@ -95,6 +95,40 @@ namespace OpenSim
             m_console.SetGuiMode(m_gui);
             MainConsole.Instance = m_console;
 
+            RegisterConsoleCommands();
+
+            base.StartupSpecific();
+
+            //Run Startup Commands
+            if (String.IsNullOrEmpty( m_startupCommandsFile ))
+            {
+                m_log.Info("[STARTUP]: No startup command script specified. Moving on...");
+            }
+            else
+            {
+                RunCommandScript(m_startupCommandsFile);
+            }
+
+            // Start timer script (run a script every xx seconds)
+            if (m_timedScript != "disabled")
+            {
+                m_scriptTimer = new Timer();
+                m_scriptTimer.Enabled = true;
+                m_scriptTimer.Interval = 1200 * 1000;
+                m_scriptTimer.Elapsed += RunAutoTimerScript;
+            }
+
+            PrintFileToConsole("startuplogo.txt");
+
+            // For now, start at the 'root' level by default
+            if (m_sceneManager.Scenes.Count == 1) // If there is only one region, select it
+                ChangeSelectedRegion("region", new string[] {"change", "region", m_sceneManager.Scenes[0].RegionInfo.RegionName});
+            else
+                ChangeSelectedRegion("region", new string[] {"change", "region", "root"});
+        }
+
+        private void RegisterConsoleCommands()
+        {
             m_console.Commands.AddCommand("region", false, "clear assets",
                     "clear assets",
                     "Clear the asset cache", HandleClearAssets);
@@ -255,35 +289,6 @@ namespace OpenSim
                         "reset user password [<first> [<last> [<password>]]]",
                         "Reset a user password", HandleResetUserPassword);
             }
-
-            base.StartupSpecific();
-
-            //Run Startup Commands
-            if (String.IsNullOrEmpty( m_startupCommandsFile ))
-            {
-                m_log.Info("[STARTUP]: No startup command script specified. Moving on...");
-            }
-            else
-            {
-                RunCommandScript(m_startupCommandsFile);
-            }
-
-            // Start timer script (run a script every xx seconds)
-            if (m_timedScript != "disabled")
-            {
-                m_scriptTimer = new Timer();
-                m_scriptTimer.Enabled = true;
-                m_scriptTimer.Interval = 1200 * 1000;
-                m_scriptTimer.Elapsed += RunAutoTimerScript;
-            }
-
-            PrintFileToConsole("startuplogo.txt");
-
-            // For now, start at the 'root' level by default
-            if (m_sceneManager.Scenes.Count == 1) // If there is only one region, select it
-                ChangeSelectedRegion("region", new string[] {"change", "region", m_sceneManager.Scenes[0].RegionInfo.RegionName});
-            else
-                ChangeSelectedRegion("region", new string[] {"change", "region", "root"});
         }
 
         public override void ShutdownSpecific()
@@ -410,9 +415,9 @@ namespace OpenSim
             {
                 m_console.Error("Usage: create region <region name> <region_file.xml>");
             }
-                
 
-            CreateRegion(new RegionInfo(cmd[2], regionFile, false, ConfigSource.Source), true);
+            IScene scene;
+            CreateRegion(new RegionInfo(cmd[2], regionFile, false, ConfigSource.Source), true, out scene);
         }
 
         private void HandleLoginEnable(string module, string[] cmd)
@@ -1002,7 +1007,14 @@ namespace OpenSim
         {
             if (cmdparams.Length > 2)
             {
-                m_sceneManager.SaveCurrentSceneToXml2(cmdparams[2]);
+                try
+                {
+                    m_sceneManager.SaveCurrentSceneToXml2(cmdparams[2]);
+                }
+                catch
+                {
+                    m_console.Error("Unable to save xml. Usage: save xml2 <filename>");
+                }
             }
             else
             {
@@ -1014,7 +1026,14 @@ namespace OpenSim
         {
             if (cmdparams.Length > 2)
             {
-                m_sceneManager.LoadCurrentSceneFromXml2(cmdparams[2]);
+                try
+                {
+                    m_sceneManager.LoadCurrentSceneFromXml2(cmdparams[2]);
+                }
+                catch
+                {
+                    m_console.Error("Specified xml not found. Usage: load xml2 <filename>");
+                }
             }
             else
             {
@@ -1037,7 +1056,14 @@ namespace OpenSim
         {
             if (cmdparams.Length > 2)
             {
-                m_sceneManager.LoadArchiveToCurrentScene(cmdparams[2]);
+                try
+                {
+                    m_sceneManager.LoadArchiveToCurrentScene(cmdparams[2]);
+                }
+                catch
+                {
+                    m_console.Error("Specified oar not found. Usage: load oar <filename>");
+                }
             }
             else
             {
@@ -1047,7 +1073,7 @@ namespace OpenSim
                 }
                 catch
                 {
-                    m_console.Error("Default oar not found. Usage: load-oar <filename>");
+                    m_console.Error("Default oar not found. Usage: load oar <filename>");
                 }
             }
         }
@@ -1060,7 +1086,14 @@ namespace OpenSim
         {
             if (cmdparams.Length > 2)
             {
-                m_sceneManager.SaveCurrentSceneToArchive(cmdparams[2]);
+                try
+                {
+                    m_sceneManager.SaveCurrentSceneToArchive(cmdparams[2]);
+                }
+                catch
+                {
+                    m_console.Error("Unable to save oar. Usage: save oar <filename>");
+                }
             }
             else
             {

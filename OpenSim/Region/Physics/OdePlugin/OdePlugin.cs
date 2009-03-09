@@ -181,6 +181,7 @@ namespace OpenSim.Region.Physics.OdePlugin
         private float avHeightFudgeFactor = 0.52f;
         private float avMovementDivisorWalk = 1.3f;
         private float avMovementDivisorRun = 0.8f;
+        private float minimumGroundFlightOffset = 3f;
 
         public bool meshSculptedPrim = true;
 
@@ -399,7 +400,7 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                     geomContactPointsStartthrottle = physicsconfig.GetInt("geom_contactpoints_start_throttling", 3);
                     geomUpdatesPerThrottledUpdate = physicsconfig.GetInt("geom_updates_before_throttled_update", 15);
-                    geomCrossingFailuresBeforeOutofbounds = physicsconfig.GetInt("geom_crossing_faiures_before_outofbounds", 5);
+                    geomCrossingFailuresBeforeOutofbounds = physicsconfig.GetInt("geom_crossing_failures_before_outofbounds", 5);
 
                     geomDefaultDensity = physicsconfig.GetFloat("geometry_default_density", 10.000006836f);
                     bodyFramesAutoDisable = physicsconfig.GetInt("body_frames_auto_disable", 20);
@@ -432,6 +433,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                     physics_logging_append_existing_logfile = physicsconfig.GetBoolean("physics_logging_append_existing_logfile", false);
 
                     m_NINJA_physics_joints_enabled = physicsconfig.GetBoolean("use_NINJA_physics_joints", false);
+                    minimumGroundFlightOffset = physicsconfig.GetFloat("minimum_ground_flight_offset", 3f);
 
                 }
             }
@@ -481,6 +483,12 @@ namespace OpenSim.Region.Physics.OdePlugin
 
             d.WorldSetGravity(world, gravityx, gravityy, gravityz);
             d.WorldSetContactSurfaceLayer(world, contactsurfacelayer);
+
+            d.WorldSetLinearDamping(world, 256f);
+            d.WorldSetAngularDamping(world, 256f);
+            d.WorldSetAngularDampingThreshold(world, 256f);
+            d.WorldSetLinearDampingThreshold(world, 256f);
+            d.WorldSetMaxAngularSpeed(world, 256f);
 
             // Set how many steps we go without running collision testing
             // This is in addition to the step size.
@@ -1289,6 +1297,15 @@ namespace OpenSim.Region.Physics.OdePlugin
 // Recovered for use by fly height. Kitto Flora
         public float GetTerrainHeightAtXY(float x, float y)
         {
+            // Teravus: Kitto, this code causes recurring errors that stall physics permenantly unless 
+            // the values are checked, so checking below.
+            // Is there any reason that we don't do this in ScenePresence?   
+            // The only physics engine that benefits from it in the physics plugin is this one
+
+            if ((int)x > Constants.RegionSize || (int)y > Constants.RegionSize || 
+                (int)x < 0.001f || (int)y < 0.001f)
+                return 0;
+
             return (float)_origheightmap[(int)y * Constants.RegionSize + (int)x];
         }
 // End recovered. Kitto Flora
@@ -1321,6 +1338,7 @@ namespace OpenSim.Region.Physics.OdePlugin
             pos.Z = position.Z;
             OdeCharacter newAv = new OdeCharacter(avName, this, pos, ode, size, avPIDD, avPIDP, avCapRadius, avStandupTensor, avDensity, avHeightFudgeFactor, avMovementDivisorWalk, avMovementDivisorRun);
             newAv.Flying = isFlying;
+            newAv.MinimumGroundFlightOffset = minimumGroundFlightOffset;
             _characters.Add(newAv);
             return newAv;
         }
@@ -2296,8 +2314,10 @@ namespace OpenSim.Region.Physics.OdePlugin
 
                 // Figure out the Frames Per Second we're going at.
                 //(step_time == 0.004f, there's 250 of those per second.   Times the step time/step size
-                step_time = 0.09375f;
+                
                 fps = (step_time/ODE_STEPSIZE) * 1000;
+
+                step_time = 0.09375f;
 
                 while (step_time > 0.0f)
                 {
@@ -3029,6 +3049,11 @@ namespace OpenSim.Region.Physics.OdePlugin
 
         public override void DeleteTerrain()
         {
+        }
+
+        public float GetWaterLevel()
+        {
+            return waterlevel;
         }
 
         public override void SetWaterLevel(float baseheight)

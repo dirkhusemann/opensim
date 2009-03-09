@@ -67,6 +67,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
         void osSetParcelMediaURL(string url);
         void osSetPrimFloatOnWater(int floatYN);
 
+        // Avatar Info Commands
+        string osGetAgentIP(string agent);
+
         // Teleport commands
         void osTeleportAgent(string agent, string regionName, LSL_Types.Vector3 position, LSL_Types.Vector3 lookat);
         void osTeleportAgent(string agent, uint regionX, uint regionY, LSL_Types.Vector3 position, LSL_Types.Vector3 lookat);
@@ -96,7 +99,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
 
         string osGetScriptEngineName();
         string osGetSimulatorVersion();
-        void osSetParcelMediaTime(double time);
         Hashtable osParseJSON(string JSON);
         
         void osMessageObject(key objectUUID,string message);

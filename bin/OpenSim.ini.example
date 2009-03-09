@@ -327,6 +327,12 @@ InterregionComms = "RESTComms"
     ; The old default is "OpenSim", set here fro compatibility
     shard = "OpenSim"
 
+    ; What is reported as the "User-Agent" when using llHTTPRequest
+    ; Defaults to not sent if not set here. See the notes section in the wiki at
+    ; http://wiki.secondlife.com/wiki/LlHTTPRequest for comments on adding
+    ; " (Mozilla Compatible)" to the text where there are problems with a web server
+    ;user_agent = "OpenSim LSL (Mozilla Compatible)"
+
 [ClientStack.LindenUDP]
     ; This is the multiplier applied to all client throttles for outgoing UDP network data
     ; If it is set to 1, then we obey the throttle settings as given to us by the client.  If it is set to 3, for example, then we 
@@ -463,6 +469,9 @@ InterregionComms = "RESTComms"
     ; speed of movement with Always Run on
     av_movement_divisor_run = 0.8
 
+    ; When the avatar flies, it will be moved up by this amount off the ground (in meters)
+    minimum_ground_flight_offset = 3.0
+
     ; ##
     ; ## Object options
     ; ##
@@ -478,7 +487,7 @@ InterregionComms = "RESTComms"
     body_pid_gain = 25
 
     ; amount of time a geom/body will try to cross a region border before it gets disabled
-    geom_crossing_faiures_before_outofbounds = 5
+    geom_crossing_failures_before_outofbounds = 5
 
     ; start throttling the object updates if object comes in contact with 3 or more other objects
     geom_contactpoints_start_throttling = 3
@@ -1101,3 +1110,6 @@ InterregionComms = "RESTComms"
     ; - the second number indicates how many scrips failed to compile
     ; - "oar error" if supplied, provides the error message from the OAR load
     channel_notify = -800
+
+[MRM]
+	Enabled = false ; Enables the Mini Region Modules Script Engine. WARNING: SECURITY RISK.

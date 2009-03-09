@@ -39,6 +39,7 @@ using OpenSim.Framework.Communications.Capabilities;
 
 namespace OpenSim.Region.Communications.Local
 {
+    /*
     public delegate void LoginToRegionEvent(ulong regionHandle, Login login);
 
     public class LocalLoginService : LoginService
@@ -168,6 +169,7 @@ namespace OpenSim.Region.Communications.Local
             }
             else
             {
+                m_log.InfoFormat("not found the region at {0} {1}", theUser.HomeRegionX, theUser.HomeRegionY);
                 // Emergency mode: Home-region isn't available, so we can't request the region info.
                 // Use the stored home regionHandle instead.
                 // NOTE: If the home-region moves, this will be wrong until the users update their user-profile again
@@ -427,5 +429,5 @@ namespace OpenSim.Region.Communications.Local
             m_gridService.TriggerLogOffUser(SimInfo.RegionHandle, theUser.ID, theUser.CurrentAgent.SecureSessionID, "Logging you off");
         }
 
-    }
+    }*/
 }

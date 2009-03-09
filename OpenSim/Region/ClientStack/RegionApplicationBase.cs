@@ -45,9 +45,13 @@ namespace OpenSim.Region.ClientStack
         private static readonly ILog m_log
             = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected IAssetCache m_assetCache;
         protected Dictionary<EndPoint, uint> m_clientCircuits = new Dictionary<EndPoint, uint>();
         protected NetworkServersInfo m_networkServersInfo;
+
+        public NetworkServersInfo NetServersInfo
+        {
+            get { return m_networkServersInfo; }
+        }
 
         protected BaseHttpServer m_httpServer;
         protected uint m_httpServerPort;
@@ -55,6 +59,7 @@ namespace OpenSim.Region.ClientStack
         public CommunicationsManager CommunicationsManager 
         {
             get { return m_commsManager; }
+            set { m_commsManager = value; }
         }
         protected CommunicationsManager m_commsManager;        
 
@@ -67,6 +72,14 @@ namespace OpenSim.Region.ClientStack
             get { return m_sceneManager; }
         }
         protected SceneManager m_sceneManager = new SceneManager();
+
+        protected IAssetCache m_assetCache;
+
+        public IAssetCache AssetCache
+        {
+            get { return m_assetCache; }
+            set { m_assetCache = value; }
+        }
         
         protected abstract void Initialize();
         
@@ -127,87 +140,6 @@ namespace OpenSim.Region.ClientStack
             physicsPluginManager.LoadPluginsFromAssemblies("Physics");
             
             return physicsPluginManager.GetPhysicsScene(engine, meshEngine, config, osSceneIdentifier);
-        }
-
-        /// <summary>
-        /// Create a scene and its initial base structures.
-        /// </summary>
-        /// <param name="regionInfo"></param>
-        /// <param name="clientServer"> </param>
-        /// <returns></returns>        
-        protected Scene SetupScene(RegionInfo regionInfo, out IClientNetworkServer clientServer)
-        {
-            return SetupScene(regionInfo, 0, null, out clientServer);
-        }
-
-        /// <summary>
-        /// Create a scene and its initial base structures.
-        /// </summary>
-        /// TODO: Really configSource shouldn't be passed in here, but should be moved up to BaseOpenSimServer and 
-        /// made common to all the servers.
-        /// 
-        /// <param name="regionInfo"></param>
-        /// <param name="proxyOffset"></param>
-        /// <param name="configSource"></param>
-        /// <param name="clientServer"> </param>
-        /// <returns></returns>
-        protected Scene SetupScene(
-            RegionInfo regionInfo, int proxyOffset, IConfigSource configSource, out IClientNetworkServer clientServer)
-        {
-            AgentCircuitManager circuitManager = new AgentCircuitManager();
-            IPAddress listenIP = regionInfo.InternalEndPoint.Address;
-            //if (!IPAddress.TryParse(regionInfo.InternalEndPoint, out listenIP))
-            //    listenIP = IPAddress.Parse("0.0.0.0");
-
-            uint port = (uint) regionInfo.InternalEndPoint.Port;
-            
-            clientServer 
-                = m_clientStackManager.CreateServer(
-                    listenIP, ref port, proxyOffset, regionInfo.m_allow_alternate_ports, configSource,
-                    m_assetCache, circuitManager);
-            
-            regionInfo.InternalEndPoint.Port = (int)port;
-
-            Scene scene = CreateScene(regionInfo, m_storageManager, circuitManager);
-
-            clientServer.AddScene(scene);
-
-            scene.LoadWorldMap();
-
-            scene.PhysicsScene = GetPhysicsScene(scene.RegionInfo.RegionName);
-            scene.PhysicsScene.SetTerrain(scene.Heightmap.GetFloatsSerialised());
-            scene.PhysicsScene.SetWaterLevel((float)regionInfo.RegionSettings.WaterHeight);
-
-            // TODO: Remove this cruft once MasterAvatar is fully deprecated
-            //Master Avatar Setup
-            UserProfileData masterAvatar;
-            if (scene.RegionInfo.MasterAvatarAssignedUUID == UUID.Zero)
-            {
-                masterAvatar =
-                    m_commsManager.UserService.SetupMasterUser(scene.RegionInfo.MasterAvatarFirstName,
-                                                               scene.RegionInfo.MasterAvatarLastName,
-                                                               scene.RegionInfo.MasterAvatarSandboxPassword);
-            }
-            else
-            {
-                masterAvatar = m_commsManager.UserService.SetupMasterUser(scene.RegionInfo.MasterAvatarAssignedUUID);
-                scene.RegionInfo.MasterAvatarFirstName = masterAvatar.FirstName;
-                scene.RegionInfo.MasterAvatarLastName = masterAvatar.SurName;
-            }
-
-            if (masterAvatar == null)
-            {
-                m_log.Info("[PARCEL]: No master avatar found, using null.");
-                scene.RegionInfo.MasterAvatarAssignedUUID = UUID.Zero;
-            }
-            else
-            {
-                m_log.InfoFormat("[PARCEL]: Found master avatar {0} {1} [" + masterAvatar.ID.ToString() + "]",
-                                 scene.RegionInfo.MasterAvatarFirstName, scene.RegionInfo.MasterAvatarLastName);
-                scene.RegionInfo.MasterAvatarAssignedUUID = masterAvatar.ID;
-            }
-            
-            return scene;
         }
     }
 }
