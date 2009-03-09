@@ -176,15 +176,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
                 else
                 {
-                    if (!IsOK(VivoxCreateDirectory(null, sceneUUID + "D", sceneName)))
+                    if (!VivoxTryCreateDirectory(sceneUUID + "D", sceneName, out channelId))
                     {
                         m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
                                          "*", sceneUUID, sceneName);
-                        channelId = String.Empty;
-                    }
-                    if (!VivoxTryGetDirectory(sceneUUID + "D", out channelId))
-                    {
-                        m_log.Warn("[VivoxVoice] Create directory (1) failed");
                         channelId = String.Empty;
                     }
                 }
@@ -531,6 +526,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             string channelUri = null;
             string channelId = null;
+
             string landUUID;
             string landName;
             string parentId;
@@ -557,20 +553,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     
             lock (vlock)
             {
-                if (!VivoxTryGetChannel(parentId, landUUID, out channelId, out channelUri))
-                {
-                    // channelUri does not exist yet, create it...
-                    XmlElement resp = VivoxCreateChannel(parentId, landUUID, landName);
-                
-                    // ...and extract it
-                    if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
-                    {
-                        throw new Exception("vivox channel uri not available");
-                    }
-                }
+                if (!VivoxTryGetChannel(parentId, landUUID, out channelId, out channelUri) &&
+                    !VivoxTryCreateChannel(parentId, landUUID, landName, out channelUri))
+                    throw new Exception("vivox channel uri not available");
 
                 m_log.DebugFormat("[VivoxVoice]: Region:Parcel \"{0}\": parent channel id {1}: retrieved parcel channel_uri {2} ", 
                                   landName, parentId, channelUri);
+
 
             }
 
@@ -658,7 +647,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// In this case the call handles parent and description as optional values.
         /// </summary>
 
-        private XmlElement VivoxCreateChannel(string parent, string channelId, string description)
+        private bool VivoxTryCreateChannel(string parent, string channelId, string description, out string channelUri)
         {
             string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "create", channelId, m_authToken);
             if (parent != null && parent != String.Empty)
@@ -669,15 +658,21 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
             }
-           if (m_vivoxChannelEncrypt)
+            if (m_vivoxChannelEncrypt)
             {
                 requrl = String.Format("{0}&chan_encrypt_audio=1", requrl);
             }
-           if (m_vivoxChannelType != String.Empty)
+            if (m_vivoxChannelType != String.Empty)
             {
                 requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
             }
-            return VivoxCall(requrl, true);
+            
+            XmlElement resp = VivoxCall(requrl, true);
+            if (XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
+                return true;
+
+            channelUri = String.Empty;
+            return false;
         }
 
         /// <summary>
@@ -688,19 +683,27 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// The parent and description are optional values.
         /// </summary>
 
-        private XmlElement VivoxCreateDirectory(string parent, string dirId, string description)
+        private bool VivoxTryCreateDirectory(string dirId, string description, out string channelId)
         {
             string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "create", dirId, m_authToken);
-            if (parent != null && parent != String.Empty)
-            {
-                requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
-            }
+
+            // if (parent != null && parent != String.Empty)
+            // {
+            //     requrl = String.Format("{0}&chan_parent={1}", requrl, parent);
+            // }
+
             if (description != null && description != String.Empty)
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
             }
             requrl = String.Format("{0}&chan_type={1}", requrl, "dir");
-            return VivoxCall(requrl, true);
+
+            XmlElement resp = VivoxCall(requrl, true);
+            if (IsOK(resp) && XmlFind(resp, "response.level0.body.chan_id", out channelId))
+                return true;
+
+            channelId = String.Empty;
+            return false;
         }
 
         private static readonly string m_vivoxChannelSearchPath = "http://{0}/api2/viv_chan_search.php?cond_channame={1}&auth_token={2}";
