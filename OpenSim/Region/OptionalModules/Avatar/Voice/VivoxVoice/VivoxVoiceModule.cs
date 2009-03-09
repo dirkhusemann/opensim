@@ -140,30 +140,31 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             lock (vlock)
             {
-
+                
                 string chan_id;
                 string sceneUUID = scene.RegionInfo.RegionID.ToString();
                 string sceneName  = scene.RegionInfo.RegionName;
-
-                XmlElement resp = VivoxGetChannel(null, sceneUUID+"D");
-
+                
+                XmlElement resp = VivoxGetChannel(null, sceneUUID + "D");
+                
                 // Make sure that all local channels are deleted.
                 // So we have to search for the children, and then do an
                 // iteration over the set of chidren identified.
                 // This assumes that there is just one directory per
                 // region.
-
-               if (XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                
+                if (XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                 {
                     XmlElement children = VivoxListChildren(chan_id);
                     string count;
-                   if (XmlFind(children, "response.level0.channel-search.count", out count))
+
+                    if (XmlFind(children, "response.level0.channel-search.count", out count))
                     {
                         int cnum = Convert.ToInt32(count);
-                       for (int i=0; i<cnum; i++)
+                        for (int i = 0; i < cnum; i++)
                         {
                             string id;
-                           if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                            if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
                             {
                                 if (!IsOK(VivoxDeleteChannel(chan_id, id)))
                                     m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, chan_id, id);
@@ -173,14 +174,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 }
                 else
                 {
-                    if (!IsOK(VivoxCreateDirectory(null, sceneUUID+"D", sceneName)))
+                    if (!IsOK(VivoxCreateDirectory(null, sceneUUID + "D", sceneName)))
                     {
                         m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
-                            "*", sceneUUID, sceneName);
+                                         "*", sceneUUID, sceneName);
                         chan_id = String.Empty;
                     }
-                    resp = VivoxGetChannel(null, sceneUUID+"D");
-                   if (!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                    resp = VivoxGetChannel(null, sceneUUID + "D");
+                    if (!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
                     {
                         m_log.Warn("[VivoxVoice] Create directory (1) failed");
                         chan_id = String.Empty;
@@ -442,8 +443,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 LLSDParcelVoiceInfoResponse parcelVoiceInfo;
                 string channel_uri;
 
-                if (null == scene.LandChannel) throw new Exception(String.Format("region \"{0}\": avatar \"{1}\": land data not yet available",
-                                                                                 scene.RegionInfo.RegionName, avatarName));
+                if (null == scene.LandChannel) 
+                    throw new Exception(String.Format("region \"{0}\": avatar \"{1}\": land data not yet available",
+                                                      scene.RegionInfo.RegionName, avatarName));
 
 
 
