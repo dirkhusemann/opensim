@@ -141,11 +141,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             lock (vlock)
             {
                 
-                string chan_id;
+                string channelId;
+
                 string sceneUUID = scene.RegionInfo.RegionID.ToString();
                 string sceneName  = scene.RegionInfo.RegionName;
-                
-                XmlElement resp = VivoxGetChannel(null, sceneUUID + "D");
                 
                 // Make sure that all local channels are deleted.
                 // So we have to search for the children, and then do an
@@ -153,9 +152,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // This assumes that there is just one directory per
                 // region.
                 
-                if (XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                if (VivoxTryGetDirectory(sceneUUID + "D", out channelId))
                 {
-                    XmlElement children = VivoxListChildren(chan_id);
+                    m_log.DebugFormat("[VivoxVoice]: region {0}: uuid {1}: located directory id {2}",
+                                      sceneName, sceneUUID, channelId);
+
+                    XmlElement children = VivoxListChildren(channelId);
                     string count;
 
                     if (XmlFind(children, "response.level0.channel-search.count", out count))
@@ -166,8 +168,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                             string id;
                             if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
                             {
-                                if (!IsOK(VivoxDeleteChannel(chan_id, id)))
-                                    m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, chan_id, id);
+                                if (!IsOK(VivoxDeleteChannel(channelId, id)))
+                                    m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, channelId, id);
                             } 
                         }
                     }
@@ -178,13 +180,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     {
                         m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
                                          "*", sceneUUID, sceneName);
-                        chan_id = String.Empty;
+                        channelId = String.Empty;
                     }
-                    resp = VivoxGetChannel(null, sceneUUID + "D");
-                    if (!XmlFind(resp, "response.level0.body.level2.id", out chan_id))
+                    if (!VivoxTryGetDirectory(sceneUUID + "D", out channelId))
                     {
                         m_log.Warn("[VivoxVoice] Create directory (1) failed");
-                        chan_id = String.Empty;
+                        channelId = String.Empty;
                     }
                 }
 
@@ -194,7 +195,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // the same, if the parent table entry is an empty string, then
                 // region channels will be created as first-level channels.
 
-               lock (m_parents) m_parents.Add(sceneUUID, chan_id);
+               lock (m_parents) m_parents.Add(sceneUUID, channelId);
 
             }
 
@@ -203,9 +204,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 // we need to capture scene in an anonymous method
                 // here as we need it later in the callbacks
                 scene.EventManager.OnRegisterCaps += delegate(UUID agentID, Caps caps)
-                {
+                    {
                         OnRegisterCaps(scene, agentID, caps);
-                };
+                    };
             }
 
         }
@@ -529,6 +530,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         {
 
             string channelUri = null;
+            string channelId = null;
             string landUUID;
             string landName;
             string parentId;
@@ -555,13 +557,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     
             lock (vlock)
             {
-
-                XmlElement resp = VivoxGetChannel(parentId, landUUID);
-
-                if (!XmlFind(resp, "response.level0.body.level2.uri", out channelUri))
+                if (!VivoxTryGetChannel(parentId, landUUID, out channelId, out channelUri))
                 {
                     // channelUri does not exist yet, create it...
-                    resp = VivoxCreateChannel(parentId, landUUID, landName);
+                    XmlElement resp = VivoxCreateChannel(parentId, landUUID, landName);
                 
                     // ...and extract it
                     if (!XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
@@ -704,6 +703,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             return VivoxCall(requrl, true);
         }
 
+        private static readonly string m_vivoxChannelSearchPath = "http://{0}/api2/viv_chan_search.php?cond_channame={1}&auth_token={2}";
+
         /// <summary>
         /// Retrieve a channel.
         /// Once again, there a multitude of options possible. In the simplest case 
@@ -716,27 +717,109 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// In this case the call handles parent and description as optional values.
         /// </summary>
 
-        private XmlElement VivoxGetChannel(string parent, string channelid)
+        private bool VivoxTryGetChannel(string channelParent, string channelName, 
+                                        out string channelId, out string channelUri)
         {
-            string requrl = String.Format(m_vivoxChannelPath, m_vivoxServer, "get", channelid, m_authToken);
+            string count;
 
-            if (parent != null && parent != String.Empty)
-                return VivoxGetChild(parent, channelid);
-            else
-                return VivoxCall(requrl, true);
+            string requrl = String.Format(m_vivoxChannelSearchPath, m_vivoxServer, channelName, m_authToken);
+            XmlElement resp = VivoxCall(requrl, true);
+
+            if (XmlFind(resp, "response.level0.channel-search.count", out count))
+            {
+                int channels = Convert.ToInt32(count);
+                for (int i = 0; i < channels; i++)
+                {
+                    string name;
+                    string id;
+                    string type;
+                    string uri;
+                    string parent;
+
+                    // skip if not a channel
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.type", i, out type) || 
+                        type != "channel")
+                        continue;
+
+                    // skip if not the name we are looking for
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.name", i, out name) ||
+                        name != channelName)
+                        continue;
+
+                    // skip if parent does not match
+                    if (channelParent != null && !XmlFind(resp, "response.level0.channel-search.channels.channels.level4.parent", i, out parent))
+                        continue;
+
+                    // skip if no channel id available
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                        continue;
+
+                    // skip if no channel uri available
+                    if (type == "channel" && !XmlFind(resp, "response.level0.channel-search.channels.channels.level4.uri", i, out uri))
+                        continue;
+
+                    channelId = id;
+                    channelUri = uri;
+
+                    return true;
+                }
+            }
+
+            channelId = String.Empty;
+            channelUri = String.Empty;
+            return false;
         }
 
-        private static readonly string m_vivoxChannelById = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_id={2}&auth_token={3}";
-
-        private XmlElement VivoxGetChannelById(string parent, string channelid)
+        private bool VivoxTryGetDirectory(string directoryName, out string directoryId)
         {
-            string requrl = String.Format(m_vivoxChannelById, m_vivoxServer, "get", channelid, m_authToken);
+            string count;
 
-            if (parent != null && parent != String.Empty)
-                return VivoxGetChild(parent, channelid);
-            else
-                return VivoxCall(requrl, true);
+            string requrl = String.Format(m_vivoxChannelSearchPath, m_vivoxServer, directoryName, m_authToken);
+            XmlElement resp = VivoxCall(requrl, true);
+
+            if (XmlFind(resp, "response.level0.channel-search.count", out count))
+            {
+                int channels = Convert.ToInt32(count);
+                for (int i = 0; i < channels; i++)
+                {
+                    string name;
+                    string id;
+                    string type;
+
+                    // skip if not a directory
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.type", i, out type) || 
+                        type != "dir")
+                        continue;
+
+                    // skip if not the name we are looking for
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.name", i, out name) ||
+                        name != directoryName)
+                        continue;
+
+                    // skip if no channel id available
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+                        continue;
+
+                    directoryId = id;
+                    return true;
+                }
+            }
+
+            directoryId = String.Empty;
+            return false;
         }
+
+        // private static readonly string m_vivoxChannelById = "http://{0}/api2/viv_chan_mod.php?mode={1}&chan_id={2}&auth_token={3}";
+
+        // private XmlElement VivoxGetChannelById(string parent, string channelid)
+        // {
+        //     string requrl = String.Format(m_vivoxChannelById, m_vivoxServer, "get", channelid, m_authToken);
+
+        //     if (parent != null && parent != String.Empty)
+        //         return VivoxGetChild(parent, channelid);
+        //     else
+        //         return VivoxCall(requrl, true);
+        // }
 
         /// <summary>
         /// Delete a channel.
@@ -774,36 +857,36 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             return VivoxCall(requrl, true);
         }
 
-        private XmlElement VivoxGetChild(string parent, string child)
-        {
+        // private XmlElement VivoxGetChild(string parent, string child)
+        // {
 
-            XmlElement children = VivoxListChildren(parent);
-            string count;
+        //     XmlElement children = VivoxListChildren(parent);
+        //     string count;
 
-           if (XmlFind(children, "response.level0.channel-search.count", out count))
-            {
-                int cnum = Convert.ToInt32(count);
-               for (int i=0; i<cnum; i++)
-                {
-                    string name;
-                    string id;
-                   if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.name", i, out name))
-                    {
-                       if (name == child)
-                        {
-                           if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
-                            {
-                                return VivoxGetChannelById(null, id);
-                            }
-                        }
-                    } 
-                }
-            }
+        //    if (XmlFind(children, "response.level0.channel-search.count", out count))
+        //     {
+        //         int cnum = Convert.ToInt32(count);
+        //         for (int i = 0; i < cnum; i++)
+        //         {
+        //             string name;
+        //             string id;
+        //             if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.name", i, out name))
+        //             {
+        //                 if (name == child)
+        //                 {
+        //                    if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+        //                     {
+        //                         return VivoxGetChannelById(null, id);
+        //                     }
+        //                 }
+        //             } 
+        //         }
+        //     }
 
-            // One we *know* does not exist.
-            return VivoxGetChannel(null, Guid.NewGuid().ToString());
+        //     // One we *know* does not exist.
+        //     return VivoxGetChannel(null, Guid.NewGuid().ToString());
 
-        }
+        // }
    
         /// <summary>
         /// This method handles the WEB side of making a request over the
