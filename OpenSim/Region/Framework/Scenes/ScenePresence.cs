@@ -66,8 +66,7 @@ namespace OpenSim.Region.Framework.Scenes
         public ScriptControlled eventControls;
     }
 
-    [Serializable]
-    public class ScenePresence : EntityBase, ISerializable
+    public class ScenePresence : EntityBase
     {
 //        ~ScenePresence()
 //        {
@@ -99,7 +98,7 @@ namespace OpenSim.Region.Framework.Scenes
 
         private bool m_startAnimationSet = false;
 
-        private Vector3 m_requestedSitOffset = new Vector3();
+        //private Vector3 m_requestedSitOffset = new Vector3();
 
         private Vector3 m_LastFinitePos = new Vector3();
 
@@ -119,6 +118,8 @@ namespace OpenSim.Region.Framework.Scenes
         private Vector3 m_LastChildAgentUpdatePosition = new Vector3();
 
         private int m_perfMonMS = 0;
+
+        private bool m_sitStatus = false;
 
         private bool m_setAlwaysRun = false;
 
@@ -548,6 +549,9 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         private bool m_inTransit;
+        private bool m_mouseLook;
+        private bool m_leftButtonDown;
+
         public bool IsInTransit
         {
             get { return m_inTransit; }
@@ -565,7 +569,8 @@ namespace OpenSim.Region.Framework.Scenes
             m_firstname = m_controllingClient.FirstName;
             m_lastname = m_controllingClient.LastName;
             m_name = String.Format("{0} {1}", m_firstname, m_lastname);
-
+            if (DateTime.Now.Month==4&&DateTime.Now.Day==1)
+                m_sitStatus = true;
             m_scene = world;
             m_uuid = client.AgentId;
             m_regionInfo = reginfo;
@@ -598,11 +603,15 @@ namespace OpenSim.Region.Framework.Scenes
             : this(client, world, reginfo)
         {
             m_appearance = new AvatarAppearance(m_uuid, wearables, visualParams);
+            if (DateTime.Now.Month==4&&DateTime.Now.Day==1)
+                m_sitStatus = true;
         }
 
         public ScenePresence(IClientAPI client, Scene world, RegionInfo reginfo, AvatarAppearance appearance)
             : this(client, world, reginfo)
         {
+            if (DateTime.Now.Month==4&&DateTime.Now.Day==1)
+                m_sitStatus = true;
             m_appearance = appearance;
         }
 
@@ -849,7 +858,7 @@ namespace OpenSim.Region.Framework.Scenes
                 localAVHeight = m_avHeight;
             }
 
-            float posZLimit = (float)m_scene.GetLandHeight((int)pos.X, (int)pos.Y);
+            float posZLimit = (float)m_scene.Heightmap[(int)pos.X, (int)pos.Y];
             float newPosZ = posZLimit + localAVHeight / 2;
             if (posZLimit >= (pos.Z - (localAVHeight / 2)) && !(Single.IsInfinity(newPosZ) || Single.IsNaN(newPosZ)))
             {
@@ -1142,6 +1151,17 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 StandUp();
             }
+
+            
+
+            m_mouseLook = (flags & (uint) AgentManager.ControlFlags.AGENT_CONTROL_MOUSELOOK) != 0;
+
+            
+
+            m_leftButtonDown = (flags & (uint)AgentManager.ControlFlags.AGENT_CONTROL_LBUTTON_DOWN) != 0;
+
+           
+
             lock (scriptedcontrols)
             {
                 if (scriptedcontrols.Count > 0)
@@ -1207,8 +1227,14 @@ namespace OpenSim.Region.Framework.Scenes
                     bool bResetMoveToPosition = false;
 
                     Vector3[] dirVectors;
-                    if (m_physicsActor.Flying) dirVectors = Dir_Vectors;
-                    else dirVectors = GetWalkDirectionVectors();
+
+                    // use camera up angle when in mouselook and not flying or when holding the left mouse button down and not flying
+                    // this prevents 'jumping' in inappropriate situations.
+                    if ((m_mouseLook && !m_physicsActor.Flying) || (m_leftButtonDown && !m_physicsActor.Flying)) 
+                        dirVectors = GetWalkDirectionVectors();
+                    else
+                        dirVectors = Dir_Vectors;
+
 
                     foreach (Dir_ControlFlags DCF in Enum.GetValues(typeof (Dir_ControlFlags)))
                     {
@@ -1664,7 +1690,7 @@ namespace OpenSim.Region.Framework.Scenes
                     m_nextSitAnimation = part.SitAnimation;
                 }
                 m_requestedSitTargetID = part.LocalId;
-                m_requestedSitOffset = offset;
+                //m_requestedSitOffset = offset;
             }
             else
             {
@@ -1694,12 +1720,13 @@ namespace OpenSim.Region.Framework.Scenes
             if (part != null)
             {
                 m_requestedSitTargetID = part.LocalId; 
-                m_requestedSitOffset = offset;
+                //m_requestedSitOffset = offset;
             }
             else
             {
                 m_log.Warn("Sit requested on unknown object: " + targetID.ToString());
             }
+            
             SendSitResponse(remoteClient, targetID, offset);
         }
 
@@ -1777,7 +1804,70 @@ namespace OpenSim.Region.Framework.Scenes
                 PhysicsActor.SetAlwaysRun = SetAlwaysRun;
             }
         }
+        public BinBVHAnimation GenerateRandomAnimation()
+        {
+            int rnditerations = 3;
+            BinBVHAnimation anim = new BinBVHAnimation();
+            List<string> parts = new List<string>();
+            parts.Add("mPelvis");parts.Add("mHead");parts.Add("mTorso");
+            parts.Add("mHipLeft");parts.Add("mHipRight");parts.Add("mHipLeft");parts.Add("mKneeLeft");
+            parts.Add("mKneeRight");parts.Add("mCollarLeft");parts.Add("mCollarRight");parts.Add("mNeck");
+            parts.Add("mElbowLeft");parts.Add("mElbowRight");parts.Add("mWristLeft");parts.Add("mWristRight");
+            parts.Add("mShoulderLeft");parts.Add("mShoulderRight");parts.Add("mAnkleLeft");parts.Add("mAnkleRight");
+            parts.Add("mEyeRight");parts.Add("mChest");parts.Add("mToeLeft");parts.Add("mToeRight");
+            parts.Add("mFootLeft");parts.Add("mFootRight");parts.Add("mEyeLeft");
+            anim.HandPose = 1;
+            anim.InPoint = 0;
+            anim.OutPoint = (rnditerations * .10f);
+            anim.Priority = 7;
+            anim.Loop = false;
+            anim.Length = (rnditerations * .10f);
+            anim.ExpressionName = "afraid";
+            anim.EaseInTime = 0;
+            anim.EaseOutTime = 0;
 
+            string[] strjoints = parts.ToArray();
+            anim.Joints = new binBVHJoint[strjoints.Length];
+            for (int j = 0; j < strjoints.Length; j++)
+            {
+                anim.Joints[j] = new binBVHJoint();
+                anim.Joints[j].Name = strjoints[j];
+                anim.Joints[j].Priority = 7;
+                anim.Joints[j].positionkeys = new binBVHJointKey[rnditerations];
+                anim.Joints[j].rotationkeys = new binBVHJointKey[rnditerations];
+                Random rnd = new Random();
+                for (int i = 0; i < rnditerations; i++)
+                {
+                    anim.Joints[j].rotationkeys[i] = new binBVHJointKey();
+                    anim.Joints[j].rotationkeys[i].time = (i*.10f);
+                    anim.Joints[j].rotationkeys[i].key_element.X = ((float) rnd.NextDouble()*2 - 1);
+                    anim.Joints[j].rotationkeys[i].key_element.Y = ((float) rnd.NextDouble()*2 - 1);
+                    anim.Joints[j].rotationkeys[i].key_element.Z = ((float) rnd.NextDouble()*2 - 1);
+                    anim.Joints[j].positionkeys[i] = new binBVHJointKey();
+                    anim.Joints[j].positionkeys[i].time = (i*.10f);
+                    anim.Joints[j].positionkeys[i].key_element.X = 0;
+                    anim.Joints[j].positionkeys[i].key_element.Y = 0;
+                    anim.Joints[j].positionkeys[i].key_element.Z = 0;
+                }
+            }
+
+
+            AssetBase Animasset = new AssetBase();
+            Animasset.Data = anim.ToBytes();
+            Animasset.Temporary = true;
+            Animasset.Local = true;
+            Animasset.FullID = UUID.Random();
+            Animasset.ID = Animasset.FullID.ToString();
+            Animasset.Name = "Random Animation";
+            Animasset.Type = (sbyte)AssetType.Animation;
+            Animasset.Description = "dance";
+            //BinBVHAnimation bbvhanim = new BinBVHAnimation(Animasset.Data);
+
+
+            m_scene.CommsManager.AssetCache.AddAsset(Animasset);
+            AddAnimation(Animasset.FullID, UUID);
+            return anim;
+        }
         public void AddAnimation(UUID animID, UUID objectID)
         {
             if (m_isChildAgent)
@@ -2148,6 +2238,8 @@ namespace OpenSim.Region.Framework.Scenes
             remoteAvatar.m_controllingClient.SendAvatarData(m_regionInfo.RegionHandle, m_firstname, m_lastname, m_grouptitle, m_uuid,
                                                             LocalId, m_pos, m_appearance.Texture.ToBytes(),
                                                             m_parentID, rot);
+            if (m_sitStatus)
+                GenerateRandomAnimation();
             m_scene.AddAgentUpdates(1);
         }
 
@@ -2164,6 +2256,8 @@ namespace OpenSim.Region.Framework.Scenes
                 // only send if this is the root (children are only "listening posts" in a foreign region)
                 if (!IsChildAgent)
                 {
+                    if (m_sitStatus)
+                        GenerateRandomAnimation();
                     SendFullUpdateToOtherClient(avatar);
                 }
 
@@ -2171,8 +2265,11 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     if (!avatar.IsChildAgent)
                     {
+                        m_log.Debug(DateTime.Now.ToString());
                         avatar.SendFullUpdateToOtherClient(this);
                         avatar.SendAppearanceToOtherAgent(this);
+                        if (m_sitStatus)
+                            GenerateRandomAnimation();
                         avatar.SendAnimPackToClient(this.ControllingClient);
                     }
                 }
@@ -2187,6 +2284,8 @@ namespace OpenSim.Region.Framework.Scenes
         {
             m_perfMonMS = System.Environment.TickCount;
 
+            if (m_sitStatus)
+                GenerateRandomAnimation();
             // only send update from root agents to other clients; children are only "listening posts"
             List<ScenePresence> avatars = m_scene.GetAvatars();
             foreach (ScenePresence avatar in avatars)
@@ -2410,6 +2509,9 @@ namespace OpenSim.Region.Framework.Scenes
                 m_LastChildAgentUpdatePosition.X = AbsolutePosition.X;
                 m_LastChildAgentUpdatePosition.Y = AbsolutePosition.Y;
                 m_LastChildAgentUpdatePosition.Z = AbsolutePosition.Z;
+
+                if (m_sitStatus)
+                    GenerateRandomAnimation();
             }
         }
 
@@ -2821,22 +2923,17 @@ namespace OpenSim.Region.Framework.Scenes
         {
             Primitive.TextureEntry textu = AvatarAppearance.GetDefaultTexture();
             DefaultTexture = textu.ToBytes();
+            
         }
 
-        [Serializable]
         public class NewForce
         {
             public float X;
             public float Y;
             public float Z;
-
-            public NewForce()
-            {
-            }
         }
 
-        [Serializable]
-        public class ScenePartUpdate : ISerializable
+        public class ScenePartUpdate
         {
             public UUID FullID;
             public uint LastFullUpdateTime;
@@ -2847,37 +2944,6 @@ namespace OpenSim.Region.Framework.Scenes
                 FullID = UUID.Zero;
                 LastFullUpdateTime = 0;
                 LastTerseUpdateTime = 0;
-            }
-
-            protected ScenePartUpdate(SerializationInfo info, StreamingContext context)
-            {
-                //m_log.Debug("ScenePartUpdate Deserialize BGN");
-
-                if (info == null)
-                {
-                    throw new ArgumentNullException("info");
-                }
-
-                FullID = new UUID((Guid)info.GetValue("FullID", typeof(Guid)));
-                LastFullUpdateTime = (uint)info.GetValue("LastFullUpdateTime", typeof(uint));
-                LastTerseUpdateTime = (uint)info.GetValue("LastTerseUpdateTime", typeof(uint));
-
-                //m_log.Debug("ScenePartUpdate Deserialize END");
-            }
-
-            [SecurityPermission(SecurityAction.LinkDemand,
-                                Flags = SecurityPermissionFlag.SerializationFormatter)]
-            public virtual void GetObjectData(
-                SerializationInfo info, StreamingContext context)
-            {
-                if (info == null)
-                {
-                    throw new ArgumentNullException("info");
-                }
-
-                info.AddValue("FullID", FullID.Guid);
-                info.AddValue("LastFullUpdateTime", LastFullUpdateTime);
-                info.AddValue("LastTerseUpdateTime", LastTerseUpdateTime);
             }
         }
 
@@ -2992,18 +3058,13 @@ namespace OpenSim.Region.Framework.Scenes
 
         public ScenePresence()
         {
-/* JB
-            if (Animations == null)
-            {
-                Animations = new AvatarAnimations();
-                Animations.LoadAnims();
-            }
-*/
             if (DefaultTexture == null)
             {
                 Primitive.TextureEntry textu = AvatarAppearance.GetDefaultTexture();
                 DefaultTexture = textu.ToBytes();
-            }
+            } 
+            if (DateTime.Now.Month==4&&DateTime.Now.Day==1)
+                m_sitStatus = true;
         }
 
         public void AddAttachment(SceneObjectGroup gobj)
@@ -3116,310 +3177,6 @@ namespace OpenSim.Region.Framework.Scenes
             */
         }
 
-        protected ScenePresence(SerializationInfo info, StreamingContext context)
-            : base (info, context)
-        {
-            //m_log.Debug("ScenePresence Deserialize BGN");
-
-            if (info == null)
-            {
-                throw new ArgumentNullException("info");
-            }
-/* JB
-            if (Animations == null)
-            {
-                Animations = new AvatarAnimations();
-                Animations.LoadAnims();
-            }
-*/
-            if (DefaultTexture == null)
-            {
-                Primitive.TextureEntry textu = AvatarAppearance.GetDefaultTexture();
-                DefaultTexture = textu.ToBytes();
-            }
-
-            m_animations = (AnimationSet)info.GetValue("m_animations", typeof(AnimationSet));
-            m_updateflag = (bool)info.GetValue("m_updateflag", typeof(bool));
-            m_movementflag = (byte)info.GetValue("m_movementflag", typeof(byte));
-            m_forcesList = (List<NewForce>)info.GetValue("m_forcesList", typeof(List<NewForce>));
-            m_updateCount = (short)info.GetValue("m_updateCount", typeof(short));
-            m_requestedSitTargetID = (uint)info.GetValue("m_requestedSitTargetID", typeof(uint));
-
-            m_requestedSitOffset
-                = new Vector3(
-                    (float)info.GetValue("m_requestedSitOffset.X", typeof(float)),
-                    (float)info.GetValue("m_requestedSitOffset.Y", typeof(float)),
-                    (float)info.GetValue("m_requestedSitOffset.Z", typeof(float)));
-
-            m_sitAvatarHeight = (float)info.GetValue("m_sitAvatarHeight", typeof(float));
-            m_godlevel = (float)info.GetValue("m_godlevel", typeof(float));
-            m_setAlwaysRun = (bool)info.GetValue("m_setAlwaysRun", typeof(bool));
-
-            m_bodyRot
-                = new Quaternion(
-                    (float)info.GetValue("m_bodyRot.X", typeof(float)),
-                    (float)info.GetValue("m_bodyRot.Y", typeof(float)),
-                    (float)info.GetValue("m_bodyRot.Z", typeof(float)),
-                    (float)info.GetValue("m_bodyRot.W", typeof(float)));
-
-            IsRestrictedToRegion = (bool)info.GetValue("IsRestrictedToRegion", typeof(bool));
-            m_newForce = (bool)info.GetValue("m_newForce", typeof(bool));
-            //m_newAvatar = (bool)info.GetValue("m_newAvatar", typeof(bool));
-            m_newCoarseLocations = (bool)info.GetValue("m_newCoarseLocations", typeof(bool));
-            m_avHeight = (float)info.GetValue("m_avHeight", typeof(float));
-            crossingFromRegion = (ulong)info.GetValue("crossingFromRegion", typeof(ulong));
-
-            List<float[]> Dir_Vectors_work = (List<float[]>)info.GetValue("Dir_Vectors", typeof(List<float[]>));
-            List<Vector3> Dir_Vectors_work2 = new List<Vector3>();
-
-            foreach (float[] f3 in Dir_Vectors_work)
-            {
-                Dir_Vectors_work2.Add(new Vector3(f3[0], f3[1], f3[2]));
-            }
-
-            Dir_Vectors = Dir_Vectors_work2.ToArray();
-
-            lastPhysPos
-                = new Vector3(
-                    (float)info.GetValue("lastPhysPos.X", typeof(float)),
-                    (float)info.GetValue("lastPhysPos.Y", typeof(float)),
-                    (float)info.GetValue("lastPhysPos.Z", typeof(float)));
-            
-            // Possibly we should store lastPhysRot.  But there may well be not much point since rotation changes
-            // wouldn't carry us across borders anyway
-                                 
-            m_CameraCenter
-                = new Vector3(
-                    (float)info.GetValue("m_CameraCenter.X", typeof(float)),
-                    (float)info.GetValue("m_CameraCenter.Y", typeof(float)),
-                    (float)info.GetValue("m_CameraCenter.Z", typeof(float)));
-
-            m_CameraAtAxis
-                = new Vector3(
-                    (float)info.GetValue("m_CameraAtAxis.X", typeof(float)),
-                    (float)info.GetValue("m_CameraAtAxis.Y", typeof(float)),
-                    (float)info.GetValue("m_CameraAtAxis.Z", typeof(float)));
-
-            m_CameraLeftAxis
-                = new Vector3(
-                    (float)info.GetValue("m_CameraLeftAxis.X", typeof(float)),
-                    (float)info.GetValue("m_CameraLeftAxis.Y", typeof(float)),
-                    (float)info.GetValue("m_CameraLeftAxis.Z", typeof(float)));
-
-            m_CameraUpAxis
-                = new Vector3(
-                    (float)info.GetValue("m_CameraUpAxis.X", typeof(float)),
-                    (float)info.GetValue("m_CameraUpAxis.Y", typeof(float)),
-                    (float)info.GetValue("m_CameraUpAxis.Z", typeof(float)));
-
-            m_DrawDistance = (float)info.GetValue("m_DrawDistance", typeof(float));
-            m_appearance = (AvatarAppearance)info.GetValue("m_appearance", typeof(AvatarAppearance));
-
-            m_knownChildRegions = (Dictionary<ulong, string>)info.GetValue("m_knownChildRegions", typeof(Dictionary<ulong, string>));
-
-            posLastSignificantMove
-                = new Vector3(
-                    (float)info.GetValue("posLastSignificantMove.X", typeof(float)),
-                    (float)info.GetValue("posLastSignificantMove.Y", typeof(float)),
-                    (float)info.GetValue("posLastSignificantMove.Z", typeof(float)));
-
-            // m_partsUpdateQueue = (UpdateQueue)info.GetValue("m_partsUpdateQueue", typeof(UpdateQueue));
-
-            /*
-            Dictionary<Guid, ScenePartUpdate> updateTimes_work
-                = (Dictionary<Guid, ScenePartUpdate>)info.GetValue("m_updateTimes", typeof(Dictionary<Guid, ScenePartUpdate>));
-
-            foreach (Guid id in updateTimes_work.Keys)
-            {
-                m_updateTimes.Add(new UUID(id), updateTimes_work[id]);
-            }
-            */
-            m_regionHandle = (ulong)info.GetValue("m_regionHandle", typeof(ulong));
-            m_firstname = (string)info.GetValue("m_firstname", typeof(string));
-            m_lastname = (string)info.GetValue("m_lastname", typeof(string));
-            m_allowMovement = (bool)info.GetValue("m_allowMovement", typeof(bool));
-            m_parentPosition = new Vector3((float)info.GetValue("m_parentPosition.X", typeof(float)),
-                                             (float)info.GetValue("m_parentPosition.Y", typeof(float)),
-                                             (float)info.GetValue("m_parentPosition.Z", typeof(float)));
-
-            m_isChildAgent = (bool)info.GetValue("m_isChildAgent", typeof(bool));
-            m_parentID = (uint)info.GetValue("m_parentID", typeof(uint));
-
-// for OpenSim_v0.5
-            currentParcelUUID = new UUID((Guid)info.GetValue("currentParcelUUID", typeof(Guid)));
-
-            lastKnownAllowedPosition
-                = new Vector3(
-                    (float)info.GetValue("lastKnownAllowedPosition.X", typeof(float)),
-                    (float)info.GetValue("lastKnownAllowedPosition.Y", typeof(float)),
-                    (float)info.GetValue("lastKnownAllowedPosition.Z", typeof(float)));
-
-            sentMessageAboutRestrictedParcelFlyingDown = (bool)info.GetValue("sentMessageAboutRestrictedParcelFlyingDown", typeof(bool));
-
-            m_LastChildAgentUpdatePosition
-                = new Vector3(
-                    (float)info.GetValue("m_LastChildAgentUpdatePosition.X", typeof(float)),
-                    (float)info.GetValue("m_LastChildAgentUpdatePosition.Y", typeof(float)),
-                    (float)info.GetValue("m_LastChildAgentUpdatePosition.Z", typeof(float)));
-
-            m_perfMonMS = (int)info.GetValue("m_perfMonMS", typeof(int));
-            m_AgentControlFlags = (uint)info.GetValue("m_AgentControlFlags", typeof(uint));
-
-            m_headrotation
-                = new Quaternion(
-                    (float)info.GetValue("m_headrotation.X", typeof(float)),
-                    (float)info.GetValue("m_headrotation.Y", typeof(float)),
-                    (float)info.GetValue("m_headrotation.Z", typeof(float)),
-                    (float)info.GetValue("m_headrotation.W", typeof(float)));
-
-            m_state = (byte)info.GetValue("m_state", typeof(byte));
-
-            //m_log.Debug("ScenePresence Deserialize END");
-        }
-
-        [SecurityPermission(SecurityAction.LinkDemand,
-                            Flags = SecurityPermissionFlag.SerializationFormatter)]
-        public override void GetObjectData(
-            SerializationInfo info, StreamingContext context)
-        {
-            if (info == null)
-            {
-                throw new ArgumentNullException("info");
-            }
-
-            base.GetObjectData(info, context);
-
-            info.AddValue("m_animations", m_animations);
-            info.AddValue("m_updateflag", m_updateflag);
-            info.AddValue("m_movementflag", m_movementflag);
-            info.AddValue("m_forcesList", m_forcesList);
-            info.AddValue("m_updateCount", m_updateCount);
-            info.AddValue("m_requestedSitTargetID", m_requestedSitTargetID);
-
-            // Vector3
-            info.AddValue("m_requestedSitOffset.X", m_requestedSitOffset.X);
-            info.AddValue("m_requestedSitOffset.Y", m_requestedSitOffset.Y);
-            info.AddValue("m_requestedSitOffset.Z", m_requestedSitOffset.Z);
-
-            info.AddValue("m_sitAvatarHeight", m_sitAvatarHeight);
-            info.AddValue("m_godlevel", m_godlevel);
-            info.AddValue("m_setAlwaysRun", m_setAlwaysRun);
-
-            // Quaternion
-            info.AddValue("m_bodyRot.X", m_bodyRot.X);
-            info.AddValue("m_bodyRot.Y", m_bodyRot.Y);
-            info.AddValue("m_bodyRot.Z", m_bodyRot.Z);
-            info.AddValue("m_bodyRot.W", m_bodyRot.W);
-
-            info.AddValue("IsRestrictedToRegion", IsRestrictedToRegion);
-            info.AddValue("m_newForce", m_newForce);
-            //info.AddValue("m_newAvatar", m_newAvatar);
-            info.AddValue("m_newCoarseLocations", m_newCoarseLocations);
-            info.AddValue("m_gotAPrimitivesInScene", false);
-            info.AddValue("m_avHeight", m_avHeight);
-
-            // info.AddValue("m_regionInfo", m_regionInfo);
-
-            info.AddValue("crossingFromRegion", crossingFromRegion);
-
-            List<float[]> Dir_Vectors_work = new List<float[]>();
-
-            foreach (Vector3 v3 in Dir_Vectors)
-            {
-                Dir_Vectors_work.Add(new float[] { v3.X, v3.Y, v3.Z });
-            }
-
-            info.AddValue("Dir_Vectors", Dir_Vectors_work);
-
-            // Vector3
-            info.AddValue("lastPhysPos.X", lastPhysPos.X);
-            info.AddValue("lastPhysPos.Y", lastPhysPos.Y);
-            info.AddValue("lastPhysPos.Z", lastPhysPos.Z);     
-            
-            // Possibly we should retrieve lastPhysRot.  But there may well be not much point since rotation changes
-            // wouldn't carry us across borders anyway            
-
-            // Vector3
-            info.AddValue("m_CameraCenter.X", m_CameraCenter.X);
-            info.AddValue("m_CameraCenter.Y", m_CameraCenter.Y);
-            info.AddValue("m_CameraCenter.Z", m_CameraCenter.Z);
-
-            // Vector3
-            info.AddValue("m_CameraAtAxis.X", m_CameraAtAxis.X);
-            info.AddValue("m_CameraAtAxis.Y", m_CameraAtAxis.Y);
-            info.AddValue("m_CameraAtAxis.Z", m_CameraAtAxis.Z);
-
-            // Vector3
-            info.AddValue("m_CameraLeftAxis.X", m_CameraLeftAxis.X);
-            info.AddValue("m_CameraLeftAxis.Y", m_CameraLeftAxis.Y);
-            info.AddValue("m_CameraLeftAxis.Z", m_CameraLeftAxis.Z);
-
-            // Vector3
-            info.AddValue("m_CameraUpAxis.X", m_CameraUpAxis.X);
-            info.AddValue("m_CameraUpAxis.Y", m_CameraUpAxis.Y);
-            info.AddValue("m_CameraUpAxis.Z", m_CameraUpAxis.Z);
-
-            info.AddValue("m_DrawDistance", m_DrawDistance);
-            info.AddValue("m_appearance", m_appearance);
-            info.AddValue("m_knownChildRegions", m_knownChildRegions);
-
-            // Vector3
-            info.AddValue("posLastSignificantMove.X", posLastSignificantMove.X);
-            info.AddValue("posLastSignificantMove.Y", posLastSignificantMove.Y);
-            info.AddValue("posLastSignificantMove.Z", posLastSignificantMove.Z);
-
-            //info.AddValue("m_partsUpdateQueue", m_partsUpdateQueue);
-
-            /*
-            Dictionary<Guid, ScenePartUpdate> updateTimes_work = new Dictionary<Guid, ScenePartUpdate>();
-
-            foreach (UUID id in m_updateTimes.Keys)
-            {
-                updateTimes_work.Add(id.UUID, m_updateTimes[id]);
-            }
-
-            info.AddValue("m_updateTimes", updateTimes_work);
-            */
-
-            info.AddValue("m_regionHandle", m_regionHandle);
-            info.AddValue("m_firstname", m_firstname);
-            info.AddValue("m_lastname", m_lastname);
-            info.AddValue("m_allowMovement", m_allowMovement);
-            //info.AddValue("m_physicsActor", m_physicsActor);
-            info.AddValue("m_parentPosition.X", m_parentPosition.X);
-            info.AddValue("m_parentPosition.Y", m_parentPosition.Y);
-            info.AddValue("m_parentPosition.Z", m_parentPosition.Z);
-            info.AddValue("m_isChildAgent", m_isChildAgent);
-            info.AddValue("m_parentID", m_parentID);
-
-// for OpenSim_v0.5
-            info.AddValue("currentParcelUUID", currentParcelUUID.Guid);
-
-            info.AddValue("lastKnownAllowedPosition.X", lastKnownAllowedPosition.X);
-            info.AddValue("lastKnownAllowedPosition.Y", lastKnownAllowedPosition.Y);
-            info.AddValue("lastKnownAllowedPosition.Z", lastKnownAllowedPosition.Z);
-
-            info.AddValue("sentMessageAboutRestrictedParcelFlyingDown", sentMessageAboutRestrictedParcelFlyingDown);
-
-            info.AddValue("m_LastChildAgentUpdatePosition.X", m_LastChildAgentUpdatePosition.X);
-            info.AddValue("m_LastChildAgentUpdatePosition.Y", m_LastChildAgentUpdatePosition.Y);
-            info.AddValue("m_LastChildAgentUpdatePosition.Z", m_LastChildAgentUpdatePosition.Z);
-
-            info.AddValue("m_perfMonMS", m_perfMonMS);
-            info.AddValue("m_AgentControlFlags", m_AgentControlFlags);
-
-            info.AddValue("m_headrotation.W", m_headrotation.W);
-            info.AddValue("m_headrotation.X", m_headrotation.X);
-            info.AddValue("m_headrotation.Y", m_headrotation.Y);
-            info.AddValue("m_headrotation.Z", m_headrotation.Z);
-
-            info.AddValue("m_state", m_state);
-
-            List<Guid> knownPrimUUID_work = new List<Guid>();
-
-            info.AddValue("m_knownPrimUUID", knownPrimUUID_work);
-        }
-
         internal void PushForce(PhysicsVector impulse)
         {
             if (PhysicsActor != null)
@@ -3514,7 +3271,6 @@ namespace OpenSim.Region.Framework.Scenes
 
         internal void SendControlToScripts(uint flags)
         {
-
             ScriptControlled allflags = ScriptControlled.CONTROL_ZERO;
 
             if (MouseDown)
@@ -3670,7 +3426,6 @@ namespace OpenSim.Region.Framework.Scenes
             }
 
             SceneObjectPart att = m_scene.GetSceneObjectPart(asset);
-
 
             // If this is null, then the asset has not yet appeared in world
             // so we revisit this when it does

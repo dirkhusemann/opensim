@@ -38,12 +38,16 @@ using OpenSim.Region.CoreModules.Avatar.InstantMessage;
 using OpenSim.Region.CoreModules.Scripting.DynamicTexture;
 using OpenSim.Region.CoreModules.Scripting.LoadImageURL;
 using OpenSim.Region.CoreModules.Scripting.XMLRPC;
+using OpenSim.Framework.Servers;
 
 namespace OpenSim.ApplicationPlugins.LoadRegions
 {
-    public class LoadRegionsPlugin : IApplicationPlugin
+    public class LoadRegionsPlugin : IApplicationPlugin, IRegionCreator
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
+        public event NewRegionCreated OnNewRegionCreated;
+        private NewRegionCreated m_newRegionCreatedHandler;
 
         #region IApplicationPlugin Members
 
@@ -54,6 +58,9 @@ namespace OpenSim.ApplicationPlugins.LoadRegions
         public string Version { get { return m_version; } }
         public string Name { get { return m_name; } }
 
+        protected OpenSimBase m_openSim;
+
+
         public void Initialise()
         {
             m_log.Info("[LOADREGIONS]: " + Name + " cannot be default-initialized!");
@@ -62,10 +69,16 @@ namespace OpenSim.ApplicationPlugins.LoadRegions
 
         public void Initialise(OpenSimBase openSim)
         {
+            m_openSim = openSim;
+            m_openSim.ApplicationRegistry.RegisterInterface<IRegionCreator>(this);
+        }
+
+        public void PostInitialise()
+        {
             m_log.Info("[LOADREGIONS]: Load Regions addin being initialised");
 
             IRegionLoader regionLoader;
-            if (openSim.ConfigSource.Source.Configs["Startup"].GetString("region_info_source", "filesystem") == "filesystem")
+            if (m_openSim.ConfigSource.Source.Configs["Startup"].GetString("region_info_source", "filesystem") == "filesystem")
             {
                 m_log.Info("[LOADREGIONS]: Loading Region Info from filesystem");
                 regionLoader = new RegionLoaderFileSystem();
@@ -76,14 +89,14 @@ namespace OpenSim.ApplicationPlugins.LoadRegions
                 regionLoader = new RegionLoaderWebServer();
             }
 
-            regionLoader.SetIniConfigSource(openSim.ConfigSource.Source);
+            regionLoader.SetIniConfigSource(m_openSim.ConfigSource.Source);
             RegionInfo[] regionsToLoad = regionLoader.LoadRegions();
 
-            openSim.ModuleLoader.LoadDefaultSharedModule(new DynamicTextureModule());
-            openSim.ModuleLoader.LoadDefaultSharedModule(new InstantMessageModule());
-            openSim.ModuleLoader.LoadDefaultSharedModule(new LoadImageURLModule());
-            openSim.ModuleLoader.LoadDefaultSharedModule(new XMLRPCModule());
-            openSim.ModuleLoader.LoadDefaultSharedModule(new AssetTransactionModule());
+            m_openSim.ModuleLoader.LoadDefaultSharedModule(new DynamicTextureModule());
+            m_openSim.ModuleLoader.LoadDefaultSharedModule(new InstantMessageModule());
+            m_openSim.ModuleLoader.LoadDefaultSharedModule(new LoadImageURLModule());
+            m_openSim.ModuleLoader.LoadDefaultSharedModule(new XMLRPCModule());
+            m_openSim.ModuleLoader.LoadDefaultSharedModule(new AssetTransactionModule());
             if (!CheckRegionsForSanity(regionsToLoad))
             {
                 m_log.Error("[LOADREGIONS]: Halting startup due to conflicts in region configurations");
@@ -92,13 +105,22 @@ namespace OpenSim.ApplicationPlugins.LoadRegions
 
             for (int i = 0; i < regionsToLoad.Length; i++)
             {
+                IScene scene;
                 m_log.Debug("[LOADREGIONS]: Creating Region: " + regionsToLoad[i].RegionName + " (ThreadID: " + Thread.CurrentThread.ManagedThreadId.ToString() +
                             ")");
-                openSim.CreateRegion(regionsToLoad[i], true);
+                m_openSim.CreateRegion(regionsToLoad[i], true, out scene);
+                if (scene != null)
+                {
+                    m_newRegionCreatedHandler = OnNewRegionCreated;
+                    if (m_newRegionCreatedHandler != null)
+                    {
+                        m_newRegionCreatedHandler(scene);
+                    }
+                }
             }
 
-            openSim.ModuleLoader.PostInitialise();
-            openSim.ModuleLoader.ClearCache();
+            m_openSim.ModuleLoader.PostInitialise();
+            m_openSim.ModuleLoader.ClearCache();
         }
 
         public void Dispose()
@@ -175,9 +197,10 @@ namespace OpenSim.ApplicationPlugins.LoadRegions
             {
                 if (regionhandle == regionsToLoad[i].RegionHandle)
                 {
+                    IScene scene;
                     m_log.Debug("[LOADREGIONS]: Creating Region: " + regionsToLoad[i].RegionName + " (ThreadID: " +
                                 Thread.CurrentThread.ManagedThreadId.ToString() + ")");
-                    openSim.CreateRegion(regionsToLoad[i], true);
+                    openSim.CreateRegion(regionsToLoad[i], true, out scene);
                 }
             }
         }

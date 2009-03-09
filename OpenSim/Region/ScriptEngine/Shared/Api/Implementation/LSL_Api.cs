@@ -1007,17 +1007,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             int y = (int)(pos.Y + offset.y);
 
             // Clamp to valid position
-            if (x<0) 
+            if (x < 0) 
                 x = 0;
-            else if (x>=World.Heightmap.Width)
-                x = World.Heightmap.Width-1;
-            if (y<0) 
+            else if (x >= World.Heightmap.Width)
+                x = World.Heightmap.Width - 1;
+            if (y < 0) 
                 y = 0;
-            else if (y>=World.Heightmap.Height)
-                y = World.Heightmap.Height-1;
-        
-
-            return World.GetLandHeight(x, y);
+            else if (y >= World.Heightmap.Height)
+                y = World.Heightmap.Height - 1;
+           
+            return World.Heightmap[x, y];
         }
 
         public LSL_Float llCloud(LSL_Vector offset)
@@ -1031,17 +1030,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             LSL_Vector wind = new LSL_Vector(0, 0, 0);
             IWindModule module = World.RequestModuleInterface<IWindModule>();
-            if (module != null && module.WindSpeeds != null)
+            if (module != null)
             {
                 Vector3 pos = m_host.GetWorldPosition();
-                int x = (int)((pos.X + offset.x)/ 16);
-                int y = (int)((pos.Y + offset.y)/ 16);
-                if (x < 0) x = 0;
-                if (x > 15) x = 15;
-                if (y < 0) y = 0;
-                if (y > 15) y = 15;
-                wind.x = module.WindSpeeds[y * 16 + x].X;
-                wind.y = module.WindSpeeds[y * 16 + x].Y;
+                int x = (int)(pos.X + offset.x);
+                int y = (int)(pos.Y + offset.y);
+
+                Vector3 windSpeed = module.WindSpeed(x, y, 0);
+
+                wind.x = windSpeed.X;
+                wind.y = windSpeed.Y;
             }
             return wind;
         }
@@ -2719,7 +2717,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             //{
             //    msg.fromAgentName = "(hippos)";// Added for posterity.  This means that we can't figure out who sent it
             //}
-            msg.message = message;
+            // Cap the message length at 1024.
+            if (message != null && message.Length > 1024)
+                msg.message = message.Substring(0, 1024);
+            else
+                msg.message = message;
             msg.dialog = (byte)19; // messgage from script ??? // dialog;
             msg.fromGroup = false;// fromGroup;
             msg.offline = (byte)0; //offline;
@@ -2795,28 +2797,24 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
         }
 
-
-
+        /// <summary>
+        /// Attempt to clamp the object on the Z axis at the given height over tau seconds.
+        /// </summary>
+        /// <param name="height">Height to hover.  Height of zero disables hover.</param>
+        /// <param name="water">False if height is calculated just from ground, otherwise uses ground or water depending on whichever is higher</param>
+        /// <param name="tau">Number of seconds over which to reach target</param>
         public void llSetHoverHeight(double height, int water, double tau)
         {
             m_host.AddScriptLPS(1);
-            Vector3 pos = m_host.GetWorldPosition();
-            int x = (int)(pos.X);
-            int y = (int)(pos.Y);
-            float landHeight = (float)World.GetLandHeight(x, y);
-            float targetHeight = landHeight + (float)height;
-            if (water == 1)
-            {
-                float waterHeight = (float)World.RegionInfo.RegionSettings.WaterHeight;
-                if (waterHeight > targetHeight)
-                {
-                    targetHeight = waterHeight + (float)height;
-                }
-            }
             if (m_host.PhysActor != null)
             {
-                m_host.MoveToTarget(new Vector3(pos.X, pos.Y, targetHeight), (float)tau);
-                m_host.PhysActor.Flying = true;
+                PIDHoverType hoverType = PIDHoverType.Ground;
+                if (water == 1)
+                {
+                    hoverType = PIDHoverType.GroundAndWater;
+                }
+
+                m_host.SetHoverHeight((float)height, hoverType, (float)tau);
             }
         }
 
@@ -2825,8 +2823,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             m_host.AddScriptLPS(1);
             if (m_host.PhysActor != null)
             {
-                m_host.PhysActor.Flying = false;
-                m_host.PhysActor.PIDActive = false;
+                m_host.SetHoverHeight(0f, PIDHoverType.Ground, 0f);
             }
         }
 
@@ -3710,8 +3707,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 ScenePresence presence = World.GetScenePresence(agentId);
                 if (presence != null)
                 {
-                    // agent must be over the owners land
-                    if (m_host.OwnerID == World.GetLandOwner(presence.AbsolutePosition.X, presence.AbsolutePosition.Y))
+                    // agent must be over the owners land                    
+                    if (m_host.OwnerID 
+                        == World.LandChannel.GetLandObject(
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)
                     {
                         presence.ControllingClient.SendTeleportLocationStart();
                         World.TeleportClientHome(agentId, presence.ControllingClient);
@@ -5186,7 +5185,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (presence != null)
                 {
                     // agent must be over the owners land
-                    if (m_host.OwnerID == World.GetLandOwner(presence.AbsolutePosition.X, presence.AbsolutePosition.Y))
+                    if (m_host.OwnerID 
+                        == World.LandChannel.GetLandObject(
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)
                         World.TeleportClientHome(agentId, presence.ControllingClient);
                 }
             }
@@ -5269,29 +5270,34 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
             UUID key = new UUID();
-            if (UUID.TryParse(id,out key))
+            if (UUID.TryParse(id, out key))
             {
-                ScenePresence presence = World.GetScenePresence(key);
+                ScenePresence presence = World.GetScenePresence(key);                
                 if (presence != null) // object is an avatar
                 {
-                    if (m_host.OwnerID == World.GetLandOwner(presence.AbsolutePosition.X, presence.AbsolutePosition.Y))
+                    if (m_host.OwnerID 
+                        == World.LandChannel.GetLandObject(
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)                    
                         return 1;
                 }
                 else // object is not an avatar
                 {
                     SceneObjectPart obj = World.GetSceneObjectPart(key);
                     if (obj != null)
-                        if (m_host.OwnerID == World.GetLandOwner(obj.AbsolutePosition.X, obj.AbsolutePosition.Y))
+                        if (m_host.OwnerID
+                            == World.LandChannel.GetLandObject(
+                                obj.AbsolutePosition.X, obj.AbsolutePosition.Y).landData.OwnerID)                             
                             return 1;
                 }
             }
+            
             return 0;
         }
 
         public LSL_String llGetLandOwnerAt(LSL_Vector pos)
         {
             m_host.AddScriptLPS(1);
-            return World.GetLandOwner((float)pos.x, (float)pos.y).ToString();
+            return World.LandChannel.GetLandObject((float)pos.x, (float)pos.y).landData.OwnerID.ToString();            
         }
 
         /// <summary>
@@ -6433,7 +6439,25 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             return;
 
                         LSL_Rotation q = rules.GetQuaternionItem(idx++);
-                        llSetRot(q);
+                        // try to let this work as in SL...
+                        if (part.ParentID == 0)
+                        {
+                            // special case: If we are root, rotate complete SOG to new rotation
+                            SetRot(part, Rot2Quaternion(q));
+                        }
+                        else
+                        {
+                            // we are a child. The rotation values will be set to the one of root modified by rot, as in SL. Don't ask.
+                            SceneObjectGroup group = part.ParentGroup;
+                            if (group != null) // a bit paranoid, maybe
+                            {
+                                SceneObjectPart rootPart = group.RootPart;
+                                if (rootPart != null) // again, better safe than sorry
+                                {
+                                    SetRot(part, rootPart.RotationOffset * Rot2Quaternion(q));
+                                }
+                            }
+                        }
 
                         break;
 
@@ -6798,16 +6822,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public void llSetParcelMusicURL(string url)
         {
             m_host.AddScriptLPS(1);
-            UUID landowner = World.GetLandOwner(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y);
-            if (landowner == UUID.Zero)
-            {
+            
+            ILandObject land = World.LandChannel.GetLandObject(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y);
+
+            if (land.landData.OwnerID != m_host.ObjectOwner)
                 return;
-            }
-            if (landowner != m_host.ObjectOwner)
-            {
-                return;
-            }
-            World.SetLandMusicURL(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y, url);
+            
+            land.SetMusicUrl(url);
+            
             // ScriptSleep(2000);
         }
 
@@ -8187,11 +8209,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (presence == null)
                 {
                     // we send to all
-
                     landData.MediaID = new UUID(texture);
                     landData.MediaAutoScale = autoAlign ? (byte)1 : (byte)0;
+                    
                     // do that one last, it will cause a ParcelPropertiesUpdate
-                    World.SetLandMediaURL(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y, url);
+                    landObject.SetMediaUrl(url);
 
                     // now send to all (non-child) agents
                     List<ScenePresence> agents = World.GetAvatars();
@@ -8658,7 +8680,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             int c = 0;
             for (int i = 0; i < src1.Length; i++)
             {
-                ret += src1[i] ^ src2[c];
+                ret += (char) (src1[i] ^ src2[c]);
 
                 c++;
                 if (c >= src2.Length)
@@ -8708,6 +8730,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             httpHeaders["X-SecondLife-Local-Rotation"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000}, {3:0.000000})", rotation.X, rotation.Y, rotation.Z, rotation.W);
             httpHeaders["X-SecondLife-Owner-Name"] = scenePresence == null ? string.Empty : scenePresence.ControllingClient.Name;
             httpHeaders["X-SecondLife-Owner-Key"] = m_host.ObjectOwner.ToString();
+            string userAgent = config.Configs["Network"].GetString("user_agent", null);
+            if (userAgent != null)
+                httpHeaders["User-Agent"] = userAgent;
 
             UUID reqID = httpScriptMod.
                 StartHttpRequest(m_localID, m_itemID, url, param, httpHeaders, body);

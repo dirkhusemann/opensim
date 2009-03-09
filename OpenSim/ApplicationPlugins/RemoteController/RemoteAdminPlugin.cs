@@ -131,6 +131,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             }
         }
 
+        public void PostInitialise()
+        {
+        }
+
         public XmlRpcResponse XmlRpcRestartMethod(XmlRpcRequest request)
         {
             XmlRpcResponse response = new XmlRpcResponse();
@@ -559,8 +563,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                           region.RegionID, regionXmlPath);
                         region.SaveRegionToFile("dynamic region", regionXmlPath);
                     }
-
-                    m_app.CreateRegion(region);
+                    IScene newscene;
+                    m_app.CreateRegion(region, out newscene);
 
                     responseData["success"]     = "true";
                     responseData["region_name"] = region.RegionName;

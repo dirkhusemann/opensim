@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -26,15 +26,17 @@
  */
 
 using System;
-using System.Collections.Generic;
-using OpenSim.Framework.Servers;
+using OpenMetaverse;
 
-namespace OpenSim.Grid.Framework
+namespace OpenSim.Framework
 {
-    public interface IGridMessagingMapper
+    public interface ILoginServiceToRegionsConnector
     {
-        List<MessageServerInfo> GetMessageServersList();
-        void RegisterMessageServer(MessageServerInfo m);
-        void DeRegisterMessageServer(MessageServerInfo m);
+        bool RegionLoginsEnabled { get; }
+        void LogOffUserFromGrid(ulong regionHandle, UUID AvatarID, UUID RegionSecret, string message);
+        bool NewUserConnection(ulong regionHandle, AgentCircuitData agent);
+        RegionInfo RequestClosestRegion(string region);
+        RegionInfo RequestNeighbourInfo(UUID regionID);
+        RegionInfo RequestNeighbourInfo(ulong regionhandle);
     }
 }

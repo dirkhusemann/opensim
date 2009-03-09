@@ -866,6 +866,7 @@ namespace OpenSim.Region.Framework.Scenes
                         if (m_updateEntitiesThread.ThreadState == ThreadState.Stopped)
                             m_updateEntitiesThread.Start();
                         */
+                        
                         m_sceneGraph.UpdateEntities();
                     }
                         
@@ -1113,7 +1114,6 @@ namespace OpenSim.Region.Framework.Scenes
                 {
                     Heightmap = new TerrainChannel(map);
                 }
-
             }
             catch (Exception e)
             {
@@ -2296,7 +2296,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// </summary>
         public void RegisterCommsEvents()
         {
-            m_sceneGridService.OnExpectUser += NewUserConnection;
+            m_sceneGridService.OnExpectUser += HandleNewUserConnection;
             m_sceneGridService.OnAvatarCrossingIntoRegion += AgentCrossing;
             m_sceneGridService.OnCloseAgentConnection += IncomingCloseAgent;
             m_sceneGridService.OnRegionUp += OtherRegionUp;
@@ -2328,7 +2328,7 @@ namespace OpenSim.Region.Framework.Scenes
             m_sceneGridService.OnExpectPrim -= IncomingInterRegionPrimGroup;
             //m_sceneGridService.OnChildAgentUpdate -= IncomingChildAgentDataUpdate;
             m_sceneGridService.OnRegionUp -= OtherRegionUp;
-            m_sceneGridService.OnExpectUser -= NewUserConnection;
+            m_sceneGridService.OnExpectUser -= HandleNewUserConnection;
             m_sceneGridService.OnAvatarCrossingIntoRegion -= AgentCrossing;
             m_sceneGridService.OnCloseAgentConnection -= IncomingCloseAgent;
             m_sceneGridService.OnGetLandData -= GetLandData;
@@ -2340,12 +2340,26 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         /// <summary>
+        /// A handler for the SceneCommunicationService event, to match that events return type of void.
+        /// Use NewUserConnection() directly if possible so the return type can refuse connections.
+        /// At the moment nothing actually seems to use this event,
+        /// as everything is switching to calling the NewUserConnection method directly.
+        /// </summary>
+        /// <param name="agent"></param>
+        public void HandleNewUserConnection(AgentCircuitData agent)
+        {
+            NewUserConnection(agent);
+        }
+
+        /// <summary>
         /// Do the work necessary to initiate a new user connection for a particular scene.
         /// At the moment, this consists of setting up the caps infrastructure
+        /// The return bool should allow for connections to be refused, but as not all calling paths
+        /// take proper notice of it let, we allowed banned users in still.
         /// </summary>
         /// <param name="regionHandle"></param>
         /// <param name="agent"></param>
-        public void NewUserConnection(AgentCircuitData agent)
+        public bool NewUserConnection(AgentCircuitData agent)
         {
             CapsModule.NewUserConnection(agent);
 
@@ -2358,7 +2372,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 sp.AdjustKnownSeeds();
 
-                return;
+                return true;
             }
 
             // Don't disable this log message - it's too helpful
@@ -2371,6 +2385,7 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.WarnFormat(
                "[CONNECTION BEGIN]: Incoming user {0} at {1} is on the region banlist",
                agent.AgentID, RegionInfo.RegionName);
+                //return false;
             }
 
             CapsModule.AddCapsHandler(agent.AgentID);
@@ -2402,6 +2417,8 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.WarnFormat(
                     "[CONNECTION BEGIN]: We couldn't find a User Info record for {0}.  This is usually an indication that the UUID we're looking up is invalid", agent.AgentID);
             }
+
+            return true;
         }
 
         public void UpdateCircuitData(AgentCircuitData data)
@@ -2414,7 +2431,7 @@ namespace OpenSim.Region.Framework.Scenes
             return m_authenticateHandler.TryChangeCiruitCode(oldcc, newcc);
         }
 
-        protected void HandleLogOffUserFromGrid(UUID AvatarID, UUID RegionSecret, string message)
+        public void HandleLogOffUserFromGrid(UUID AvatarID, UUID RegionSecret, string message)
         {
             ScenePresence loggingOffUser = null;
             loggingOffUser = GetScenePresence(AvatarID);
@@ -3002,24 +3019,6 @@ namespace OpenSim.Region.Framework.Scenes
             m_eventManager.TriggerOnPluginConsole(args);
         }
 
-        public double GetLandHeight(int x, int y)
-        {
-            return Heightmap[x, y];
-        }
-
-        public UUID GetLandOwner(float x, float y)
-        {
-            ILandObject land = LandChannel.GetLandObject(x, y);
-            if (land == null)
-            {
-                return UUID.Zero;
-            }
-            else
-            {
-                return land.landData.OwnerID;
-            }
-        }
-
         public LandData GetLandData(float x, float y)
         {
             return LandChannel.GetLandObject(x, y).landData;
@@ -3027,40 +3026,8 @@ namespace OpenSim.Region.Framework.Scenes
 
         public LandData GetLandData(uint x, uint y)
         {
-            m_log.DebugFormat("[SCENE] returning land for {0},{1}", x, y);
+            m_log.DebugFormat("[SCENE]: returning land for {0},{1}", x, y);
             return LandChannel.GetLandObject((int)x, (int)y).landData;
-        }
-
-        public void SetLandMusicURL(float x, float y, string url)
-        {
-            ILandObject land = LandChannel.GetLandObject(x, y);
-            if (land == null)
-            {
-                return;
-            }
-            else
-            {
-                land.landData.MusicURL = url;
-                land.sendLandUpdateToAvatarsOverMe();
-                return;
-            }
-        }
-
-        public void SetLandMediaURL(float x, float y, string url)
-        {
-            ILandObject land = LandChannel.GetLandObject(x, y);
-
-            if (land == null)
-            {
-                return;
-            }
-
-            else
-            {
-                land.landData.MediaURL = url;
-                land.sendLandUpdateToAvatarsOverMe();
-                return;
-            }
         }
 
         public RegionInfo RequestClosestRegion(string name)
@@ -3397,24 +3364,6 @@ namespace OpenSim.Region.Framework.Scenes
         }
 
         #endregion
-
-        public void ParcelMediaSetTime(float time)
-        {
-            //should be doing this by parcel, but as its only for testing
-            // The use of Thread.Sleep here causes the following compiler error under mono 1.2.4
-            // OpenSim/Region/Environment/Scenes/Scene.cs(3675,17): error CS0103: The name `Thread' does not exist
-            // in the context of `<>c__CompilerGenerated17'
-            // MW said it was okay to comment the body of this method out for now since the code is experimental
-            // and will be replaced anyway
-//            ForEachClient(delegate(IClientAPI client)
-//            {
-//                client.SendParcelMediaCommand((uint)(2), ParcelMediaCommandEnum.Pause, 0);
-//                Thread.Sleep(10);
-//                client.SendParcelMediaCommand((uint)(64), ParcelMediaCommandEnum.Time, time);
-//                Thread.Sleep(200);
-//                client.SendParcelMediaCommand((uint)(4), ParcelMediaCommandEnum.Play, 0);
-//            });
-        }
 
         public void RegionHandleRequest(IClientAPI client, UUID regionID)
         {

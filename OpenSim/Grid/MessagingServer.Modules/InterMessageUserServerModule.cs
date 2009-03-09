@@ -42,17 +42,17 @@ using Timer = System.Timers.Timer;
 
 namespace OpenSim.Grid.MessagingServer.Modules
 {
-    public class MessageUserServerModule : IMessageUserServerService
+    public class InterMessageUserServerModule : IInterServiceUserService
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         private MessageServerConfig m_cfg;
 
-        private IUGAIMCore m_messageCore;
+        private IGridServiceCore m_messageCore;
 
         private Timer reconnectTimer = new Timer(300000); // 5 mins
 
-        public MessageUserServerModule(MessageServerConfig config, IUGAIMCore messageCore)
+        public InterMessageUserServerModule(MessageServerConfig config, IGridServiceCore messageCore)
         {
             m_cfg = config;
             m_messageCore = messageCore;
@@ -63,7 +63,7 @@ namespace OpenSim.Grid.MessagingServer.Modules
 
         public void Initialise()
         {
-            m_messageCore.RegisterInterface<IMessageUserServerService>(this);
+            m_messageCore.RegisterInterface<IInterServiceUserService>(this);
         }
 
         public void PostInitialise()

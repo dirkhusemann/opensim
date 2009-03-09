@@ -25,14 +25,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using OpenSim.Data;
+using OpenSim.Region.Framework.Scenes;
 
-namespace OpenSim.Grid.Framework
+namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
-    public interface IMessageRegionService
+    public class Heightmap : IHeightmap
     {
-        int ClearRegionCache();
-        RegionProfileData GetRegionInfo(ulong regionhandle);
+        private Scene m_scene;
+
+        public Heightmap(Scene scene)
+        {
+            m_scene = scene;
+        }
+
+        public int Height
+        {
+            get { return m_scene.Heightmap.Height; }
+        }
+
+        public int Width
+        {
+            get { return m_scene.Heightmap.Width; }
+        }
+
+        public double Get(int x, int y)
+        {
+            return m_scene.Heightmap[x, y];
+        }
+
+        public void Set(int x, int y, double val)
+        {
+            m_scene.Heightmap[x, y] = val;
+        }
     }
 }

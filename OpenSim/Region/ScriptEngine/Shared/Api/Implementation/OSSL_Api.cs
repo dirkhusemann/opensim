@@ -30,6 +30,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.Remoting.Lifetime;
 using System.Text;
+using System.Net;
 using OpenMetaverse;
 using Nini.Config;
 using OpenSim;
@@ -502,12 +503,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (presence != null)
                 {
                     // agent must be over owners land to avoid abuse
-                    if (m_host.OwnerID == World.GetLandOwner(presence.AbsolutePosition.X, presence.AbsolutePosition.Y))
+                    if (m_host.OwnerID 
+                        == World.LandChannel.GetLandObject(
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)                        
                     {
                         presence.ControllingClient.SendTeleportLocationStart();
                         World.RequestTeleportLocation(presence.ControllingClient, regionName,
                             new Vector3((float)position.x, (float)position.y, (float)position.z),
                             new Vector3((float)lookat.x, (float)lookat.y, (float)lookat.z), (uint)TPFlags.ViaLocation);
+                        
                         ScriptSleep(5000);
                     }
                 }
@@ -531,7 +535,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 if (presence != null)
                 {
                     // agent must be over owners land to avoid abuse
-                    if (m_host.OwnerID == World.GetLandOwner(presence.AbsolutePosition.X, presence.AbsolutePosition.Y))
+                    if (m_host.OwnerID 
+                        == World.LandChannel.GetLandObject(
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)                          
                     {
                         presence.ControllingClient.SendTeleportLocationStart();
                         World.RequestTeleportLocation(presence.ControllingClient, regionHandle,
@@ -546,6 +552,34 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public void osTeleportAgent(string agent, LSL_Types.Vector3 position, LSL_Types.Vector3 lookat)
         {
             osTeleportAgent(agent, World.RegionInfo.RegionName, position, lookat);
+        }
+
+        // Functions that get information from the agent itself.
+        //
+        // osGetAgentIP - this is used to determine the IP address of
+        //the client.  This is needed to help configure other in world
+        //resources based on the IP address of the clients connected.
+        //I think High is a good risk level for this, as it is an
+        //information leak.
+        public string osGetAgentIP(string agent)
+        {
+            CheckThreatLevel(ThreatLevel.High, "osGetAgentIP");
+
+            UUID avatarID = (UUID)agent;
+
+            m_host.AddScriptLPS(1);
+            if (World.Entities.ContainsKey((UUID)agent) && World.Entities[avatarID] is ScenePresence)
+            {
+                ScenePresence target = (ScenePresence)World.Entities[avatarID];
+                EndPoint ep = target.ControllingClient.GetClientInfo().userEP;
+                if (ep is IPEndPoint) 
+                {
+                    IPEndPoint ip = (IPEndPoint)ep;
+                    return ip.Address.ToString();
+                }
+            }
+            // fall through case, just return nothing
+            return "";
         }
 
         // Adam's super super custom animation functions
@@ -748,19 +782,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             CheckThreatLevel(ThreatLevel.VeryLow, "osSetParcelMediaURL");
 
             m_host.AddScriptLPS(1);
-            UUID landowner = World.GetLandOwner(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y);
+            
+            ILandObject land 
+                = World.LandChannel.GetLandObject(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y);
 
-            if (landowner == UUID.Zero)
-            {
+            if (land.landData.OwnerID != m_host.ObjectOwner)
                 return;
-            }
 
-            if (landowner != m_host.ObjectOwner)
-            {
-                return;
-            }
-
-            World.SetLandMediaURL(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y, url);
+            land.SetMediaUrl(url);
         }
 
         public string osGetScriptEngineName()
@@ -806,20 +835,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             CheckThreatLevel(ThreatLevel.High,"osGetSimulatorVersion");
             m_host.AddScriptLPS(1);
             return m_ScriptEngine.World.GetSimulatorVersion();
-        }
-
-        //for testing purposes only
-        public void osSetParcelMediaTime(double time)
-        {
-            // This gets very high because I have no idea what it does.
-            // If someone knows, please adjust. If it;s no longer needed,
-            // please remove.
-            //This sets the current time on a video. IE, it can be used to skip to a set time in the video. [MW]
-            CheckThreatLevel(ThreatLevel.VeryHigh, "osSetParcelMediaTime");
-
-            m_host.AddScriptLPS(1);
-
-            World.ParcelMediaSetTime((float)time);
         }
 
         public Hashtable osParseJSON(string JSON)

@@ -42,6 +42,11 @@ namespace OpenSim.Region.CoreModules.World.Archiver
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+        /// <value>
+        /// Post a message to the log every x assets as a progress bar
+        /// </value>
+        private static int LOG_ASSET_LOAD_NOTIFICATION_INTERVAL = 50;
+        
         /// <summary>
         /// Archive assets
         /// </summary>
@@ -105,7 +110,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
 
             xtw.WriteEndDocument();
 
-            archive.AddFile("assets.xml", sw.ToString());
+            archive.WriteFile("assets.xml", sw.ToString());
         }
 
         /// <summary>
@@ -116,6 +121,8 @@ namespace OpenSim.Region.CoreModules.World.Archiver
         {
             // It appears that gtar, at least, doesn't need the intermediate directory entries in the tar
             //archive.AddDir("assets");
+            
+            int assetsAdded = 0;
 
             foreach (UUID uuid in m_assets.Keys)
             {
@@ -134,10 +141,18 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                         asset.Type, asset.ID);
                 }
 
-                archive.AddFile(
+                archive.WriteFile(
                     ArchiveConstants.ASSETS_PATH + uuid.ToString() + extension,
                     asset.Data);
+                
+                assetsAdded++;
+                
+                if (assetsAdded % LOG_ASSET_LOAD_NOTIFICATION_INTERVAL == 0)
+                    m_log.InfoFormat("[ARCHIVER]: Added {0} assets to archive", assetsAdded);
             }
+            
+            if (assetsAdded % LOG_ASSET_LOAD_NOTIFICATION_INTERVAL != 0)
+                m_log.InfoFormat("[ARCHIVER]: Added {0} assets to archive", assetsAdded);
         }
     }
 }

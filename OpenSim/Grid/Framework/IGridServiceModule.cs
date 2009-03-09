@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -30,11 +30,11 @@ using OpenSim.Framework.Servers;
 
 namespace OpenSim.Grid.Framework
 {
-    public interface IUGAIMCore
+    public interface IGridServiceModule
     {
-        T Get<T>();
-        void RegisterInterface<T>(T iface);
-        bool TryGet<T>(out T iface);
-        BaseHttpServer GetHttpServer();
+        void Close();
+        void Initialise(IGridServiceCore core);
+        void PostInitialise();
+        void RegisterHandlers(BaseHttpServer httpServer);
     }
 }

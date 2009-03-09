@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -32,25 +32,26 @@ using System.Reflection;
 using System.Text;
 using Nwc.XmlRpc;
 using log4net;
+using OpenSim.Data;
 using OpenSim.Framework.Servers;
 using OpenSim.Framework;
 using OpenSim.Grid.Framework;
 
 namespace OpenSim.Grid.GridServer.Modules
 {
-    public class GridMessagingModule : IGridMessagingMapper
+    public class GridMessagingModule : IMessagingServerDiscovery
     {
-        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        //private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        protected GridDBService m_gridDBService;
-        protected IUGAIMCore m_gridCore;
+        protected IRegionProfileService m_gridDBService;
+        protected IGridServiceCore m_gridCore;
 
         protected GridConfig m_config;
 
         /// <value>
         /// Used to notify old regions as to which OpenSim version to upgrade to
         /// </value>
-        private string m_opensimVersion;
+        //private string m_opensimVersion;
 
         protected BaseHttpServer m_httpServer;
 
@@ -61,14 +62,14 @@ namespace OpenSim.Grid.GridServer.Modules
         { 
         }
 
-        public void Initialise(string opensimVersion, GridDBService gridDBService, IUGAIMCore gridCore, GridConfig config)
+        public void Initialise(string opensimVersion, IRegionProfileService gridDBService, IGridServiceCore gridCore, GridConfig config)
         {
-            m_opensimVersion = opensimVersion;
+            //m_opensimVersion = opensimVersion;
             m_gridDBService = gridDBService;
             m_gridCore = gridCore;
             m_config = config;
 
-            m_gridCore.RegisterInterface<IGridMessagingMapper>(this);
+            m_gridCore.RegisterInterface<IMessagingServerDiscovery>(this);
 
             RegisterHandlers();
         }
