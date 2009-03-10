@@ -758,7 +758,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                         continue;
 
                     // skip if no channel uri available
-                    if (type == "channel" && !XmlFind(resp, "response.level0.channel-search.channels.channels.level4.uri", i, out uri))
+                    if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.uri", i, out uri))
                         continue;
 
                     channelId = id;
