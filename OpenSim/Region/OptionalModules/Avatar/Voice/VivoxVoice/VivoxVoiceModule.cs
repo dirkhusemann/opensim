@@ -741,7 +741,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
                     // skip if not a channel
                     if (!XmlFind(resp, "response.level0.channel-search.channels.channels.level4.type", i, out type) || 
-                        type != "channel")
+                        (type != "channel" && type != "positional_M"))
                         continue;
 
                     // skip if not the name we are looking for
