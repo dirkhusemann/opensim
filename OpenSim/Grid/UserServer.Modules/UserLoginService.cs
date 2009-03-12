@@ -201,22 +201,47 @@ namespace OpenSim.Grid.UserServer.Modules
 
         protected override RegionInfo RequestClosestRegion(string region)
         {
-            return m_regionProfileService.RequestSimProfileData(region,
-                                                           m_config.GridServerURL, m_config.GridSendKey, m_config.GridRecvKey).ToRegionInfo();
+            RegionProfileData profileData = m_regionProfileService.RequestSimProfileData(region,
+                                                                                         m_config.GridServerURL, m_config.GridSendKey, m_config.GridRecvKey);
+
+            if (profileData != null)
+            {
+                return profileData.ToRegionInfo();
+            }
+            else
+            {
+                return null;
+            }
         }
 
         protected override RegionInfo GetRegionInfo(ulong homeRegionHandle)
         {
-            return m_regionProfileService.RequestSimProfileData(homeRegionHandle,
-                                                           m_config.GridServerURL, m_config.GridSendKey,
-                                                           m_config.GridRecvKey).ToRegionInfo();
+            RegionProfileData profileData = m_regionProfileService.RequestSimProfileData(homeRegionHandle,
+                                                                                         m_config.GridServerURL, m_config.GridSendKey,
+                                                                                         m_config.GridRecvKey);
+            if (profileData != null)
+            {
+                return profileData.ToRegionInfo();
+            }
+            else
+            {
+                return null;
+            }
         }
 
         protected override RegionInfo GetRegionInfo(UUID homeRegionId)
         {
-            return m_regionProfileService.RequestSimProfileData(homeRegionId,
-                                                           m_config.GridServerURL, m_config.GridSendKey,
-                                                           m_config.GridRecvKey).ToRegionInfo();
+            RegionProfileData profileData = m_regionProfileService.RequestSimProfileData(homeRegionId,
+                                                                                         m_config.GridServerURL, m_config.GridSendKey,
+                                                                                         m_config.GridRecvKey);
+            if (profileData != null)
+            {
+                return profileData.ToRegionInfo();
+            }
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>
