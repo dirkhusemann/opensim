@@ -593,7 +593,26 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (World.Entities.ContainsKey((UUID)avatar) && World.Entities[avatarID] is ScenePresence)
             {
                 ScenePresence target = (ScenePresence)World.Entities[avatarID];
-                target.AddAnimation(animation, m_host.UUID);
+                if (target != null)
+                {
+					UUID animID=UUID.Zero;
+                    lock (m_host.TaskInventory)
+                    {
+                        foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                        {
+                            if (inv.Value.Name == animation)
+                            {
+                                if (inv.Value.Type == (int)AssetType.Animation)
+                                    animID = inv.Value.AssetID;
+                                continue;
+                            }
+                        }
+                    }
+                    if (animID == UUID.Zero)
+                        target.AddAnimation(animation, m_host.UUID);
+                    else
+                        target.AddAnimation(animID, m_host.UUID);
+                }
             }
         }
 
@@ -607,7 +626,26 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (World.Entities.ContainsKey(avatarID) && World.Entities[avatarID] is ScenePresence)
             {
                 ScenePresence target = (ScenePresence)World.Entities[avatarID];
-                target.RemoveAnimation(animation);
+				if (target != null)
+				{
+					UUID animID=UUID.Zero;
+                    lock (m_host.TaskInventory)
+                    {
+                        foreach (KeyValuePair<UUID, TaskInventoryItem> inv in m_host.TaskInventory)
+                        {
+                            if (inv.Value.Name == animation)
+                            {
+                                if (inv.Value.Type == (int)AssetType.Animation)
+                                    animID = inv.Value.AssetID;
+                                continue;
+                            }
+                        }
+                    }
+                    if (animID == UUID.Zero)
+                        target.RemoveAnimation(animation);
+                    else
+                        target.RemoveAnimation(animID);
+				}
             }
         }
 
@@ -753,6 +791,33 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 World.EventManager.TriggerRequestChangeWaterHeight((float)height);
             }
         }
+
+        /// <summary>
+        /// Changes the Region Sun Settings, then Triggers a Sun Update
+        /// </summary>
+        /// <param name="useEstateSun">True to use Estate Sun instead of Region Sun</param>
+        /// <param name="sunFixed">True to keep the sun stationary</param>
+        /// <param name="sunHour">The "Sun Hour" that is desired, 0...24, with 0 just after SunRise</param>
+        public void osSetRegionSunSettings(bool useEstateSun, bool sunFixed, double sunHour)
+        {
+            CheckThreatLevel(ThreatLevel.Nuisance, "osSetRegionSunSettings");
+
+            m_host.AddScriptLPS(1);
+            //Check to make sure that the script's owner is the estate manager/master
+            //World.Permissions.GenericEstatePermission(
+            if (World.Permissions.IsGod(m_host.OwnerID))
+            {
+                World.RegionInfo.RegionSettings.UseEstateSun = useEstateSun;
+                World.RegionInfo.RegionSettings.SunPosition  = sunHour + 6; // LL Region Sun Hour is 6 to 30
+                World.RegionInfo.RegionSettings.FixedSun     = sunFixed;
+                World.RegionInfo.RegionSettings.Save();
+
+                World.EventManager.TriggerEstateToolsSunUpdate(World.RegionInfo.RegionHandle, sunFixed, useEstateSun, (float)sunHour);
+            }
+        }
+
+
+
 
         public double osList2Double(LSL_Types.list src, int index)
         {

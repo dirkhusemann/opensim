@@ -87,6 +87,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private int m_inPacketsChecked;
 
+        // Used to adjust Sun Orbit values so Linden based viewers properly position sun
+        private const float m_sunPainDaHalfOrbitalCutoff = 4.712388980384689858f;
+
+
         /* protected variables */
 
         protected static Dictionary<PacketType, PacketMethod> PacketHandlers =
@@ -2403,10 +2407,26 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public void SendSunPos(Vector3 Position, Vector3 Velocity, ulong CurrentTime, uint SecondsPerSunCycle, uint SecondsPerYear, float OrbitalPosition)
         {
+            // Viewers based on the Linden viwer code, do wacky things for oribital positions from Midnight to Sunrise
+            // So adjust for that
+            // Contributed by: Godfrey
+
+            if (OrbitalPosition > m_sunPainDaHalfOrbitalCutoff) // things get weird from midnight to sunrise
+            {
+                OrbitalPosition = (OrbitalPosition - m_sunPainDaHalfOrbitalCutoff) * 0.6666666667f + m_sunPainDaHalfOrbitalCutoff;
+            }
+
+
+
             SimulatorViewerTimeMessagePacket viewertime = (SimulatorViewerTimeMessagePacket)PacketPool.Instance.GetPacket(PacketType.SimulatorViewerTimeMessage);
             viewertime.TimeInfo.SunDirection = Position;
             viewertime.TimeInfo.SunAngVelocity = Velocity;
-            viewertime.TimeInfo.UsecSinceStart = CurrentTime;
+
+            // Sun module used to add 6 hours to adjust for linden sun hour, adding here
+            // to prevent existing code from breaking if it assumed that 6 hours were included.
+            // 21600 == 6 hours * 60 minutes * 60 Seconds
+            viewertime.TimeInfo.UsecSinceStart = CurrentTime + 21600;
+
             viewertime.TimeInfo.SecPerDay = SecondsPerSunCycle;
             viewertime.TimeInfo.SecPerYear = SecondsPerYear;
             viewertime.TimeInfo.SunPhase = OrbitalPosition;
@@ -4046,6 +4066,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                     handlerUpdatePrimSingleRotation(localId, rot2, this);
                                 }
                                 break;
+                            case 4:
+                            case 20:
+                                Vector3 scale4 = new Vector3(block.Data, 0);
+
+                                handlerUpdatePrimScale = OnUpdatePrimScale;
+                                if (handlerUpdatePrimScale != null)
+                                {
+//                                     m_log.Debug("new scale is " + scale4.X + " , " + scale4.Y + " , " + scale4.Z);
+                                    handlerUpdatePrimScale(localId, scale4, this);
+                                }
+                                break;
                             case 5:
 
                                 Vector3 scale1 = new Vector3(block.Data, 12);
@@ -4095,6 +4126,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                     //m_log.Debug("new rotation position is " + pos.X + " , " + pos.Y + " , " + pos.Z);
                                     // m_log.Debug("new rotation is " + rot.X + " , " + rot.Y + " , " + rot.Z + " , " + rot.W);
                                     handlerUpdatePrimGroupRotation(localId, pos3, rot4, this);
+                                }
+                                break;
+                            case 12:
+                            case 28:
+                                Vector3 scale7 = new Vector3(block.Data, 0);
+
+                                handlerUpdatePrimGroupScale = OnUpdatePrimGroupScale;
+                                if (handlerUpdatePrimGroupScale != null)
+                                {
+//                                     m_log.Debug("new scale is " + scale7.X + " , " + scale7.Y + " , " + scale7.Z);
+                                    handlerUpdatePrimGroupScale(localId, scale7, this);
                                 }
                                 break;
                             case 13:
@@ -4148,6 +4190,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                         handlerUpdatePrimSinglePosition(localId, pos6, this);
                                     }
                                 }
+                                break;
+                            default:
+                                m_log.Debug("[CLIENT] MultipleObjUpdate recieved an unknown packet type: " + (block.Type));
                                 break;
                         }
                     }
