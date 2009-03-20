@@ -41,10 +41,11 @@ using Nwc.XmlRpc;
 using OpenMetaverse.StructuredData;
 using CoolHTTPListener = HttpServer.HttpListener;
 using HttpListener=System.Net.HttpListener;
+using OpenSim.Framework.Servers.Interfaces;
 
 namespace OpenSim.Framework.Servers
 {
-    public class BaseHttpServer
+    public class BaseHttpServer : IHttpServer
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private HttpServerLogWriter httpserverlog = new HttpServerLogWriter();
@@ -148,11 +149,6 @@ namespace OpenSim.Framework.Servers
             return true;
         }
 
-        /// <summary>
-        /// Gets the XML RPC handler for given method name
-        /// </summary>
-        /// <param name="method">Name of the method</param>
-        /// <returns>Returns null if not found</returns>
         public XmlRpcMethod GetXmlRPCHandler(string method)
         {
             lock (m_rpcHandlers)
@@ -168,13 +164,15 @@ namespace OpenSim.Framework.Servers
             }
         }
 
-        public bool AddHTTPHandler(string method, GenericHTTPMethod handler)
+        public bool AddHTTPHandler(string methodName, GenericHTTPMethod handler)
         {
+            //m_log.DebugFormat("[BASE HTTP SERVER]: Registering {0}", methodName);
+            
             lock (m_HTTPHandlers)
             {
-                if (!m_HTTPHandlers.ContainsKey(method))
+                if (!m_HTTPHandlers.ContainsKey(methodName))
                 {
-                    m_HTTPHandlers.Add(method, handler);
+                    m_HTTPHandlers.Add(methodName, handler);
                     return true;
                 }
             }
@@ -201,12 +199,6 @@ namespace OpenSim.Framework.Servers
             return false;
         }
 
-        /// <summary>
-        /// Adds a LLSD handler, yay.
-        /// </summary>
-        /// <param name="path">/resource/ path</param>
-        /// <param name="handler">handle the LLSD response</param>
-        /// <returns></returns>
         public bool AddLLSDHandler(string path, LLSDMethod handler)
         {
             lock (m_llsdHandlers)
@@ -517,28 +509,33 @@ namespace OpenSim.Framework.Servers
 
         private bool TryGetHTTPHandler(string handlerKey, out GenericHTTPMethod HTTPHandler)
         {
+            //m_log.DebugFormat("[BASE HTTP HANDLER]: Looking for HTTP handler for {0}", handlerKey);
+            
             string bestMatch = null;
 
-            foreach (string pattern in m_HTTPHandlers.Keys)
+            lock (m_HTTPHandlers)
             {
-                if (handlerKey.StartsWith(pattern))
+                foreach (string pattern in m_HTTPHandlers.Keys)
                 {
-                    if (String.IsNullOrEmpty(bestMatch) || pattern.Length > bestMatch.Length)
+                    if (handlerKey.StartsWith(pattern))
                     {
-                        bestMatch = pattern;
+                        if (String.IsNullOrEmpty(bestMatch) || pattern.Length > bestMatch.Length)
+                        {
+                            bestMatch = pattern;
+                        }
                     }
                 }
-            }
 
-            if (String.IsNullOrEmpty(bestMatch))
-            {
-                HTTPHandler = null;
-                return false;
-            }
-            else
-            {
-                HTTPHandler = m_HTTPHandlers[bestMatch];
-                return true;
+                if (String.IsNullOrEmpty(bestMatch))
+                {
+                    HTTPHandler = null;
+                    return false;
+                }
+                else
+                {
+                    HTTPHandler = m_HTTPHandlers[bestMatch];
+                    return true;
+                }
             }
         }
 
@@ -878,7 +875,6 @@ namespace OpenSim.Framework.Servers
         /// <returns>true if we have one, false if not</returns>
         private bool DoWeHaveAHTTPHandler(string path)
         {
-
             string[] pathbase = path.Split('/');
             string searchquery = "/";
 
@@ -894,30 +890,30 @@ namespace OpenSim.Framework.Servers
 
             string bestMatch = null;
 
-            foreach (string pattern in m_HTTPHandlers.Keys)
+            //m_log.DebugFormat("[BASE HTTP HANDLER]: Checking if we have an HTTP handler for {0}", searchquery);
+            
+            lock (m_HTTPHandlers)
             {
-
-                if (searchquery.StartsWith(pattern) && searchquery.Length >= pattern.Length)
+                foreach (string pattern in m_HTTPHandlers.Keys)
                 {
-
-                    bestMatch = pattern;
-
+                    if (searchquery.StartsWith(pattern) && searchquery.Length >= pattern.Length)
+                    {
+                        bestMatch = pattern;
+                    }
                 }
-            }
 
-            // extra kicker to remove the default XMLRPC login case..  just in case..
-            if (path == "/")
-                return false;
+                // extra kicker to remove the default XMLRPC login case..  just in case..
+                if (path == "/")
+                    return false;
 
-            if (String.IsNullOrEmpty(bestMatch))
-            {
-
-                return false;
-            }
-            else
-            {
-
-                return true;
+                if (String.IsNullOrEmpty(bestMatch))
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
             }
         }
 
@@ -1024,7 +1020,8 @@ namespace OpenSim.Framework.Servers
                     catch (SocketException f)
                     {
                         // This has to be here to prevent a Linux/Mono crash
-                        m_log.WarnFormat("[BASE HTTP SERVER] XmlRpcRequest issue {0}.\nNOTE: this may be spurious on Linux.", f);
+                        m_log.WarnFormat(
+                            "[BASE HTTP SERVER]: XmlRpcRequest issue {0}.\nNOTE: this may be spurious on Linux.", f);
                     }
                 }
                 catch(Exception)
@@ -1184,34 +1181,38 @@ namespace OpenSim.Framework.Servers
 
             string bestMatch = null;
 
-            foreach (string pattern in m_HTTPHandlers.Keys)
+//            m_log.DebugFormat(
+//                "[BASE HTTP HANDLER]: TryGetHTTPHandlerPathBased() looking for HTTP handler to match {0}", searchquery);
+            
+            lock (m_HTTPHandlers)
             {
-                if (searchquery.ToLower().StartsWith(pattern.ToLower()))
+                foreach (string pattern in m_HTTPHandlers.Keys)
                 {
-                    if (String.IsNullOrEmpty(bestMatch) || searchquery.Length > bestMatch.Length)
+                    if (searchquery.ToLower().StartsWith(pattern.ToLower()))
                     {
-                        // You have to specifically register for '/' and to get it, you must specificaly request it
-                        //
-                        if (pattern == "/" && searchquery == "/" || pattern != "/")
-                            bestMatch = pattern;
+                        if (String.IsNullOrEmpty(bestMatch) || searchquery.Length > bestMatch.Length)
+                        {
+                            // You have to specifically register for '/' and to get it, you must specificaly request it
+                            //
+                            if (pattern == "/" && searchquery == "/" || pattern != "/")
+                                bestMatch = pattern;
+                        }
                     }
-                }
-            }
+                }           
 
-           
-
-            if (String.IsNullOrEmpty(bestMatch))
-            {
-                httpHandler = null;
-                return false;
-            }
-            else
-            {
-                if (bestMatch == "/" && searchquery != "/")
+                if (String.IsNullOrEmpty(bestMatch))
+                {
+                    httpHandler = null;
                     return false;
+                }
+                else
+                {
+                    if (bestMatch == "/" && searchquery != "/")
+                        return false;
 
-                httpHandler =  m_HTTPHandlers[bestMatch];
-                return true;
+                    httpHandler =  m_HTTPHandlers[bestMatch];
+                    return true;
+                }
             }
         }
 
@@ -1276,7 +1277,6 @@ namespace OpenSim.Framework.Servers
             response.ContentLength64 = buffer.Length;
             response.ContentEncoding = Encoding.UTF8;
 
-
             try
             {
                 response.OutputStream.Write(buffer, 0, buffer.Length);
@@ -1297,8 +1297,7 @@ namespace OpenSim.Framework.Servers
                     // This has to be here to prevent a Linux/Mono crash
                     m_log.WarnFormat("[BASE HTTP SERVER] XmlRpcRequest issue {0}.\nNOTE: this may be spurious on Linux.", e);
                 }
-            }
-            
+            }            
         }
 
         public void SendHTML404(OSHttpResponse response, string host)
@@ -1478,21 +1477,18 @@ namespace OpenSim.Framework.Servers
 
         public void RemoveHTTPHandler(string httpMethod, string path)
         {
-            if (httpMethod != null && httpMethod.Length == 0)
+            lock (m_HTTPHandlers)
             {
-                m_HTTPHandlers.Remove(path);
-                return;
+                if (httpMethod != null && httpMethod.Length == 0)
+                {
+                    m_HTTPHandlers.Remove(path);
+                    return;
+                }
+                
+                m_HTTPHandlers.Remove(GetHandlerKey(httpMethod, path));
             }
-            
-            m_HTTPHandlers.Remove(GetHandlerKey(httpMethod, path));
         }
 
-        /// <summary>
-        /// Remove the agent IF it is registered. Intercept the possible exception.
-        /// </summary>
-        /// <param name="agent"></param>
-        /// <param name="handler"></param>
-        /// <returns></returns>
         public bool RemoveAgentHandler(string agent, IHttpAgentHandler handler)
         {
             try
@@ -1512,7 +1508,6 @@ namespace OpenSim.Framework.Servers
         
         public bool RemoveLLSDHandler(string path, LLSDMethod handler)
         {
-
             try
             {
                 if (handler == m_llsdHandlers[path])
