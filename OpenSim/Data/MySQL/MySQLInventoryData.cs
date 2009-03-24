@@ -497,6 +497,15 @@ namespace OpenSim.Data.MySQL
                 }
 
                 result.Dispose();
+
+                result = new MySqlCommand("update inventoryfolders set version=version+1 where folderID = ?folderID", database.Connection);
+                result.Parameters.AddWithValue("?folderID", item.Folder.ToString
+());
+                lock (database)
+                {
+                    result.ExecuteNonQuery();
+                }
+                result.Dispose();
             }
             catch (MySqlException e)
             {
@@ -537,6 +546,16 @@ namespace OpenSim.Data.MySQL
                 database.Reconnect();
                 m_log.Error(e.ToString());
             }
+        }
+
+        public InventoryItemBase queryInventoryItem(UUID itemID)
+        {
+            return getInventoryItem(itemID);
+        }
+
+        public InventoryFolderBase queryInventoryFolder(UUID folderID)
+        {
+            return getInventoryFolder(folderID);
         }
 
         /// <summary>

@@ -96,6 +96,10 @@ namespace OpenSim.Framework.Communications
         /// <returns>true if the item was successfully deleted</returns>
         bool DeleteItem(InventoryItemBase item, UUID session_id);
 
+        InventoryItemBase QueryItem(InventoryItemBase item, UUID session_id);
+
+        InventoryFolderBase QueryFolder(InventoryFolderBase item, UUID session_id);
+
         /// <summary>
         /// Does the given user have an inventory structure?
         /// </summary>

@@ -525,8 +525,6 @@ namespace OpenSim.Region.Framework.Scenes
                         itemCopy.SalePrice = item.SalePrice;
                         itemCopy.SaleType = item.SaleType;
 
-                        itemCopy.CreationDate = item.CreationDate;
-
                         recipientUserInfo.AddItem(itemCopy);
 
                         if (!Permissions.BypassPermissions())
@@ -618,6 +616,13 @@ namespace OpenSim.Region.Framework.Scenes
                      "[AGENT INVENTORY]: Failed to find receiving user {0} for folder {1}", recipientId, folderId);
 
                 return null;
+            }
+
+            if (!recipientUserInfo.HasReceivedInventory)
+            {
+                recipientUserInfo.FetchInventory();
+                if (!WaitForInventory(recipientUserInfo))
+                    return null;
             }
 
             if (recipientParentFolderId == UUID.Zero)

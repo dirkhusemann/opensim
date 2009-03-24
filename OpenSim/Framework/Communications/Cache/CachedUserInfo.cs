@@ -36,6 +36,8 @@ namespace OpenSim.Framework.Communications.Cache
     internal delegate void AddItemDelegate(InventoryItemBase itemInfo);
     internal delegate void UpdateItemDelegate(InventoryItemBase itemInfo);
     internal delegate void DeleteItemDelegate(UUID itemID);
+    internal delegate void QueryItemDelegate(UUID itemID);
+    internal delegate void QueryFolderDelegate(UUID folderID);
 
     internal delegate void CreateFolderDelegate(string folderName, UUID folderID, ushort folderType, UUID parentID);
     internal delegate void MoveFolderDelegate(UUID folderID, UUID parentID);
@@ -767,6 +769,107 @@ namespace OpenSim.Framework.Communications.Cache
 
             return RootFolder.FindFolderForType(type);
         }
+
+        // Load additional items that other regions have put into the database
+        // The item will be added tot he local cache. Returns true if the item
+        // was found and can be sent to the client
+        //
+        public bool QueryItem(InventoryItemBase item)
+        {
+            if (m_hasReceivedInventory)
+            {
+                InventoryItemBase invItem = RootFolder.FindItem(item.ID);
+
+                if (invItem != null)
+                {
+                    // Item is in local cache, just update client
+                    //
+                    return true;
+                }
+
+                InventoryItemBase itemInfo = null;
+
+                if (m_commsManager.SecureInventoryService != null)
+                {
+                    itemInfo = m_commsManager.SecureInventoryService.QueryItem(item, m_session_id);
+                }
+                else
+                {
+                    itemInfo = m_commsManager.InventoryService.QueryItem(item);
+                }
+
+                if (itemInfo != null)
+                {
+                    InventoryFolderImpl folder = RootFolder.FindFolder(itemInfo.Folder);
+                    ItemReceive(itemInfo, folder);
+                    return true;
+                }
+
+                return false;
+            }
+            else
+            {
+                AddRequest(
+                    new InventoryRequest(
+                        Delegate.CreateDelegate(typeof(QueryItemDelegate), this, "QueryItem"),
+                        new object[] { item.ID }));
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public bool QueryFolder(InventoryFolderBase folder)
+        {
+            if (m_hasReceivedInventory)
+            {
+                InventoryFolderBase invFolder = RootFolder.FindFolder(folder.ID);
+
+                if (invFolder != null)
+                {
+                    // Folder is in local cache, just update client
+                    //
+                    return true;
+                }
+
+                InventoryFolderBase folderInfo = null;
+
+                if (m_commsManager.SecureInventoryService != null)
+                {
+                    folderInfo = m_commsManager.SecureInventoryService.QueryFolder(folder, m_session_id);
+                }
+                else
+                {
+                    folderInfo = m_commsManager.InventoryService.QueryFolder(folder);
+                }
+
+                if (folderInfo != null)
+                {
+                    InventoryFolderImpl createdFolder = RootFolder.CreateChildFolder(folderInfo.ID, folderInfo.Name, (ushort)folderInfo.Type);
+
+                    createdFolder.Version = folderInfo.Version;
+                    createdFolder.Owner = folderInfo.Owner;
+                    createdFolder.ParentID = folderInfo.ParentID;
+
+                    return true;
+                }
+
+                return false;
+            }
+            else
+            {
+                AddRequest(
+                    new InventoryRequest(
+                        Delegate.CreateDelegate(typeof(QueryFolderDelegate), this, "QueryFolder"),
+                        new object[] { folder.ID }));
+
+                return true;
+            }
+
+            return false;
+        }
+
     }
 
     /// <summary>
