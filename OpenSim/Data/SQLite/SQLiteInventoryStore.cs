@@ -295,7 +295,15 @@ namespace OpenSim.Data.SQLite
 
                     fillItemRow(inventoryRow, item);
                 }
+
                 invItemsDa.Update(ds, "inventoryitems");
+
+                DataTable inventoryFolderTable = ds.Tables["inventoryfolders"];
+
+                inventoryRow = inventoryFolderTable.Rows.Find(Util.ToRawUuidString(item.Folder));
+                inventoryRow["version"] = (int)inventoryRow["version"] + 1;
+
+                invFoldersDa.Update(ds, "inventoryfolders");
             }
         }
 
@@ -616,6 +624,16 @@ namespace OpenSim.Data.SQLite
 
                 invItemsDa.Update(ds, "inventoryitems");
             }
+        }
+
+        public InventoryItemBase queryInventoryItem(UUID itemID)
+        {
+            return null;
+        }
+
+        public InventoryFolderBase queryInventoryFolder(UUID folderID)
+        {
+            return null;
         }
 
         /// <summary>

@@ -296,6 +296,38 @@ namespace OpenSim.Region.Communications.OGS1
             return false;
         }
 
+        public InventoryItemBase QueryItem(InventoryItemBase item)
+        {
+            try
+            {
+                return SynchronousRestObjectPoster.BeginPostObject<InventoryItemBase, InventoryItemBase>(
+                    "POST", _inventoryServerUrl + "/QueryItem/", item);
+            }
+            catch (WebException e)
+            {
+                m_log.ErrorFormat("[OGS1 INVENTORY SERVICE]: Query inventory item operation failed, {0} {1}",
+                     e.Source, e.Message);
+            }
+
+            return null;
+        }
+
+        public InventoryFolderBase QueryFolder(InventoryFolderBase item)
+        {
+            try
+            {
+                return SynchronousRestObjectPoster.BeginPostObject<InventoryFolderBase, InventoryFolderBase>(
+                    "POST", _inventoryServerUrl + "/QueryFolder/", item);
+            }
+            catch (WebException e)
+            {
+                m_log.ErrorFormat("[OGS1 INVENTORY SERVICE]: Query inventory item operation failed, {0} {1}",
+                     e.Source, e.Message);
+            }
+
+            return null;
+        }
+
         public bool HasInventoryForUser(UUID userID)
         {
             return false;
