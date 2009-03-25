@@ -211,7 +211,7 @@ namespace OpenSim.Framework.Communications.Capabilities
         public void RegisterHandler(string capName, IRequestHandler handler)
         {
             m_capsHandlers[capName] = handler;
-            //m_log.DebugFormat("[CAPS]: Registering handler for \"{0}\": path {1}", capName, handler.Path);
+            m_log.DebugFormat("[CAPS]: Registering handler for \"{0}\": path {1}", capName, handler.Path);
         }
 
         /// <summary>
@@ -244,11 +244,11 @@ namespace OpenSim.Framework.Communications.Capabilities
         public string CapsRequest(string request, string path, string param,
                                   OSHttpRequest httpRequest, OSHttpResponse httpResponse)
         {
-            //m_log.Debug("[CAPS]: Seed Caps Request in region: " + m_regionName);
+            // m_log.Debug("[CAPS]: Seed Caps Request in region: " + m_regionName);
 
             string result = LLSDHelpers.SerialiseLLSDReply(m_capsHandlers.CapsDetails);
 
-            //m_log.DebugFormat("[CAPS] CapsRequest {0}", result);
+            // m_log.DebugFormat("[CAPS] CapsRequest {0}", result);
 
             return result;
         }

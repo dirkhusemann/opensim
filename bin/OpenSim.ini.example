@@ -646,7 +646,11 @@ InterregionComms = "RESTComms"
 
 
 [Voice]
-    ; PLEASE NOTE that we don't have voice support in OpenSim quite yet - these configuration options are stubs
+    ; The Voice module ONLY provides the necessary mechanics
+    ; on the OpenSim side --- it DOES NOT provide client side voice
+    ; support! For that you need to write/find a suitable
+    ; SLVoice(.exe) replacement that can talk to a SIP/VOIP server.
+
     enabled = false
     ; This is not supported by the SLViewer right now and
     ; hardcoded within the SL Viewer. Maybe it will be
@@ -657,7 +661,11 @@ InterregionComms = "RESTComms"
 
 
 [AsteriskVoice]
-    ; PLEASE NOTE that we don't have voice support in OpenSim quite yet - these configuration options are stubs
+    ; The AsteriskVoice module ONLY provides the necessary mechanics
+    ; on the OpenSim side --- it DOES NOT provide client side voice
+    ; support! For that you need to write/find a suitable
+    ; SLVoice(.exe) replacement that can talk to an asterisk server.
+
     enabled = false
     ; SIP account server domain
     sip_domain = testserver.com
@@ -672,6 +680,32 @@ InterregionComms = "RESTComms"
     ; salt for asterisk nonces
     asterisk_salt = paluempalum
 
+
+[VivoxVoice]
+
+    ; The VivoxVoice module will allow you to provide voice on your
+    ; region(s). It uses the same voice technology as the LL grid and
+    ; works with recent LL clients (we have tested 1.22.9.110075, so
+    ; anything later ought to be fine as well). 
+    ;
+    ; For this to work you need to obtain an admin account from Vivox
+    ; that allows you to create voice accounts and region channels.
+
+    enabled = false
+
+    ; vivox voice server
+    vivox_server = foobar.vivox.com
+
+    ; vivox admin user name
+    vivox_admin_user = DeepThroat
+
+    ; vivox admin password
+    vivox_admin_password = VoiceG4te
+
+    ; channel type: "channel" or "positional"
+    ; - positional: spatial sound
+    ; - channel: normal "conference call", no spatial sound
+    vivox_channel_type = positional
 
 ; Uncomment the following to control the progression of daytime
 ; in the Sim.  The defaults are what is shown below
@@ -1122,4 +1156,4 @@ InterregionComms = "RESTComms"
 [MRM]
     ; Enables the Mini Region Modules Script Engine. WARNING: SECURITY RISK.
     ; default is false
-	  Enabled = false 
+    Enabled = false 
