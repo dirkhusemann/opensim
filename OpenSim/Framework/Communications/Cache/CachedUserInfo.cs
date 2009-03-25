@@ -816,8 +816,6 @@ namespace OpenSim.Framework.Communications.Cache
 
                 return true;
             }
-
-            return false;
         }
 
         public bool QueryFolder(InventoryFolderBase folder)
@@ -866,10 +864,7 @@ namespace OpenSim.Framework.Communications.Cache
 
                 return true;
             }
-
-            return false;
         }
-
     }
 
     /// <summary>
