@@ -35,49 +35,54 @@ namespace OpenSim.Framework.Serialization
     /// </summary>
     public class ArchiveConstants
     {
-        /// <summary>
+        /// <value>
         /// The location of the archive control file
-        /// </summary>
-        public static readonly string CONTROL_FILE_PATH = "archive.xml";
+        /// </value>
+        public const string CONTROL_FILE_PATH = "archive.xml";
 
-        /// <summary>
+        /// <value>
         /// Path for the assets held in an archive
-        /// </summary>
-        public static readonly string ASSETS_PATH = "assets/";
+        /// </value>
+        public const string ASSETS_PATH = "assets/";
 
-        /// <summary>
+        /// <value>
         /// Path for the inventory data
-        /// </summary>
-        public static readonly string INVENTORY_PATH = "inventory/";
+        /// </value>
+        public const string INVENTORY_PATH = "inventory/";
 
-        /// <summary>
+        /// <value>
         /// Path for the prims file
-        /// </summary>
-        public static readonly string OBJECTS_PATH = "objects/";
+        /// </value>
+        public const string OBJECTS_PATH = "objects/";
 
-        /// <summary>
+        /// <value>
         /// Path for terrains.  Technically these may be assets, but I think it's quite nice to split them out.
-        /// </summary>
-        public static readonly string TERRAINS_PATH = "terrains/";
+        /// </value>
+        public const string TERRAINS_PATH = "terrains/";
 
-        /// <summary>
+        /// <value>
         /// Path for region settings.
-        /// </summary>
-        public static readonly string SETTINGS_PATH = "settings/";
+        /// </value>
+        public const string SETTINGS_PATH = "settings/";
+        
+        /// <value>
+        /// Path for user profiles
+        /// </value>
+        public const string USERS_PATH = "userprofiles/";
 
-        /// <summary>
+        /// <value>
         /// The character the separates the uuid from extension information in an archived asset filename
-        /// </summary>
-        public static readonly string ASSET_EXTENSION_SEPARATOR = "_";
+        /// </value>
+        public const string ASSET_EXTENSION_SEPARATOR = "_";
 
-        /// <summary>
+        /// <value>
         /// Used to separate components in an inventory node name
-        /// </summary>
-        public static readonly string INVENTORY_NODE_NAME_COMPONENT_SEPARATOR = "__";
+        /// </value>
+        public const string INVENTORY_NODE_NAME_COMPONENT_SEPARATOR = "__";
 
-        /// <summary>
+        /// <value>
         /// Extensions used for asset types in the archive
-        /// </summary>
+        /// </value>
         public static readonly IDictionary<sbyte, string> ASSET_TYPE_TO_EXTENSION = new Dictionary<sbyte, string>();
         public static readonly IDictionary<string, sbyte> EXTENSION_TO_ASSET_TYPE = new Dictionary<string, sbyte>();
 
