@@ -333,7 +333,7 @@
       <Reference name="OpenMetaverseTypes.dll"/>
       <Reference name="XMLRPC.dll"/>
       <Reference name="log4net.dll"/>
-      <Reference name="HttpServer.dll"/>
+      <Reference name="HttpServer_OpenSim.dll"/>
 
       <Files>
         <Match pattern="*.cs" recurse="true">
@@ -1166,11 +1166,15 @@
       <Reference name="Nini.dll" />
       <Reference name="log4net.dll"/>
       <Reference name="DotNetOpenMail.dll"/>
+	  
+	  <!-- To allow regions to have mono addins -->
+      <Reference name="Mono.Addins.dll" />
 
       <Files>
+        <Match pattern="*.addin.xml" path="Resources" buildAction="EmbeddedResource" recurse="true"/>
         <Match pattern="*.cs" recurse="true">
           <Exclude name="Tests" pattern="Tests" />
-	  <Exclude name="TerrainDefaultEffects" pattern="World/Terrain/DefaultEffects" />
+          <Exclude name="TerrainDefaultEffects" pattern="World/Terrain/DefaultEffects" />
         </Match>
       </Files>
     </Project>
@@ -2912,7 +2916,7 @@
       <Reference name="OpenSim.Framework"/>
       <Reference name="OpenSim.Framework.Servers"/>
       <Reference name="log4net.dll"/>
-      <Reference name="HttpServer.dll"/>
+      <Reference name="HttpServer_OpenSim.dll"/>
       <Reference name="nunit.framework.dll" />
 
       <Files>
@@ -3211,6 +3215,7 @@
 
   </Solution>
 </Prebuild>
+
 
 
 

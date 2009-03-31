@@ -34,6 +34,7 @@ using log4net;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
 using OpenSim.Framework.Statistics;
+using System.Text;
 
 namespace OpenSim.Framework.Communications.Cache
 {
@@ -334,7 +335,7 @@ namespace OpenSim.Framework.Communications.Cache
         {
             AssetInfo assetInf = new AssetInfo(asset);
 
-            ProcessRecievedAsset(IsTexture, assetInf);
+            ProcessReceivedAsset(IsTexture, assetInf);
 
             if (!m_memcache.Contains(assetInf.FullID))
             {
@@ -389,8 +390,8 @@ namespace OpenSim.Framework.Communications.Cache
             }
         }
 
-        protected void ProcessRecievedAsset(bool IsTexture, AssetInfo assetInf)
-        {
+        protected void ProcessReceivedAsset(bool IsTexture, AssetInfo assetInf)
+        {            
         }
 
         // See IAssetReceiver
@@ -503,7 +504,7 @@ namespace OpenSim.Framework.Communications.Cache
             req.Params = transferRequest.TransferInfo.Params;
             req.AssetInf = new AssetInfo(asset);
             req.NumPackets = CalculateNumPackets(asset.Data);
-            lock(AssetRequests) AssetRequests.Add(req);
+            lock (AssetRequests) AssetRequests.Add(req);
         }
 
         /// <summary>
@@ -526,7 +527,7 @@ namespace OpenSim.Framework.Communications.Cache
 
             for (int i = 0; i < num; i++)
             {
-                lock(AssetRequests)
+                lock (AssetRequests)
                 {
                    req = AssetRequests[0];
                    AssetRequests.RemoveAt(0);

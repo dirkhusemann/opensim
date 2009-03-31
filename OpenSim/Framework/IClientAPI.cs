@@ -427,6 +427,11 @@ namespace OpenSim.Framework
     public delegate void UserInfoRequest(IClientAPI client);
     public delegate void UpdateUserInfo(bool imViaEmail, bool visible, IClientAPI client);
     public delegate void RetrieveInstantMessages(IClientAPI client);
+    public delegate void PickDelete(IClientAPI client, UUID pickID);
+    public delegate void PickGodDelete(IClientAPI client, UUID agentID, UUID pickID, UUID queryID);
+    public delegate void PickInfoUpdate(IClientAPI client, UUID pickID, UUID creatorID, bool topPick, string name, string desc, UUID snapshotID, int sortOrder, bool enabled);
+    public delegate void AvatarNotesUpdate(IClientAPI client, UUID targetID, string notes);
+    public delegate void MuteListRequest(IClientAPI client, uint muteCRC);
 
     #endregion
 
@@ -755,6 +760,13 @@ namespace OpenSim.Framework
         event UpdateUserInfo OnUpdateUserInfo;
 
         event RetrieveInstantMessages OnRetrieveInstantMessages;
+
+        event PickDelete OnPickDelete;
+        event PickGodDelete OnPickGodDelete;
+        event PickInfoUpdate OnPickInfoUpdate;
+        event AvatarNotesUpdate OnAvatarNotesUpdate;
+
+        event MuteListRequest OnMuteListRequest;
         
         /// <summary>
         /// Set the debug level at which packet output should be printed to console.
@@ -803,11 +815,7 @@ namespace OpenSim.Framework
         void SendChatMessage(string message, byte type, Vector3 fromPos, string fromName, UUID fromAgentID, byte source,
                              byte audible);
 
-        void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog,
-                                uint timeStamp);
-
-        void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog,
-                                uint timeStamp, UUID transactionID, bool fromGroup, byte[] binaryBucket);
+        void SendInstantMessage(GridInstantMessage im);
 
         void SendGenericMessage(string method, List<string> message);
 
@@ -846,7 +854,7 @@ namespace OpenSim.Framework
         void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position,
                                    Vector3 velocity, Quaternion rotation);
 
-        void SendCoarseLocationUpdate(List<Vector3> CoarseLocations);
+        void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations);
 
         void AttachObject(uint localID, Quaternion rotation, byte attachPoint, UUID ownerID);
         void SetChildAgentThrottle(byte[] throttle);
@@ -1057,6 +1065,8 @@ namespace OpenSim.Framework
 
         void SendLeaveGroupReply(UUID groupID, bool success);
 
+        void SendCreateGroupReply(UUID groupID, bool success, string message);
+
         void SendLandStatReply(uint reportType, uint requestFlags, uint resultCount, LandStatReportItem[] lsrpia);
 
         void SendScriptRunningReply(UUID objectID, UUID itemID, bool running);
@@ -1112,11 +1122,16 @@ namespace OpenSim.Framework
         void SendAgentDropGroup(UUID groupID);
         void SendAvatarNotesReply(UUID targetID, string text);
         void SendAvatarPicksReply(UUID targetID, Dictionary<UUID, string> picks);
+        void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled);
+
         void SendAvatarClassifiedReply(UUID targetID, Dictionary<UUID, string> classifieds);
 
         void SendParcelDwellReply(int localID, UUID parcelID, float dwell);
 
         void SendUserInfoReply(bool imViaEmail, bool visible, string email);
+        
+        void SendUseCachedMuteList();
+        void SendMuteListUpdate(string filename);
 
         void KillEndDone();
 

@@ -3101,11 +3101,8 @@ if (m_shape != null) {
 
         public void TriggerScriptChangedEvent(Changed val)
         {
-            if (m_parentGroup != null)
-            {
-                if (m_parentGroup.Scene != null)
-                    m_parentGroup.Scene.TriggerObjectChanged(LocalId, (uint)val);
-            }
+            if (m_parentGroup != null && m_parentGroup.Scene != null)
+                m_parentGroup.Scene.EventManager.TriggerOnScriptChangedEvent(LocalId, (uint)val);
         }
 
         public void TrimPermissions()
@@ -3535,7 +3532,7 @@ if (m_shape != null) {
             //tmpcolor.G = tmpcolor.G*255;
             //tmpcolor.B = tmpcolor.B*255;
             //tex.DefaultTexture.RGBA = tmpcolor;
-            UpdateTextureEntry(tex.ToBytes());
+            UpdateTextureEntry(tex.GetBytes());
         }
 
         /// <summary>

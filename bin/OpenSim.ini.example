@@ -198,7 +198,7 @@
 
     ;WorldMapModule = "WorldMap"
     ;MapImageModule = "MapImageModule"
-	
+
     ; ##
     ; ## Customized Cache Implementation
     ; ##
@@ -231,8 +231,8 @@
 
 [Communications]
 
-;InterregionComms = "LocalComms"
-InterregionComms = "RESTComms"
+    ;InterregionComms = "LocalComms"
+    InterregionComms = "RESTComms"
 
 [StandAlone]
     accounts_authenticate = true
@@ -375,6 +375,11 @@ InterregionComms = "RESTComms"
     ; Control which region module is used for instant messaging.
     ; Default is InstantMessageModule (this is the name of the core IM module as well as the setting)
     InstantMessageModule = InstantMessageModule
+    ; MessageTransferModule = MessageTransferModule
+    ; OfflineMessageModule = OfflineMessageModule
+    ; OfflineMessagesURL = http://yourserver/offlines.php
+    ; MuteListModule = MuteListModule
+    ; MuteListsURL = http://yourserver/mutes.php
 
 
 [ODEPhysicsSettings]
@@ -576,14 +581,14 @@ InterregionComms = "RESTComms"
 [RestHandler]
     ; Change this to true to enable the REST Asset and Inventory Plugin
     enabled = false
-    authenticate=true
-    secured=true
-    extended-escape=true
-    realm=OpenSim REST
-    dump-asset=false
-    path-fill=true
-    dump-line-size=32
-    flush-on-error=true
+    authenticate = true
+    secured = true
+    extended-escape = true
+    realm = OpenSim REST
+    dump-asset = false
+    path-fill = true
+    dump-line-size = 32
+    flush-on-error = true
 
 
 ; Uncomment the following for IRC bridge
@@ -719,6 +724,22 @@ InterregionComms = "RESTComms"
     ; send a Sun update every update_interval # of frames.  A lower number will
     ; make for smoother sun transition at the cost of network
     ;update_interval = 100
+
+
+[Wind]
+    ; Enables the wind module.  Default is true
+    enabled = true
+    ; Adjusts wind strength. 0.0 = no wind, 1.0 = normal wind.  Default is 1.0
+    strength = 1.0
+	
+
+[Trees]
+    ; Enable this to allow the tree module to manage your sim trees, including growing, reproducing and dying
+    ; default is false
+    active_trees = false
+
+    ; Density of tree population
+    tree_density = 1000.0
 
 
 [ScriptEngine.DotNetEngine]
@@ -1130,26 +1151,17 @@ InterregionComms = "RESTComms"
     broker = "http://broker.place.com/{1}"
 
 
-[Trees]
-    ; Enable this to allow the tree module to manage your sim trees, including growing, reproducing and dying
-    ; default is false
-    active_trees = false
-
-    ; Density of tree population
-    tree_density = 1000.0
-
-
 [RegionReady]
     ; Enable this module to get notified once all items and scripts in the region have been completely loaded and compiled
     ; default is false
     enabled = false
 
-     ; Channel on which to signal region readiness through a message
-     ; formatted as follows: "{server_startup|oar_file_load},{0|1},n,[oar error]"
-     ; - the first field indicating whether this is an initial server startup
-     ; - the second field is a number indicating whether the OAR file loaded ok (1 == ok, 0 == error)
-     ; - the third field is a number indicating how many scripts failed to compile
-     ; - "oar error" if supplied, provides the error message from the OAR load
+    ; Channel on which to signal region readiness through a message
+    ; formatted as follows: "{server_startup|oar_file_load},{0|1},n,[oar error]"
+    ; - the first field indicating whether this is an initial server startup
+    ; - the second field is a number indicating whether the OAR file loaded ok (1 == ok, 0 == error)
+    ; - the third field is a number indicating how many scripts failed to compile
+    ; - "oar error" if supplied, provides the error message from the OAR load
     channel_notify = -800
 
 

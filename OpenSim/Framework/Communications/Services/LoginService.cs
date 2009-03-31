@@ -40,7 +40,7 @@ using OpenMetaverse.StructuredData;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Statistics;
 
-namespace OpenSim.Framework.Communications
+namespace OpenSim.Framework.Communications.Services
 {
     public abstract class LoginService
     {

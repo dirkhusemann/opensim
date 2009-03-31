@@ -113,16 +113,8 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                     if (!user.IsChildAgent)
                     {
                         m_log.DebugFormat("[INSTANT MESSAGE]: Delivering to client");
-                        user.ControllingClient.SendInstantMessage(
-                                new UUID(im.fromAgentID),
-                                im.message,
-                                new UUID(im.toAgentID),
-                                im.fromAgentName,
-                                im.dialog,
-                                im.timestamp,
-                                new UUID(im.imSessionID),
-                                im.fromGroup,
-                                im.binaryBucket);
+                        user.ControllingClient.SendInstantMessage(im);
+
                         // Message sent
                         result(true);
                         return;
@@ -143,16 +135,8 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                     ScenePresence user = (ScenePresence) scene.Entities[toAgentID];
 
                     m_log.DebugFormat("[INSTANT MESSAGE]: Delivering to client");
-                    user.ControllingClient.SendInstantMessage(
-                            new UUID(im.fromAgentID),
-                            im.message,
-                            new UUID(im.toAgentID),
-                            im.fromAgentName,
-                            im.dialog,
-                            im.timestamp,
-                            new UUID(im.imSessionID),
-                            im.fromGroup,
-                            im.binaryBucket);
+                    user.ControllingClient.SendInstantMessage(im);
+
                     // Message sent
                     result(true);
                     return;
@@ -167,6 +151,13 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                 return;
             }
 
+            HandleUndeliveredMessage(im, result);
+
+            return;
+        }
+
+        private void HandleUndeliveredMessage(GridInstantMessage im, MessageResultNotification result)
+        {
             UndeliveredMessage handlerUndeliveredMessage = OnUndeliveredMessage;
 
             // If this event has handlers, then the IM will be considered
@@ -181,7 +172,6 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
 
             //m_log.DebugFormat("[INSTANT MESSAGE]: Undeliverable");
             result(false);
-            return;
         }
 
         /// <summary>
@@ -487,14 +477,14 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                     if (upd.Handle == prevRegionHandle)
                     {
                         m_log.Error("[GRID INSTANT MESSAGE]: Unable to deliver an instant message");
-                        result(false);
+                        HandleUndeliveredMessage(im, result);
                         return;
                     }
                 }
                 else
                 {
                     m_log.Error("[GRID INSTANT MESSAGE]: Unable to deliver an instant message");
-                    result(false);
+                    HandleUndeliveredMessage(im, result);
                     return;
                 }
             }
@@ -544,18 +534,18 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                     else
                     {
                         m_log.WarnFormat("[GRID INSTANT MESSAGE]: Unable to find region {0}", upd.Handle);
-                        result(false);
+                        HandleUndeliveredMessage(im, result);
                     }
                 }
                 else
                 {
-                    result(false);
+                    HandleUndeliveredMessage(im, result);
                 }
             }
             else
             {
                 m_log.WarnFormat("[GRID INSTANT MESSAGE]: Unable to find user {0}", toAgentID);
-                result(false);
+                HandleUndeliveredMessage(im, result);
             }
         }
 

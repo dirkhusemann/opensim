@@ -37,7 +37,7 @@ OpenSim Developers (in very rough order of appearance)
 * dalien
 
 Patches
-
+* arthursv
 * A_Biondi
 * alex_carnell
 * awebb (IBM)
@@ -47,6 +47,7 @@ Patches
 * CharlieO
 * ChrisDown
 * Chris Yeoh
+* coyled
 * Daedius
 * DoranZemlja
 * daTwitch 
@@ -57,6 +58,7 @@ Patches
 * Godfrey
 * Grumly57
 * Fly-Man
+* Flyte Xevious
 * jhurliman
 * jimbo2120 (IBM)
 * John R Sohn (XenReborn)
@@ -69,6 +71,7 @@ Patches
 * krtaylor (IBM)
 * lulurun 
 * M.Igarashi
+* maimedleech
 * Mic Bowman
 * mikkopa/_someone - RealXtend
 * Mircea Kitsune

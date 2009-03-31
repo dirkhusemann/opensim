@@ -4991,8 +4991,66 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_Integer llEdgeOfWorld(LSL_Vector pos, LSL_Vector dir)
         {
             m_host.AddScriptLPS(1);
-            NotImplemented("llEdgeOfWorld");
-            return 0;
+
+            // edge will be used to pass the Region Coordinates offset
+            // we want to check for a neighboring sim
+            LSL_Vector edge = new LSL_Vector(0, 0, 0);
+            
+            if (dir.x == 0)
+            {
+                if (dir.y == 0)
+                {
+                    // Direction vector is 0,0 so return
+                    // false since we're staying in the sim
+                    return 0;
+                }
+                else
+                {
+                    // Y is the only valid direction
+                    edge.y = dir.y / Math.Abs(dir.y);
+                }
+            }
+            else
+            {
+                LSL_Float mag;
+                if (dir.x > 0)
+                {
+                    mag = (Constants.RegionSize - pos.x) / dir.x;  
+                }
+                else
+                {
+                    mag = (pos.x/dir.x);
+                }
+
+                mag = Math.Abs(mag);
+
+                edge.y = pos.y + (dir.y * mag);
+
+                if (edge.y > Constants.RegionSize || edge.y < 0)
+                {
+                    // Y goes out of bounds first
+                    edge.y = dir.y / Math.Abs(dir.y);
+                }
+                else
+                {
+                    // X goes out of bounds first or its a corner exit
+                    edge.y = 0;
+                    edge.x = dir.x / Math.Abs(dir.x);
+                }
+            }
+            
+            List<SimpleRegionInfo> neighbors = World.CommsManager.GridService.RequestNeighbours(World.RegionInfo.RegionLocX, World.RegionInfo.RegionLocY);
+            
+            uint neighborX = World.RegionInfo.RegionLocX + (uint)dir.x;
+            uint neighborY = World.RegionInfo.RegionLocY + (uint)dir.y;
+            
+            foreach (SimpleRegionInfo sri in neighbors)
+            {
+                if (sri.RegionLocX == neighborX && sri.RegionLocY == neighborY)
+                    return 0;
+            }
+            
+            return 1;
         }
 
         /// <summary>
@@ -5051,7 +5109,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 flags |= ScriptBaseClass.AGENT_MOUSELOOK;
             }
 
-            if ((agent.State & (byte)AgentManager.AgentState.Typing) != (byte)0)
+            if ((agent.State & (byte)AgentState.Typing) != (byte)0)
             {
                 flags |= ScriptBaseClass.AGENT_TYPING;
             }
@@ -6766,22 +6824,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_String llBase64ToString(string str)
         {
             m_host.AddScriptLPS(1);
-            UTF8Encoding encoder = new UTF8Encoding();
-            Decoder utf8Decode = encoder.GetDecoder();
             try
             {
-                byte[] todecode_byte = Convert.FromBase64String(str);
-                int charCount = utf8Decode.GetCharCount(todecode_byte, 0, todecode_byte.Length);
-                char[] decoded_char = new char[charCount];
-                utf8Decode.GetChars(todecode_byte, 0, todecode_byte.Length, decoded_char, 0);
-                string result = new String(decoded_char);
-                return result;
+                return Util.Base64ToString(str);
             }
             catch (Exception e)
             {
                 throw new Exception("Error in base64Decode" + e.Message);
             }
         }
+
 
         public LSL_String llXorBase64Strings(string str1, string str2)
         {

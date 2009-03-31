@@ -35,96 +35,61 @@ using Nini.Config;
 using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
-using OpenSim.Framework.Communications;
+using OpenSim.Framework.Communications.Clients;
 using OpenSim.Framework.Communications.Cache;
 using Caps = OpenSim.Framework.Communications.Capabilities.Caps;
 using LLSDHelpers = OpenSim.Framework.Communications.Capabilities.LLSDHelpers;
 using OpenSim.Framework.Servers;
 using OpenSim.Framework.Servers.Interfaces;
-using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.CoreModules.Communications.REST;
 
 using OpenMetaverse.StructuredData;
 
-namespace OpenSim.Region.CoreModules.Hypergrid
-{
-    public class HGStandaloneInventoryService : IRegionModule
-    {
-        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-        private static bool initialized = false;
-        private static bool enabled = false;
-        
-        Scene m_scene;
-        //InventoryService m_inventoryService;
-        
-        #region IRegionModule interface
-
-        public void Initialise(Scene scene, IConfigSource config)
-        {
-            if (!initialized)
-            {
-                initialized = true;
-                m_scene = scene;
-
-                // This module is only on for standalones
-                enabled = !config.Configs["Startup"].GetBoolean("gridmode", true) && config.Configs["Startup"].GetBoolean("hypergrid", false);
-            }
-        }
-
-        public void PostInitialise()
-        {
-            if (enabled)
-            {
-                m_log.Info("[HGStandaloneInvService]: Starting...");
-                //m_inventoryService = new InventoryService(m_scene);
-                new InventoryService(m_scene);
-            }
-        }
-
-        public void Close()
-        {
-        }
-
-        public string Name
-        {
-            get { return "HGStandaloneInventoryService"; }
-        }
-
-        public bool IsSharedModule
-        {
-            get { return true; }
-        }
-
-        #endregion
-    }
-
-    public class InventoryService 
+namespace OpenSim.Framework.Communications.Services
+{ 
+    public class HGInventoryService 
     {
         private static readonly ILog m_log
             = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         
         private InventoryServiceBase m_inventoryService;
-        private UserManagerBase m_userService;
-        IAssetDataPlugin m_assetProvider;
-        private Scene m_scene;
-        private bool m_doLookup = false;
+        IHttpServer httpServer;
         private string m_thisInventoryUrl = "http://localhost:9000";
         private string m_thisHostname = "127.0.0.1";
         private uint m_thisPort = 9000;
 
-        public bool DoLookup
+        // These two used for local access, standalone mode
+        private UserManagerBase m_userService = null;
+        IAssetDataPlugin m_assetProvider = null;
+
+        // These two used for remote access
+        string m_UserServerURL = string.Empty;
+        string m_AssetServerURL = string.Empty;
+        SynchronousGridAssetClient m_AssetClient = null;
+
+        // Constructor for grid inventory server
+        public HGInventoryService(InventoryServiceBase invService, string assetServiceURL, string userServiceURL, IHttpServer httpserver, string thisurl)
         {
-            get { return m_doLookup; }
-            set { m_doLookup = value; }
+            m_UserServerURL = userServiceURL;
+            m_AssetServerURL = assetServiceURL;
+
+            m_AssetClient = new SynchronousGridAssetClient(m_AssetServerURL);
+
+            Init(invService, thisurl, httpserver);
         }
 
-        public InventoryService(Scene _m_scene)
+        // Constructor for standalone mode
+        public HGInventoryService(InventoryServiceBase invService, IAssetDataPlugin assetService, UserManagerBase userService, IHttpServer httpserver, string thisurl)
         {
-            m_scene = _m_scene;
-            m_inventoryService = (InventoryServiceBase)m_scene.CommsManager.SecureInventoryService;
-            m_userService = (UserManagerBase)m_scene.CommsManager.UserService;
-            m_thisInventoryUrl = m_scene.CommsManager.NetworkServersInfo.InventoryURL;
+            m_userService = userService;
+            m_assetProvider = assetService;
+
+            Init(invService, thisurl, httpserver);
+        }
+
+        private void Init(InventoryServiceBase invService, string thisurl, IHttpServer httpserver)
+        {
+            m_inventoryService = invService;
+            m_thisInventoryUrl = thisurl;
             if (!m_thisInventoryUrl.EndsWith("/"))
                 m_thisInventoryUrl += "/";
 
@@ -135,130 +100,21 @@ namespace OpenSim.Region.CoreModules.Hypergrid
                 m_thisPort = (uint)uri.Port;
             }
 
-            m_assetProvider = ((AssetServerBase)m_scene.CommsManager.AssetCache.AssetServer).AssetProviderPlugin; 
+            httpServer = httpserver;
 
             AddHttpHandlers();
         }
 
-        protected void AddHttpHandlers()
+        public virtual void AddHttpHandlers()
         {
-            IHttpServer httpServer = m_scene.CommsManager.HttpServer;
-
             httpServer.AddHTTPHandler("/InvCap/", CapHandler);
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<Guid, InventoryCollection>(
-                    "POST", "/GetInventory/", GetUserInventory, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryFolderBase, bool>(
-                    "POST", "/NewFolder/", m_inventoryService.AddFolder, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryFolderBase, bool>(
-                    "POST", "/UpdateFolder/", m_inventoryService.UpdateFolder, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryFolderBase, bool>(
-                    "POST", "/MoveFolder/", m_inventoryService.MoveFolder, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryFolderBase, bool>(
-                    "POST", "/PurgeFolder/", m_inventoryService.PurgeFolder, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryItemBase, bool>(
-                    "POST", "/NewItem/", m_inventoryService.AddItem, CheckAuthSession));
-
-            httpServer.AddStreamHandler(
-                new RestDeserialiseSecureHandler<InventoryItemBase, bool>(
-                    "POST", "/DeleteItem/", m_inventoryService.DeleteItem, CheckAuthSession));
-
-            //// WARNING: Root folders no longer just delivers the root and immediate child folders (e.g
-            //// system folders such as Objects, Textures), but it now returns the entire inventory skeleton.
-            //// It would have been better to rename this request, but complexities in the BaseHttpServer
-            //// (e.g. any http request not found is automatically treated as an xmlrpc request) make it easier
-            //// to do this for now.
-            //m_scene.AddStreamHandler(
-            //    new RestDeserialiseTrustedHandler<Guid, List<InventoryFolderBase>>
-            //        ("POST", "/RootFolders/", GetInventorySkeleton, CheckTrustSource));
-
-            //// for persistent active gestures
-            //m_scene.AddStreamHandler(
-            //    new RestDeserialiseTrustedHandler<Guid, List<InventoryItemBase>>
-            //        ("POST", "/ActiveGestures/", GetActiveGestures, CheckTrustSource));
         }
 
-
-        ///// <summary>
-        ///// Check that the source of an inventory request is one that we trust.
-        ///// </summary>
-        ///// <param name="peer"></param>
-        ///// <returns></returns>
-        //public bool CheckTrustSource(IPEndPoint peer)
-        //{
-        //    if (m_doLookup)
-        //    {
-        //        m_log.InfoFormat("[GRID AGENT INVENTORY]: Checking trusted source {0}", peer);
-        //        UriBuilder ub = new UriBuilder(m_userserver_url);
-        //        IPAddress[] uaddrs = Dns.GetHostAddresses(ub.Host);
-        //        foreach (IPAddress uaddr in uaddrs)
-        //        {
-        //            if (uaddr.Equals(peer.Address))
-        //            {
-        //                return true;
-        //            }
-        //        }
-
-        //        m_log.WarnFormat(
-        //            "[GRID AGENT INVENTORY]: Rejecting request since source {0} was not in the list of trusted sources",
-        //            peer);
-
-        //        return false;
-        //    }
-        //    else
-        //    {
-        //        return true;
-        //    }
-        //}
-
-        /// <summary>
-        /// Check that the source of an inventory request for a particular agent is a current session belonging to
-        /// that agent.
-        /// </summary>
-        /// <param name="session_id"></param>
-        /// <param name="avatar_id"></param>
-        /// <returns></returns>
         public bool CheckAuthSession(string session_id, string avatar_id)
         {
-            if (m_doLookup)
-            {
-                m_log.InfoFormat("[HGStandaloneInvService]: checking authed session {0} {1}", session_id, avatar_id);
-                UUID userID = UUID.Zero;
-                UUID sessionID = UUID.Zero;
-                UUID.TryParse(avatar_id, out userID);
-                UUID.TryParse(session_id, out sessionID);
-                if (userID.Equals(UUID.Zero) || sessionID.Equals(UUID.Zero))
-                {
-                    m_log.Info("[HGStandaloneInvService]: Invalid user or session id " + avatar_id + "; " + session_id);
-                    return false;
-                }
-                UserProfileData userProfile = m_userService.GetUserProfile(userID);
-                if (userProfile != null && userProfile.CurrentAgent != null &&
-                    userProfile.CurrentAgent.SessionID == sessionID)
-                {
-                    m_log.Info("[HGStandaloneInvService]: user is logged in and session is valid. Authorizing access.");
-                    return true;
-                }
-
-                m_log.Warn("[HGStandaloneInvService]: unknown user or session_id, request rejected");
-                return false;
-            }
-            else
-            {
-                return true;
-            }
+            return true;
         }
+
 
         // In truth, this is not called from the outside, for standalones. I'm just making it
         // a handler already so that this can be reused for the InventoryServer.
@@ -271,7 +127,6 @@ namespace OpenSim.Region.CoreModules.Hypergrid
             return url;
         }
 
-
         /// <summary>
         /// Return a user's entire inventory
         /// </summary>
@@ -281,18 +136,18 @@ namespace OpenSim.Region.CoreModules.Hypergrid
         {
             UUID userID = new UUID(rawUserID);
 
-            m_log.Info("[HGStandaloneInvService]: Processing request for inventory of " + userID);
+            m_log.Info("[HGStandaloneInvModule]: Processing request for inventory of " + userID);
 
             // Uncomment me to simulate a slow responding inventory server
             //Thread.Sleep(16000);
 
             InventoryCollection invCollection = new InventoryCollection();
 
-            List<InventoryFolderBase> allFolders = ((InventoryServiceBase)m_inventoryService).GetInventorySkeleton(userID);
+            List<InventoryFolderBase> allFolders = m_inventoryService.GetInventorySkeleton(userID);
 
             if (null == allFolders)
             {
-                m_log.WarnFormat("[HGStandaloneInvService]: No inventory found for user {0}", rawUserID);
+                m_log.WarnFormat("[HGStandaloneInvModule]: No inventory found for user {0}", rawUserID);
 
                 return invCollection;
             }
@@ -301,7 +156,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
             foreach (InventoryFolderBase folder in allFolders)
             {
-                List<InventoryItemBase> items = ((InventoryServiceBase)m_inventoryService).RequestFolderItems(folder.ID);
+                List<InventoryItemBase> items = m_inventoryService.RequestFolderItems(folder.ID);
 
                 if (items != null)
                 {
@@ -324,7 +179,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
             //            }
 
             m_log.InfoFormat(
-                "[HGStandaloneInvService]: Sending back inventory response to user {0} containing {1} folders and {2} items",
+                "[HGStandaloneInvModule]: Sending back inventory response to user {0} containing {1} folders and {2} items",
                 invCollection.UserID, invCollection.Folders.Count, invCollection.Items.Count);
 
             return invCollection;
@@ -339,8 +194,8 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
             InventoryCollection invCollection = new InventoryCollection();
 
-            List<InventoryItemBase> items = ((InventoryServiceBase)m_inventoryService).RequestFolderItems(fb.ID);
-            List<InventoryFolderBase> folders = ((InventoryServiceBase)m_inventoryService).RequestSubFolders(fb.ID);
+            List<InventoryItemBase> items = m_inventoryService.RequestFolderItems(fb.ID);
+            List<InventoryFolderBase> folders = m_inventoryService.RequestSubFolders(fb.ID);
 
             invCollection.UserID = fb.Owner;
             invCollection.Folders = folders;
@@ -359,9 +214,9 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         public InventoryItemBase GetInventoryItem(InventoryItemBase item)
         {
-            m_log.Info("[HGStandaloneInvService]: Processing request for item " + item.ID);
+            m_log.Info("[HGStandaloneInvService]: Get item " + item.ID);
 
-            item = ((InventoryServiceBase)m_inventoryService).GetInventoryItem(item.ID);
+            item = m_inventoryService.GetInventoryItem(item.ID);
             if (item == null)
                 m_log.Debug("[HGStandaloneInvService]: null item");
             return item;
@@ -369,6 +224,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         public InventoryItemBase AddItem(InventoryItemBase item)
         {
+            m_log.DebugFormat("[HGStandaloneInvService]: Add item {0} from {1}", item.ID, item.Owner);
             if (m_inventoryService.AddItem(item))
                 return item;
             else
@@ -380,6 +236,10 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         public InventoryItemBase UpdateItem(InventoryItemBase item)
         {
+            m_log.DebugFormat("[HGStandaloneInvService]: Update item {0} from {1}", item.ID, item.Owner);
+            InventoryItemBase it = m_inventoryService.GetInventoryItem(item.ID);
+            item.CurrentPermissions = it.CurrentPermissions;
+            item.AssetID = it.AssetID;
             if (m_inventoryService.UpdateItem(item))
                 return item;
             else
@@ -391,6 +251,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         public InventoryItemBase MoveItem(InventoryItemBase newitem)
         {
+            m_log.DebugFormat("[HGStandaloneInvService]: Move item {0} from {1}", newitem.ID, newitem.Owner);
             InventoryItemBase Item = m_inventoryService.GetInventoryItem(newitem.ID);
             if (Item != null)
             {
@@ -425,6 +286,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         public InventoryItemBase CopyItem(InventoryItemBase olditem)
         {
+            m_log.DebugFormat("[HGStandaloneInvService]: Copy item {0} from {1}", olditem.ID, olditem.Owner);
             InventoryItemBase Item = m_inventoryService.GetInventoryItem(olditem.ID); // this is the old item id
             // BIG HACK here
             UUID newID = olditem.AssetID;
@@ -436,10 +298,10 @@ namespace OpenSim.Region.CoreModules.Hypergrid
                 }
                 Item.ID = newID;
                 Item.Folder = olditem.Folder;
+                Item.Owner = olditem.Owner;
                 // There should be some tests here about the owner, etc but I'm going to ignore that
                 // because I'm not sure it makes any sense
-
-                // Also I should probably close the asset...
+                // Also I should probably clone the asset...
                 m_inventoryService.AddItem(Item);
                 return Item;
             }
@@ -460,7 +322,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
         public List<InventoryFolderBase> GetInventorySkeleton(Guid rawUserID)
         {
             UUID userID = new UUID(rawUserID);
-            return ((InventoryServiceBase)m_inventoryService).GetInventorySkeleton(userID);
+            return m_inventoryService.GetInventorySkeleton(userID);
         }
 
         public List<InventoryItemBase> GetActiveGestures(Guid rawUserID)
@@ -469,31 +331,34 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
             m_log.InfoFormat("[HGStandaloneInvService]: fetching active gestures for user {0}", userID);
 
-            return ((InventoryServiceBase)m_inventoryService).GetActiveGestures(userID);
+            return m_inventoryService.GetActiveGestures(userID);
         }
 
         public AssetBase GetAsset(InventoryItemBase item)
         {
             m_log.Info("[HGStandaloneInvService]: Get asset " + item.AssetID + " for item " + item.ID);
-            InventoryItemBase item2 = ((InventoryServiceBase)m_inventoryService).GetInventoryItem(item.ID);
+            AssetBase asset = new AssetBase(item.AssetID, "NULL"); // send an asset with no data
+            InventoryItemBase item2 = m_inventoryService.GetInventoryItem(item.ID);
             if (item2 == null)
             {
                 m_log.Debug("[HGStandaloneInvService]: null item");
-                return null;
+                return asset;
             }
             if (item2.Owner != item.Owner)
             {
-                m_log.Debug("[HGStandaloneInvService]: client is trying to get an item for which he is not the owner");
-                return null;
+                m_log.DebugFormat("[HGStandaloneInvService]: client with uuid {0} is trying to get an item of owner {1}", item.Owner, item2.Owner);
+                return asset;
             }
 
             // All good, get the asset
-            AssetBase asset = m_assetProvider.FetchAsset(item.AssetID);
-            m_log.Debug("[HGStandaloneInvService] Found asset " + ((asset == null)? "NULL" : "Not Null"));
-            if (asset == null)
+            //AssetBase theasset = m_assetProvider.FetchAsset(item.AssetID);
+            AssetBase theasset = FetchAsset(item.AssetID, (item.InvType == (int)InventoryType.Texture)); 
+
+            m_log.Debug("[HGStandaloneInvService] Found asset " + ((theasset == null) ? "NULL" : "Not Null"));
+            if (theasset != null)
             {
-                m_log.Debug("  >> Sending assetID " + item.AssetID);
-                asset = new AssetBase(item.AssetID, "NULL"); // send an asset with no data
+                asset = theasset;
+                //m_log.Debug("  >> Sending assetID " + item.AssetID);
             }
             return asset;
         }
@@ -501,7 +366,9 @@ namespace OpenSim.Region.CoreModules.Hypergrid
         public bool PostAsset(AssetBase asset)
         {
             m_log.Info("[HGStandaloneInvService]: Post asset " + asset.FullID);
-            m_assetProvider.CreateAsset(asset);
+            //m_assetProvider.CreateAsset(asset);
+            StoreAsset(asset);
+  
             return true;
         }
 
@@ -541,6 +408,8 @@ namespace OpenSim.Region.CoreModules.Hypergrid
                 PostAsset(asset);
 
                 item.AssetID = asset.FullID;
+                item.Owner = userID;
+                m_inventoryService.UpdateItem(item);
 
                 return (asset.FullID);
             }
@@ -595,7 +464,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
             string method = (string)request["http-method"];
             if (method.Equals("GET"))
             {
-                DoInvCapPost(request, responsedata, userID, authToken);
+                DoInvCapPost(request, responsedata, userID, authority, authToken);
                 return responsedata;
             }
             //else if (method.Equals("DELETE"))
@@ -615,13 +484,13 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         }
 
-        public virtual void DoInvCapPost(Hashtable request, Hashtable responsedata, UUID userID, string authToken)
+        public virtual void DoInvCapPost(Hashtable request, Hashtable responsedata, UUID userID, string authority, string authToken)
         {
 
             // This is the meaning of POST agent
 
             // Check Auth Token
-            if (!(m_userService is IAuthentication))
+            if ((m_userService != null) && !(m_userService is IAuthentication))
             {
                 m_log.Debug("[HGStandaloneInvService]: UserService is not IAuthentication. Denying access to inventory.");
                 responsedata["int_response_code"] = 501;
@@ -629,7 +498,7 @@ namespace OpenSim.Region.CoreModules.Hypergrid
                 return;
             }
 
-            bool success = ((IAuthentication)m_userService).VerifyKey(userID, authToken);
+            bool success = VerifyKey(userID, authority, authToken);
 
             if (success)
             {
@@ -716,8 +585,6 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         Hashtable RegisterCaps(UUID userID, string authToken)
         {
-            IHttpServer httpServer = m_scene.CommsManager.HttpServer;
-
             lock (invCaps)
             {
                 if (invCaps.ContainsKey(userID))
@@ -792,5 +659,56 @@ namespace OpenSim.Region.CoreModules.Hypergrid
         }
 
         #endregion Caps
+
+        #region Local vs Remote
+
+        bool VerifyKey(UUID userID, string authority, string key)
+        {
+            // Remote call to the Authorization server
+            if (m_userService == null) 
+                return AuthClient.VerifyKey("http://" + authority, userID, key);
+            // local call
+            else 
+                return ((IAuthentication)m_userService).VerifyKey(userID, key);
+        }
+
+        AssetBase FetchAsset(UUID assetID, bool isTexture)
+        {
+            // Remote call to the Asset server
+            if (m_assetProvider == null)
+                return m_AssetClient.SyncGetAsset(assetID, isTexture);
+            // local call
+            else
+                return m_assetProvider.FetchAsset(assetID);
+        }
+
+        void StoreAsset(AssetBase asset)
+        {
+            // Remote call to the Asset server
+            if (m_assetProvider == null)
+                m_AssetClient.StoreAsset(asset);
+            // local call
+            else
+                m_assetProvider.CreateAsset(asset);
+        }
+
+        #endregion Local vs Remote
+    }
+
+    class SynchronousGridAssetClient : GridAssetClient
+    {
+        public SynchronousGridAssetClient(string url)
+            : base(url)
+        {
+        }
+
+        public AssetBase SyncGetAsset(UUID assetID, bool isTexture)
+        {
+            AssetRequest assReq = new AssetRequest();
+            assReq.AssetID = assetID;
+            assReq.IsTexture = isTexture;
+            return base.GetAsset(assReq);
+        }
+
     }
 }
