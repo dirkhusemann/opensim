@@ -298,6 +298,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private RetrieveInstantMessages handlerRetrieveInstantMessages;
 
+        private PickDelete handlerPickDelete;
+        private PickGodDelete handlerPickGodDelete;
+        private PickInfoUpdate handlerPickInfoUpdate;
+        private AvatarNotesUpdate handlerAvatarNotesUpdate;
+
+        private MuteListRequest handlerMuteListRequest;
+
         private readonly IGroupsModule m_GroupsModule;
 
         //private TerrainUnacked handlerUnackedTerrain = null;
@@ -1083,6 +1090,13 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public event RetrieveInstantMessages OnRetrieveInstantMessages;
 
+        public event PickDelete OnPickDelete;
+        public event PickGodDelete OnPickGodDelete;
+        public event PickInfoUpdate OnPickInfoUpdate;
+        public event AvatarNotesUpdate OnAvatarNotesUpdate;
+
+        public event MuteListRequest OnMuteListRequest;
+
         public void ActivateGesture(UUID assetId, UUID gestureId)
         {
         }
@@ -1176,68 +1190,58 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <summary>
         /// Send an instant message to this client
         /// </summary>
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp)
-        {
-            SendInstantMessage(fromAgent, message, toAgent, fromName, dialog, timeStamp, UUID.Zero, false, new byte[0]);
-        }
-
-        /// <summary>
-        /// Send an instant message to this client
-        /// </summary>
         //
         // Don't remove transaction ID! Groups and item gives need to set it!
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent,
-                                       string fromName, byte dialog, uint timeStamp,
-                                       UUID transactionID, bool fromGroup, byte[] binaryBucket)
+        public void SendInstantMessage(GridInstantMessage im)
         {
-            if (((Scene)(m_scene)).Permissions.CanInstantMessage(fromAgent, toAgent))
+            if (((Scene)(m_scene)).Permissions.CanInstantMessage(new UUID(im.fromAgentID), new UUID(im.toAgentID)))
             {
                 ImprovedInstantMessagePacket msg
                     = (ImprovedInstantMessagePacket)PacketPool.Instance.GetPacket(PacketType.ImprovedInstantMessage);
 
-                msg.AgentData.AgentID = fromAgent;
+                msg.AgentData.AgentID = new UUID(im.fromAgentID);
                 msg.AgentData.SessionID = UUID.Zero;
-                msg.MessageBlock.FromAgentName = Utils.StringToBytes(fromName);
-                msg.MessageBlock.Dialog = dialog;
-                msg.MessageBlock.FromGroup = fromGroup;
-                if (transactionID == UUID.Zero)
-                    msg.MessageBlock.ID = fromAgent ^ toAgent;
+                msg.MessageBlock.FromAgentName = Utils.StringToBytes(im.fromAgentName);
+                msg.MessageBlock.Dialog = im.dialog;
+                msg.MessageBlock.FromGroup = im.fromGroup;
+                if (im.imSessionID == UUID.Zero.Guid)
+                    msg.MessageBlock.ID = new UUID(im.fromAgentID) ^ new UUID(im.toAgentID);
                 else
-                    msg.MessageBlock.ID = transactionID;
-                msg.MessageBlock.Offline = 0;
-                msg.MessageBlock.ParentEstateID = 0;
-                msg.MessageBlock.Position = new Vector3();
-                msg.MessageBlock.RegionID = UUID.Zero;
-                msg.MessageBlock.Timestamp = timeStamp;
-                msg.MessageBlock.ToAgentID = toAgent;
+                    msg.MessageBlock.ID = new UUID(im.imSessionID);
+                msg.MessageBlock.Offline = im.offline;
+                msg.MessageBlock.ParentEstateID = im.ParentEstateID;
+                msg.MessageBlock.Position = im.Position;
+                msg.MessageBlock.RegionID = new UUID(im.RegionID);
+                msg.MessageBlock.Timestamp = im.timestamp;
+                msg.MessageBlock.ToAgentID = new UUID(im.toAgentID);
                 // Cap the message length at 1099. There is a limit in ImprovedInstantMessagePacket
                 // the limit is 1100 but a 0 byte gets added to mark the end of the string
-                if (message != null && message.Length > 1099)
-                    msg.MessageBlock.Message = Utils.StringToBytes(message.Substring(0, 1099));
+                if (im.message != null && im.message.Length > 1099)
+                    msg.MessageBlock.Message = Utils.StringToBytes(im.message.Substring(0, 1099));
                 else
-                    msg.MessageBlock.Message = Utils.StringToBytes(message);
-                msg.MessageBlock.BinaryBucket = binaryBucket;
+                    msg.MessageBlock.Message = Utils.StringToBytes(im.message);
+                msg.MessageBlock.BinaryBucket = im.binaryBucket;
 
-                if (message.StartsWith("[grouptest]"))
+                if (im.message.StartsWith("[grouptest]"))
                 { // this block is test code for implementing group IM - delete when group IM is finished
                     IEventQueue eq = Scene.RequestModuleInterface<IEventQueue>();
                     if (eq != null)
                     {
-                        dialog = 17;
+                        im.dialog = 17;
 
                         //eq.ChatterboxInvitation(
                         //    new UUID("00000000-68f9-1111-024e-222222111123"),
-                        //    "OpenSimulator Testing", fromAgent, message, toAgent, fromName, dialog, 0,
-                        //    false, 0, new Vector3(), 1, transactionID, fromGroup, binaryBucket);
+                        //    "OpenSimulator Testing", im.fromAgentID, im.message, im.toAgentID, im.fromAgentName, im.dialog, 0,
+                        //    false, 0, new Vector3(), 1, im.imSessionID, im.fromGroup, im.binaryBucket);
 
                         eq.ChatterboxInvitation(
                             new UUID("00000000-68f9-1111-024e-222222111123"),
-                            "OpenSimulator Testing", fromAgent, message, toAgent, fromName, dialog, 0,
-                            false, 0, new Vector3(), 1, transactionID, fromGroup, Utils.StringToBytes("OpenSimulator Testing"));
+                            "OpenSimulator Testing", new UUID(im.fromAgentID), im.message, new UUID(im.toAgentID), im.fromAgentName, im.dialog, 0,
+                            false, 0, new Vector3(), 1, new UUID(im.imSessionID), im.fromGroup, Utils.StringToBytes("OpenSimulator Testing"));
 
                         eq.ChatterBoxSessionAgentListUpdates(
                             new UUID("00000000-68f9-1111-024e-222222111123"),
-                            fromAgent, toAgent, false, false, false);
+                            new UUID(im.fromAgentID), new UUID(im.toAgentID), false, false, false);
                     }
 
                     Console.WriteLine("SendInstantMessage: " + msg);
@@ -2664,7 +2668,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             OutPacket(terse, ThrottleOutPacketType.Task);
         }
 
-        public void SendCoarseLocationUpdate(List<Vector3> CoarseLocations)
+        public void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations)
         {
             if (!IsActive) return; // We don't need to update inactive clients.
 
@@ -2674,14 +2678,19 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             CoarseLocationUpdatePacket.IndexBlock ib =
                 new CoarseLocationUpdatePacket.IndexBlock();
             loc.Location = new CoarseLocationUpdatePacket.LocationBlock[total];
+            loc.AgentData = new CoarseLocationUpdatePacket.AgentDataBlock[total];
+
             for (int i = 0; i < total; i++)
             {
                 CoarseLocationUpdatePacket.LocationBlock lb =
                     new CoarseLocationUpdatePacket.LocationBlock();
                 lb.X = (byte)CoarseLocations[i].X;
                 lb.Y = (byte)CoarseLocations[i].Y;
-                lb.Z = (byte)(CoarseLocations[i].Z / 4);
+
+                lb.Z = CoarseLocations[i].Z > 1024 ? (byte)0 : (byte)(CoarseLocations[i].Z * 0.25);
                 loc.Location[i] = lb;
+                loc.AgentData[i] = new CoarseLocationUpdatePacket.AgentDataBlock();
+                loc.AgentData[i].AgentID = users[i];
             }
             ib.You = -1;
             ib.Prey = -1;
@@ -3716,7 +3725,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             objdata.TextureAnim = new byte[0];
             objdata.Sound = UUID.Zero;
             Primitive.TextureEntry ntex = new Primitive.TextureEntry(new UUID("00000000-0000-0000-5005-000000000005"));
-            objdata.TextureEntry = ntex.ToBytes();
+            objdata.TextureEntry = ntex.GetBytes();
 
             objdata.State = 0;
             objdata.Data = new byte[0];
@@ -5821,6 +5830,35 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         }
                     }
                     break;
+                case PacketType.RemoveInventoryObjects:
+                    RemoveInventoryObjectsPacket removeObject = (RemoveInventoryObjectsPacket)Pack;
+                    if (OnRemoveInventoryFolder != null)
+                    {
+                        handlerRemoveInventoryFolder = null;
+                        foreach (RemoveInventoryObjectsPacket.FolderDataBlock datablock in removeObject.FolderData)
+                        {
+                            handlerRemoveInventoryFolder = OnRemoveInventoryFolder;
+
+                            if (handlerRemoveInventoryFolder != null)
+                            {
+                                handlerRemoveInventoryFolder(this, datablock.FolderID);
+                            }
+                        }
+                    }
+
+                    if (OnRemoveInventoryItem != null)
+                    {
+                        handlerRemoveInventoryItem = null;
+                        foreach (RemoveInventoryObjectsPacket.ItemDataBlock datablock in removeObject.ItemData)
+                        {
+                            handlerRemoveInventoryItem = OnRemoveInventoryItem;
+                            if (handlerRemoveInventoryItem != null)
+                            {
+                                handlerRemoveInventoryItem(this, datablock.ItemID);
+                            }
+                        }
+                    }
+                    break;
                 case PacketType.RequestTaskInventory:
                     RequestTaskInventoryPacket requesttask = (RequestTaskInventoryPacket)Pack;
 
@@ -6807,8 +6845,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     //m_log.Warn("[CLIENT]: unhandled TransferAbort packet");
                     break;
                 case PacketType.MuteListRequest:
-                    // TODO: handle this packet
-                    //m_log.Warn("[CLIENT]: unhandled MuteListRequest packet");
+                    MuteListRequestPacket muteListRequest =
+                            (MuteListRequestPacket)Pack;
+
+                    handlerMuteListRequest = OnMuteListRequest;
+                    if (handlerMuteListRequest != null)
+                    {
+                        handlerMuteListRequest(this, muteListRequest.MuteData.MuteCRC);
+                    }
+                    else
+                    {
+                        SendUseCachedMuteList();
+                    }
                     break;
                 case PacketType.UseCircuitCode:
                     // Don't display this one, we handle it at a lower level
@@ -7183,7 +7231,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             i++;
                         }
 
-
                         OutPacket(groupRoleMembersReply, ThrottleOutPacketType.Task);
                     }
                     break;
@@ -7194,54 +7241,15 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                     if (m_GroupsModule != null)
                     {
-                        CreateGroupReplyPacket createGroupReply = (CreateGroupReplyPacket)PacketPool.Instance.GetPacket(PacketType.CreateGroupReply);
-
-                        createGroupReply.AgentData =
-                            new CreateGroupReplyPacket.AgentDataBlock();
-                        createGroupReply.ReplyData =
-                            new CreateGroupReplyPacket.ReplyDataBlock();
-
-                        createGroupReply.AgentData.AgentID = AgentId;
-                        createGroupReply.ReplyData.GroupID = UUID.Zero;
-
-                        IMoneyModule money = m_scene.RequestModuleInterface<IMoneyModule>();
-                        if (money != null && !money.GroupCreationCovered(this))
-                        {
-                            createGroupReply.ReplyData.Success = false;
-                            createGroupReply.ReplyData.Message = Utils.StringToBytes("You do not have sufficient funds to create a group");
-                            OutPacket(createGroupReply, ThrottleOutPacketType.Task);
-                            break;
-                        }
-
-                        UUID groupID = m_GroupsModule.CreateGroup(this,
-                                                                  Utils.BytesToString(createGroupRequest.GroupData.Name),
-                                                                  Utils.BytesToString(createGroupRequest.GroupData.Charter),
-                                                                  createGroupRequest.GroupData.ShowInList,
-                                                                  createGroupRequest.GroupData.InsigniaID,
-                                                                  createGroupRequest.GroupData.MembershipFee,
-                                                                  createGroupRequest.GroupData.OpenEnrollment,
-                                                                  createGroupRequest.GroupData.AllowPublish,
-                                                                  createGroupRequest.GroupData.MaturePublish);
-                        if (groupID == UUID.Zero)
-                        {
-                            createGroupReply.ReplyData.Success = false;
-                            createGroupReply.ReplyData.Message = Utils.StringToBytes("We're sorry, but we could not create the requested group. Please try another name");
-                            OutPacket(createGroupReply, ThrottleOutPacketType.Task);
-                            break;
-                        }
-
-                        if (money != null)
-                            money.ApplyGroupCreationCharge(AgentId);
-
-                        createGroupReply.ReplyData.Success = true;
-                        createGroupReply.ReplyData.GroupID = groupID;
-                        createGroupReply.ReplyData.Message = Utils.StringToBytes("Group created");
-                        OutPacket(createGroupReply, ThrottleOutPacketType.Task);
-
-                        // Sync with event queue
-                        Thread.Sleep(1000);
-
-                        m_GroupsModule.SendAgentGroupDataUpdate(this);
+                        m_GroupsModule.CreateGroup(this,
+                                                   Utils.BytesToString(createGroupRequest.GroupData.Name),
+                                                   Utils.BytesToString(createGroupRequest.GroupData.Charter),
+                                                   createGroupRequest.GroupData.ShowInList,
+                                                   createGroupRequest.GroupData.InsigniaID,
+                                                   createGroupRequest.GroupData.MembershipFee,
+                                                   createGroupRequest.GroupData.OpenEnrollment,
+                                                   createGroupRequest.GroupData.AllowPublish,
+                                                   createGroupRequest.GroupData.MaturePublish);
                     }
                     break;
 
@@ -7556,6 +7564,51 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         handlerRetrieveInstantMessages(this);
                     break;
 
+                case PacketType.PickDelete:
+                    PickDeletePacket pickDelete =
+                            (PickDeletePacket)Pack;
+
+                    handlerPickDelete = OnPickDelete;
+                    if (handlerPickDelete != null)
+                        handlerPickDelete(this, pickDelete.Data.PickID); 
+                    break;
+                case PacketType.PickGodDelete:
+                    PickGodDeletePacket pickGodDelete =
+                            (PickGodDeletePacket)Pack;
+
+                    handlerPickGodDelete = OnPickGodDelete;
+                    if (handlerPickGodDelete != null)
+                        handlerPickGodDelete(this,
+                                pickGodDelete.AgentData.AgentID,
+                                pickGodDelete.Data.PickID,
+                                pickGodDelete.Data.QueryID); 
+                    break;
+                case PacketType.PickInfoUpdate:
+                    PickInfoUpdatePacket pickInfoUpdate =
+                            (PickInfoUpdatePacket)Pack;
+
+                    handlerPickInfoUpdate = OnPickInfoUpdate;
+                    if (handlerPickInfoUpdate != null)
+                        handlerPickInfoUpdate(this,
+                                pickInfoUpdate.Data.PickID,
+                                pickInfoUpdate.Data.CreatorID,
+                                pickInfoUpdate.Data.TopPick,
+                                Utils.BytesToString(pickInfoUpdate.Data.Name),
+                                Utils.BytesToString(pickInfoUpdate.Data.Desc),
+                                pickInfoUpdate.Data.SnapshotID,
+                                pickInfoUpdate.Data.SortOrder,
+                                pickInfoUpdate.Data.Enabled);
+                    break;
+                case PacketType.AvatarNotesUpdate:
+                    AvatarNotesUpdatePacket avatarNotesUpdate =
+                            (AvatarNotesUpdatePacket)Pack;
+
+                    handlerAvatarNotesUpdate = OnAvatarNotesUpdate;
+                    if (handlerAvatarNotesUpdate != null)
+                        handlerAvatarNotesUpdate(this,
+                                avatarNotesUpdate.Data.TargetID,
+                                Utils.BytesToString(avatarNotesUpdate.Data.Notes));
+                    break;
                 default:
                     m_log.Warn("[CLIENT]: unhandled packet " + Pack);
                     break;
@@ -7595,7 +7648,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             shape.PathTwist = addPacket.ObjectData.PathTwist;
             shape.PathTwistBegin = addPacket.ObjectData.PathTwistBegin;
             Primitive.TextureEntry ntex = new Primitive.TextureEntry(new UUID("89556747-24cb-43ed-920b-47caed15465f"));
-            shape.TextureEntry = ntex.ToBytes();
+            shape.TextureEntry = ntex.GetBytes();
             //shape.Textures = ntex;
             return shape;
         }
@@ -7610,7 +7663,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public void SendBlueBoxMessage(UUID FromAvatarID, String FromAvatarName, String Message)
         {
             if (!ChildAgentStatus())
-                SendInstantMessage(FromAvatarID, Message, AgentId, FromAvatarName, 1, (uint)Util.UnixTimeSinceEpoch());
+                SendInstantMessage(new GridInstantMessage(null, FromAvatarID, FromAvatarName, AgentId, 1, Message, false, new Vector3()));
 
             //SendInstantMessage(FromAvatarID, fromSessionID, Message, AgentId, SessionId, FromAvatarName, (byte)21,(uint) Util.UnixTimeSinceEpoch());
         }
@@ -8636,6 +8689,69 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     m_groupPowers[GroupMembership[i].GroupID] = GroupMembership[i].GroupPowers;
                 }
             }
+        }
+
+        public void SendCreateGroupReply(UUID groupID, bool success, string message)
+        {
+            CreateGroupReplyPacket createGroupReply = (CreateGroupReplyPacket)PacketPool.Instance.GetPacket(PacketType.CreateGroupReply);
+
+            createGroupReply.AgentData =
+                new CreateGroupReplyPacket.AgentDataBlock();
+            createGroupReply.ReplyData =
+                new CreateGroupReplyPacket.ReplyDataBlock();
+
+            createGroupReply.AgentData.AgentID = AgentId;
+            createGroupReply.ReplyData.GroupID = groupID;
+
+            createGroupReply.ReplyData.Success = success;
+            createGroupReply.ReplyData.Message = Utils.StringToBytes(message);
+            OutPacket(createGroupReply, ThrottleOutPacketType.Task);
+        }
+
+        public void SendUseCachedMuteList()
+        {
+            UseCachedMuteListPacket useCachedMuteList = (UseCachedMuteListPacket)PacketPool.Instance.GetPacket(PacketType.UseCachedMuteList);
+
+            useCachedMuteList.AgentData = new UseCachedMuteListPacket.AgentDataBlock();
+            useCachedMuteList.AgentData.AgentID = AgentId;
+
+            OutPacket(useCachedMuteList, ThrottleOutPacketType.Task);
+        }
+
+        public void SendMuteListUpdate(string filename)
+        {
+            MuteListUpdatePacket muteListUpdate = (MuteListUpdatePacket)PacketPool.Instance.GetPacket(PacketType.MuteListUpdate);
+
+            muteListUpdate.MuteData = new MuteListUpdatePacket.MuteDataBlock();
+            muteListUpdate.MuteData.AgentID = AgentId;
+            muteListUpdate.MuteData.Filename = Utils.StringToBytes(filename);
+
+            OutPacket(muteListUpdate, ThrottleOutPacketType.Task);
+        }
+
+        public void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled)
+        {
+            PickInfoReplyPacket pickInfoReply = (PickInfoReplyPacket)PacketPool.Instance.GetPacket(PacketType.PickInfoReply);
+
+            pickInfoReply.AgentData = new PickInfoReplyPacket.AgentDataBlock();
+            pickInfoReply.AgentData.AgentID = AgentId;
+
+            pickInfoReply.Data = new PickInfoReplyPacket.DataBlock();
+            pickInfoReply.Data.PickID = pickID;
+            pickInfoReply.Data.CreatorID = creatorID;
+            pickInfoReply.Data.TopPick = topPick;
+            pickInfoReply.Data.ParcelID = parcelID;
+            pickInfoReply.Data.Name = Utils.StringToBytes(name);
+            pickInfoReply.Data.Desc = Utils.StringToBytes(desc);
+            pickInfoReply.Data.SnapshotID = snapshotID;
+            pickInfoReply.Data.User = Utils.StringToBytes(user);
+            pickInfoReply.Data.OriginalName = Utils.StringToBytes(originalName);
+            pickInfoReply.Data.SimName = Utils.StringToBytes(simName);
+            pickInfoReply.Data.PosGlobal = new Vector3d(posGlobal);
+            pickInfoReply.Data.SortOrder = sortOrder;
+            pickInfoReply.Data.Enabled = enabled;
+
+            OutPacket(pickInfoReply, ThrottleOutPacketType.Task);
         }
 
         public string Report()

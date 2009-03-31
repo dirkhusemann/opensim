@@ -35,7 +35,7 @@ using Nini.Config;
 using Nwc.XmlRpc;
 using OpenSim.Framework.Servers;
 
-namespace OpenSim.Framework.Communications
+namespace OpenSim.Framework.Communications.Services
 {
     public class GridInfoService
     {

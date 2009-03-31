@@ -742,6 +742,11 @@ namespace OpenSim.Client.MXP.ClientStack
         public event Action<IClientAPI> OnLogout;
         public event Action<IClientAPI> OnConnectionClosed;
         public event RetrieveInstantMessages OnRetrieveInstantMessages;
+        public event PickDelete OnPickDelete;
+        public event PickGodDelete OnPickGodDelete;
+        public event PickInfoUpdate OnPickInfoUpdate;
+        public event AvatarNotesUpdate OnAvatarNotesUpdate;
+        public event MuteListRequest OnMuteListRequest;
         #pragma warning restore 67
 
         #endregion
@@ -815,7 +820,7 @@ namespace OpenSim.Client.MXP.ClientStack
             {
                 visualParams.Add(visualParam);
             }
-            OnSetAppearance(appearance.Texture.ToBytes(), visualParams);
+            OnSetAppearance(appearance.Texture.GetBytes(), visualParams);
         }
 
         public void Stop()
@@ -880,12 +885,7 @@ namespace OpenSim.Client.MXP.ClientStack
             Session.Send(chatActionEvent);
         }
 
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp)
-        {
-            // Need to translate to MXP somehow
-        }
-
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp, UUID transactionID, bool fromGroup, byte[] binaryBucket)
+        public void SendInstantMessage(GridInstantMessage im)
         {
             // Need to translate to MXP somehow
         }
@@ -997,7 +997,7 @@ namespace OpenSim.Client.MXP.ClientStack
             Session.Send(me);
         }
 
-        public void SendCoarseLocationUpdate(List<Vector3> CoarseLocations)
+        public void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations)
         {
             // Minimap function, not used.
         }
@@ -1589,5 +1589,20 @@ namespace OpenSim.Client.MXP.ClientStack
 
         #endregion
     
+        public void SendCreateGroupReply(UUID groupID, bool success, string message)
+        {
+        }
+
+        public void SendUseCachedMuteList()
+        {
+        }
+
+        public void SendMuteListUpdate(string filename)
+        {
+        }
+        
+        public void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled)
+        {
+        }
     }
 }

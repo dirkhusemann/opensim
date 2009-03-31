@@ -361,6 +361,13 @@ namespace OpenSim.Region.OptionalModules.World.NPC
 
         public event RetrieveInstantMessages OnRetrieveInstantMessages;
 
+        public event PickDelete OnPickDelete;
+        public event PickGodDelete OnPickGodDelete;
+        public event PickInfoUpdate OnPickInfoUpdate;
+        public event AvatarNotesUpdate OnAvatarNotesUpdate;
+
+        public event MuteListRequest OnMuteListRequest;
+
 #pragma warning restore 67
 
         #endregion
@@ -498,12 +505,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         {
         }
 
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp)
-        {
-            
-        }
-
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp, UUID transationID, bool fromGroup, byte[] binaryBucket)
+        public void SendInstantMessage(GridInstantMessage im)
         {
             
         }
@@ -583,7 +585,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         {
         }
 
-        public virtual void SendCoarseLocationUpdate(List<Vector3> CoarseLocations)
+        public virtual void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations)
         {
         }
 
@@ -1053,6 +1055,21 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         {
         }
 
+        public void SendCreateGroupReply(UUID groupID, bool success, string message)
+        {
+        }
+
+        public void SendUseCachedMuteList()
+        {
+        }
+
+        public void SendMuteListUpdate(string filename)
+        {
+        }
+
+        public void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled)
+        {
+        }
         #endregion
     }
 }

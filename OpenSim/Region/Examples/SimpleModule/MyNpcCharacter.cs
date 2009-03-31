@@ -255,6 +255,13 @@ namespace OpenSim.Region.Examples.SimpleModule
 
         public event RetrieveInstantMessages OnRetrieveInstantMessages;
 
+        public event PickDelete OnPickDelete;
+        public event PickGodDelete OnPickGodDelete;
+        public event PickInfoUpdate OnPickInfoUpdate;
+        public event AvatarNotesUpdate OnAvatarNotesUpdate;
+
+        public event MuteListRequest OnMuteListRequest;
+
 #pragma warning restore 67
 
         private UUID myID = UUID.Random();
@@ -409,12 +416,7 @@ namespace OpenSim.Region.Examples.SimpleModule
         {
         }
 
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp)
-        {
-            
-        }
-
-        public void SendInstantMessage(UUID fromAgent, string message, UUID toAgent, string fromName, byte dialog, uint timeStamp, UUID transactionID, bool fromGroup, byte[] binaryBucket)
+        public void SendInstantMessage(GridInstantMessage im)
         {
             
         }
@@ -494,7 +496,7 @@ namespace OpenSim.Region.Examples.SimpleModule
         {
         }
 
-        public virtual void SendCoarseLocationUpdate(List<Vector3> CoarseLocations)
+        public virtual void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations)
         {
         }
 
@@ -1053,6 +1055,21 @@ namespace OpenSim.Region.Examples.SimpleModule
         {
         }
 
+        public void SendCreateGroupReply(UUID groupID, bool success, string message)
+        {
+        }
+
+        public void SendUseCachedMuteList()
+        {
+        }
+
+        public void SendMuteListUpdate(string filename)
+        {
+        }
+
+        public void SendPickInfoReply(UUID pickID,UUID creatorID, bool topPick, UUID parcelID, string name, string desc, UUID snapshotID, string user, string originalName, string simName, Vector3 posGlobal, int sortOrder, bool enabled)
+        {
+        }
         #endregion
     }
 }

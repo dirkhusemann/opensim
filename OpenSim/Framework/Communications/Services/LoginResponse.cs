@@ -34,7 +34,7 @@ using Nwc.XmlRpc;
 using OpenMetaverse;
 using OpenMetaverse.StructuredData;
 
-namespace OpenSim.Framework.Communications
+namespace OpenSim.Framework.Communications.Services
 {
     /// <summary>
     /// A temp class to handle login response.

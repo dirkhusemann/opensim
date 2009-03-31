@@ -44,6 +44,7 @@ namespace OpenSim.Region.Framework.Interfaces
         List<GroupRoleMembersData> GroupRoleMembersRequest(IClientAPI remoteClient, UUID groupID);
         GroupProfileData GroupProfileRequest(IClientAPI remoteClient, UUID groupID);
         GroupMembershipData[] GetMembershipData(UUID UserID);
+        GroupMembershipData GetMembershipData(UUID GroupID, UUID UserID);
 
         void UpdateGroupInfo(IClientAPI remoteClient, UUID groupID, string charter, bool showInList, UUID insigniaID, int membershipFee, bool openEnrollment, bool allowPublish, bool maturePublish);
 
@@ -57,7 +58,7 @@ namespace OpenSim.Region.Framework.Interfaces
         void GroupRoleUpdate(IClientAPI remoteClient, UUID GroupID, UUID RoleID, string name, string description, string title, ulong powers, byte updateType);
         void GroupRoleChanges(IClientAPI remoteClient, UUID GroupID, UUID RoleID, UUID MemberID, uint changes);
         void GroupNoticeRequest(IClientAPI remoteClient, UUID groupNoticeID);
-        void SendGroupNoticeToClient(IClientAPI remoteClient, UUID groupNoticeID, byte dialog);
+        GridInstantMessage CreateGroupNoticeIM(UUID agentID, UUID groupNoticeID, byte dialog);
         void SendAgentGroupDataUpdate(IClientAPI remoteClient);
         void JoinGroupRequest(IClientAPI remoteClient, UUID GroupID);
         void LeaveGroupRequest(IClientAPI remoteClient, UUID GroupID);
