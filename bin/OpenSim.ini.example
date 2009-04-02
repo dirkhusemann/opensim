@@ -7,6 +7,9 @@
     ; (eg default is /opensimdir/crashes/*.txt or C:\opensim\crashes\*.txt)
     crash_dir = "crashes"
 
+    ; Place to create a PID file
+    ; PIDFile = "/tmp/my.pid"
+
     ; Http proxy support for llHTTPRequest and dynamic texture loading
     ; Set HttpProxy to the URL for your proxy server if you would like
     ; to proxy llHTTPRequests through a firewall
@@ -601,6 +604,7 @@
     ;password = mypass
     ;nick    = OpenSimBotNameProbablyMakeThisShorter
     ;channel = #the_irc_channel_you_want_to_connect_to
+    ;user    = "USER OpenSimBot 8 * :I'm an OpenSim to IRC bot"
     ;port = 6667
     ;; channel to listen for configuration commands
     ;commands_enabled = false
