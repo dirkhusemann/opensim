@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
  *
@@ -37,17 +37,43 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         uint LocalID { get; }
         UUID GlobalID { get; }
 
-        IObject[] Children { get; }
+        String Name { get; set; }
+        String Description { get; set; }
+
+        
 
         /// <summary>
-        /// Equals 'this' if we have no parent. Ergo, Root.Children.Count will always return the total number of items in the linkset.
+        /// Returns the root object of a linkset. If this object is the root, it will return itself.
         /// </summary>
         IObject Root { get; }
 
-        IObjectFace[] Faces { get; }
+        /// <summary>
+        /// Returns a collection of objects which are linked to the current object. Does not include the root object.
+        /// </summary>
+        IObject[] Children { get; }
 
+        /// <summary>
+        /// Returns a list of materials attached to this object. Each may contain unique texture 
+        /// and other visual information. For primitive based objects, this correlates with 
+        /// Object Faces. For mesh based objects, this correlates with Materials.
+        /// </summary>
+        IObjectMaterial[] Materials { get; }
+
+        /// <summary>
+        /// The bounding box of the object. Primitive and Mesh objects alike are scaled to fit within these bounds.
+        /// </summary>
         Vector3 Scale { get; set; }
+
+        /// <summary>
+        /// The rotation of the object relative to the Scene
+        /// </summary>
         Quaternion Rotation { get; set; }
+
+        /// <summary>
+        /// The position of the object relative to the Scene
+        /// </summary>
+        Vector3 Position { get; set; }
+
 
         Vector3 SitTarget { get; set; }
         String SitTargetText { get; set; }
@@ -76,10 +102,10 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         // Taper[A+B], Shear[A+B], Revolutions,
         // RadiusOffset, Skew
 
-        Material Material { get; set; }
+        PhysicsMaterial PhysicsMaterial { get; set; }
     }
 
-    public enum Material
+    public enum PhysicsMaterial
     {
         Default,
         Glass,
@@ -110,7 +136,7 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         Planar
     }
 
-    public interface IObjectFace
+    public interface IObjectMaterial
     {
         Color Color { get; set; }
         UUID Texture { get; set; }

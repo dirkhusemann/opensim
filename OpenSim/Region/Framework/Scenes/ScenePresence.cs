@@ -115,8 +115,6 @@ namespace OpenSim.Region.Framework.Scenes
 
         private int m_perfMonMS;
 
-        private bool m_sitStatus;
-
         private bool m_setAlwaysRun;
 
         private Quaternion m_bodyRot= Quaternion.Identity;
