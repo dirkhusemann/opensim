@@ -54,7 +54,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static readonly Object vlock  = new Object();
-        private static readonly bool DUMP     = true;
+        private static readonly bool DUMP     = false;
 
         // Capability strings
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
