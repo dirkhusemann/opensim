@@ -1,11 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
-    class SOPObject : IObject
+    class SOPObject : MarshalByRefObject, IObject
     {
         private readonly Scene m_rootScene;
         private readonly uint m_localID;
@@ -213,6 +214,17 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             get { throw new System.NotImplementedException(); }
             set { throw new System.NotImplementedException(); }
         }
+
+        #region Public Functions
+
+        public void Say(string msg)
+        {
+            SceneObjectPart sop = GetSOP();
+
+            m_rootScene.SimChat(msg, ChatTypeEnum.Say, sop.AbsolutePosition, sop.Name, sop.UUID, false);
+        }
+
+        #endregion
 
 
         #region Supporting Functions
