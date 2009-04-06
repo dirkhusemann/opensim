@@ -28,19 +28,62 @@
 using System;
 using System.Drawing;
 using OpenMetaverse;
+using OpenSim.Region.OptionalModules.Scripting.Minimodule.Object;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
     public interface IObject
     {
+        /// <summary>
+        /// Returns whether or not this object is still in the world.
+        /// Eg, if you store an IObject reference, however the object
+        /// is deleted before you use it, it will throw a NullReference 
+        /// exception. 'Exists' allows you to check the object is still
+        /// in play before utilizing it.
+        /// </summary>
+        /// <example>
+        /// IObject deleteMe = World.Objects[0];
+        /// 
+        /// if(deleteMe.Exists) {
+        ///     deleteMe.Say("Hello, I still exist!");
+        /// }
+        /// 
+        /// World.Objects.Remove(deleteMe);
+        /// 
+        /// if(!deleteMe.Exists) {
+        ///     Host.Console.Info("I was deleted");
+        /// }
+        /// </example>
+        /// <remarks>
+        /// Objects should be near-guarunteed to exist for any event which
+        /// passes them as an argument. Storing an object for a longer period
+        /// of time however will limit their reliability.
+        /// 
+        /// It is a good practice to use Try/Catch blocks handling for
+        /// NullReferenceException, when accessing remote objects.
+        /// </remarks>
         bool Exists { get; }
+
+        /// <summary>
+        /// The local region-unique ID for this object.
+        /// </summary>
         uint LocalID { get; }
+
+        /// <summary>
+        /// The global 'world-unique' ID for this object. 
+        /// (Note, may not actually be world unique)
+        /// </summary>
         UUID GlobalID { get; }
 
+        /// <summary>
+        /// The name of this Object.
+        /// </summary>
         String Name { get; set; }
-        String Description { get; set; }
 
-        
+        /// <summary>
+        /// The description assigned to this object.
+        /// </summary>
+        String Description { get; set; }
 
         /// <summary>
         /// Returns the root object of a linkset. If this object is the root, it will return itself.
@@ -67,23 +110,37 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         /// <summary>
         /// The rotation of the object relative to the Scene
         /// </summary>
-        Quaternion Rotation { get; set; }
+        Quaternion WorldRotation { get; set; }
+
+        /// <summary>
+        /// The rotation of the object relative to a parent object
+        /// If root, works the same as WorldRotation
+        /// </summary>
+        Quaternion OffsetRotation { get; set; }
 
         /// <summary>
         /// The position of the object relative to the Scene
         /// </summary>
-        Vector3 Position { get; set; }
+        Vector3 WorldPosition { get; set; }
 
+        /// <summary>
+        /// The position of the object relative to a parent object
+        /// If root, works the same as WorldPosition
+        /// </summary>
+        Vector3 OffsetPosition { get; set; }
 
         Vector3 SitTarget { get; set; }
         String SitTargetText { get; set; }
 
         String TouchText { get; set; }
 
+        /// <summary>
+        /// Text to be associated with this object, in the 
+        /// Second Life(r) viewer, this is shown above the
+        /// object.
+        /// </summary>
         String Text { get; set; }
 
-        bool IsPhysical { get; set; } // SetStatus(PHYSICS)
-        bool IsPhantom { get; set; } // SetStatus(PHANTOM)
         bool IsRotationLockedX { get; set; } // SetStatus(!ROTATE_X)
         bool IsRotationLockedY { get; set; } // SetStatus(!ROTATE_Y)
         bool IsRotationLockedZ { get; set; } // SetStatus(!ROTATE_Z)
@@ -103,6 +160,9 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         // RadiusOffset, Skew
 
         PhysicsMaterial PhysicsMaterial { get; set; }
+
+        IObjectPhysics Physics { get; }
+
 
         /// <summary>
         /// Causes the object to speak to its surroundings,

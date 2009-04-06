@@ -156,6 +156,10 @@ namespace OpenSim.Framework
         UUID objectID, Vector3 offset, Vector3 grapPos, IClientAPI remoteClient, List<SurfaceTouchEventArgs> surfaceArgs
         );
 
+    public delegate void SpinStart(UUID objectID, IClientAPI remoteClient);
+    public delegate void SpinUpdate(UUID objectID, Quaternion rotation, IClientAPI remoteClient);
+    public delegate void SpinStop(UUID objectID, IClientAPI remoteClient);
+
     public delegate void ParcelAccessListRequest(
         UUID agentID, UUID sessionID, uint flags, int sequenceID, int landLocalID, IClientAPI remote_client);
 
@@ -823,6 +827,7 @@ namespace OpenSim.Framework
         void SendLayerData(int px, int py, float[] map);
 
         void SendWindData(Vector2[] windSpeeds);
+        void SendCloudData(float[] cloudCover);
 
         void MoveAgentIntoRegion(RegionInfo regInfo, Vector3 pos, Vector3 look);
         void InformClientOfNeighbour(ulong neighbourHandle, IPEndPoint neighbourExternalEndPoint);

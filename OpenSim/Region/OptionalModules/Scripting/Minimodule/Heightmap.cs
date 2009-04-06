@@ -31,14 +31,20 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
     public class Heightmap : IHeightmap
     {
-        private Scene m_scene;
+        private readonly Scene m_scene;
 
         public Heightmap(Scene scene)
         {
             m_scene = scene;
         }
 
-        public int Height
+        public double this[int x, int y]
+        {
+            get { return Get(x, y); }
+            set { Set(x, y, value); }
+        }
+
+        public int Length
         {
             get { return m_scene.Heightmap.Height; }
         }
@@ -48,12 +54,12 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             get { return m_scene.Heightmap.Width; }
         }
 
-        public double Get(int x, int y)
+        protected double Get(int x, int y)
         {
             return m_scene.Heightmap[x, y];
         }
 
-        public void Set(int x, int y, double val)
+        protected void Set(int x, int y, double val)
         {
             m_scene.Heightmap[x, y] = val;
         }
