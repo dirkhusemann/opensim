@@ -170,6 +170,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         private GrabObject handlerGrabObject; //OnGrabObject;
         private MoveObject handlerGrabUpdate; //OnGrabUpdate;
         private ObjectSelect handlerDeGrabObject; //OnDeGrabObject;
+        private SpinStart handlerSpinStart; //OnSpinStart;
+        private SpinUpdate handlerSpinUpdate; //OnSpinUpdate;
+        private SpinStop handlerSpinStop; //OnSpinStop;
         private GenericCall7 handlerObjectDescription;
         private GenericCall7 handlerObjectName;
         private GenericCall7 handlerObjectClickAction;
@@ -929,9 +932,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public event DelinkObjects OnDelinkObjects;
         public event GrabObject OnGrabObject;
         public event ObjectSelect OnDeGrabObject;
+        public event SpinStart OnSpinStart;
+        public event SpinStop OnSpinStop;
         public event ObjectDuplicate OnObjectDuplicate;
         public event ObjectDuplicateOnRay OnObjectDuplicateOnRay;
         public event MoveObject OnGrabUpdate;
+        public event SpinUpdate OnSpinUpdate;
         public event AddNewPrim OnAddPrim;
         public event RequestGodlikePowers OnRequestGodlikePowers;
         public event GodKickUser OnGodKickUser;
@@ -1354,7 +1360,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         }
 
         /// <summary>
-        ///  Send the region heightmap to the client
+        ///  Send the wind matrix to the client
         /// </summary>
         /// <param name="windSpeeds">16x16 array of wind speeds</param>
         public virtual void SendWindData(Vector2[] windSpeeds)
@@ -1363,13 +1369,21 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         }
 
         /// <summary>
-        /// Send terrain layer information to the client.
+        ///  Send the cloud matrix to the client
+        /// </summary>
+        /// <param name="windSpeeds">16x16 array of cloud densities</param>
+        public virtual void SendCloudData(float[] cloudDensity)
+        {
+            ThreadPool.QueueUserWorkItem(new WaitCallback(DoSendCloudData), (object)cloudDensity);
+        }
+
+        /// <summary>
+        /// Send wind layer information to the client.
         /// </summary>
         /// <param name="o"></param>
         private void DoSendWindData(object o)
         {
             Vector2[] windSpeeds = (Vector2[])o;
-
             TerrainPatch[] patches = new TerrainPatch[2];
             patches[0] = new TerrainPatch();
             patches[0].Data = new float[16 * 16];
@@ -1387,8 +1401,31 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             LayerDataPacket layerpack = TerrainCompressor.CreateLayerDataPacket(patches, TerrainPatch.LayerType.Wind);
             layerpack.Header.Zerocoded = true;
-
             OutPacket(layerpack, ThrottleOutPacketType.Wind);
+        }
+
+        /// <summary>
+        /// Send cloud layer information to the client.
+        /// </summary>
+        /// <param name="o"></param>
+        private void DoSendCloudData(object o)
+        {
+            float[] cloudCover = (float[])o;
+            TerrainPatch[] patches = new TerrainPatch[1];
+            patches[0] = new TerrainPatch();
+            patches[0].Data = new float[16 * 16];
+
+            for (int y = 0; y < 16; y++)
+            {
+                for (int x = 0; x < 16; x++)
+                {
+                    patches[0].Data[y * 16 + x] = cloudCover[y * 16 + x];
+                }
+            }
+
+            LayerDataPacket layerpack = TerrainCompressor.CreateLayerDataPacket(patches, TerrainPatch.LayerType.Cloud);
+            layerpack.Header.Zerocoded = true;
+            OutPacket(layerpack, ThrottleOutPacketType.Cloud);
         }
 
         /// <summary>
@@ -5229,6 +5266,41 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         handlerDeGrabObject(deGrab.ObjectData.LocalID, this);
                     }
                     break;
+                case PacketType.ObjectSpinStart:
+                    //m_log.Warn("[CLIENT]: unhandled ObjectSpinStart packet");
+                    ObjectSpinStartPacket spinStart = (ObjectSpinStartPacket)Pack;
+
+                    handlerSpinStart = OnSpinStart;
+                    if (handlerSpinStart != null)
+                    {
+                        handlerSpinStart(spinStart.ObjectData.ObjectID, this);
+                    }
+                    break;
+                case PacketType.ObjectSpinUpdate:
+                    //m_log.Warn("[CLIENT]: unhandled ObjectSpinUpdate packet");
+                    ObjectSpinUpdatePacket spinUpdate = (ObjectSpinUpdatePacket)Pack;
+                    Vector3 axis;
+                    float angle;
+                    spinUpdate.ObjectData.Rotation.GetAxisAngle(out axis, out angle);
+                    //m_log.Warn("[CLIENT]: ObjectSpinUpdate packet rot axis:" + axis + " angle:" + angle);
+
+                    handlerSpinUpdate = OnSpinUpdate;
+                    if (handlerSpinUpdate != null)
+                    {
+                        handlerSpinUpdate(spinUpdate.ObjectData.ObjectID, spinUpdate.ObjectData.Rotation, this);
+                    }
+                    break;
+                case PacketType.ObjectSpinStop:
+                    //m_log.Warn("[CLIENT]: unhandled ObjectSpinStop packet");
+                    ObjectSpinStopPacket spinStop = (ObjectSpinStopPacket)Pack;
+
+                    handlerSpinStop = OnSpinStop;
+                    if (handlerSpinStop != null)
+                    {
+                        handlerSpinStop(spinStop.ObjectData.ObjectID, this);
+                    }
+                    break;
+
                 case PacketType.ObjectDescription:
                     ObjectDescriptionPacket objDes = (ObjectDescriptionPacket)Pack;
 
@@ -6865,10 +6937,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 case PacketType.AgentHeightWidth:
                     // TODO: handle this packet
                     //m_log.Warn("[CLIENT]: unhandled AgentHeightWidth packet");
-                    break;
-                case PacketType.ObjectSpinStop:
-                    // TODO: handle this packet
-                    //m_log.Warn("[CLIENT]: unhandled ObjectSpinStop packet");
                     break;
 
                 case PacketType.InventoryDescendents:

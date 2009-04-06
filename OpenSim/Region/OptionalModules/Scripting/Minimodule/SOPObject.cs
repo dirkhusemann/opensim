@@ -1,12 +1,41 @@
-﻿using System;
+/*
+ * Copyright (c) Contributors, http://opensimulator.org/
+ * See CONTRIBUTORS.TXT for a full list of copyright holders.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the OpenSimulator Project nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+using System;
 using System.Collections.Generic;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
+using OpenSim.Region.OptionalModules.Scripting.Minimodule.Object;
+using OpenSim.Region.Physics.Manager;
 
 namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
-    class SOPObject : MarshalByRefObject, IObject
+    class SOPObject : MarshalByRefObject, IObject, IObjectPhysics 
     {
         private readonly Scene m_rootScene;
         private readonly uint m_localID;
@@ -103,13 +132,19 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             set { GetSOP().Scale = value; }
         }
 
-        public Quaternion Rotation
+        public Quaternion WorldRotation
         {
             get { throw new System.NotImplementedException(); }
             set { throw new System.NotImplementedException(); }
         }
 
-        public Vector3 Position
+        public Quaternion OffsetRotation
+        {
+            get { throw new System.NotImplementedException(); }
+            set { throw new System.NotImplementedException(); }
+        }
+
+        public Vector3 WorldPosition
         {
             get { return GetSOP().AbsolutePosition; }
             set
@@ -117,6 +152,12 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                 SceneObjectPart pos = GetSOP();
                 pos.UpdateOffSet(value - pos.AbsolutePosition);
             }
+        }
+
+        public Vector3 OffsetPosition
+        {
+            get { return GetSOP().OffsetPosition; }
+            set { GetSOP().OffsetPosition = value; }
         }
 
         public Vector3 SitTarget
@@ -138,18 +179,6 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         }
 
         public string Text
-        {
-            get { throw new System.NotImplementedException(); }
-            set { throw new System.NotImplementedException(); }
-        }
-
-        public bool IsPhysical
-        {
-            get { throw new System.NotImplementedException(); }
-            set { throw new System.NotImplementedException(); }
-        }
-
-        public bool IsPhantom
         {
             get { throw new System.NotImplementedException(); }
             set { throw new System.NotImplementedException(); }
@@ -213,6 +242,11 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         {
             get { throw new System.NotImplementedException(); }
             set { throw new System.NotImplementedException(); }
+        }
+
+        public IObjectPhysics Physics
+        {
+            get { return this; }
         }
 
         #region Public Functions
@@ -347,5 +381,143 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 
         #endregion
 
+        #region IObjectPhysics
+
+        public bool Enabled
+        {
+            get { throw new System.NotImplementedException(); }
+            set { throw new System.NotImplementedException(); }
+        }
+
+        public bool Phantom
+        {
+            get { throw new System.NotImplementedException(); }
+            set { throw new System.NotImplementedException(); }
+        }
+
+        public bool PhantomCollisions
+        {
+            get { throw new System.NotImplementedException(); }
+            set { throw new System.NotImplementedException(); }
+        }
+
+        public double Density
+        {
+            get { return (GetSOP().PhysActor.Mass/Scale.X*Scale.Y/Scale.Z); }
+            set { throw new NotImplementedException(); }
+        }
+
+        public double Mass
+        {
+            get { return GetSOP().PhysActor.Mass; }
+            set { throw new NotImplementedException(); }
+        }
+
+        public double Buoyancy
+        {
+            get { return GetSOP().PhysActor.Buoyancy; }
+            set { GetSOP().PhysActor.Buoyancy = (float)value; }
+        }
+
+        public Vector3 GeometricCenter
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.GeometricCenter;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+        }
+
+        public Vector3 CenterOfMass
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.CenterOfMass;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+        }
+
+        public Vector3 RotationalVelocity
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.RotationalVelocity;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+            set
+            {
+                GetSOP().PhysActor.RotationalVelocity = new PhysicsVector(value.X, value.Y, value.Z);
+            }
+        }
+
+        public Vector3 Velocity
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.Velocity;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+            set
+            {
+                GetSOP().PhysActor.Velocity = new PhysicsVector(value.X, value.Y, value.Z);
+            }
+        }
+
+        public Vector3 Torque
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.Torque;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+            set
+            {
+                GetSOP().PhysActor.Torque = new PhysicsVector(value.X, value.Y, value.Z);
+            }
+        }
+
+        public Vector3 Acceleration
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.Acceleration;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+        }
+
+        public Vector3 Force
+        {
+            get
+            {
+                PhysicsVector tmp = GetSOP().PhysActor.Force;
+                return new Vector3(tmp.X, tmp.Y, tmp.Z);
+            }
+            set
+            {
+                GetSOP().PhysActor.Force = new PhysicsVector(value.X, value.Y, value.Z);
+            }
+        }
+
+        public bool FloatOnWater
+        {
+            set { GetSOP().PhysActor.FloatOnWater = value; }
+        }
+
+        public void AddForce(Vector3 force, bool pushforce)
+        {
+            GetSOP().PhysActor.AddForce(new PhysicsVector(force.X, force.Y, force.Z), pushforce);
+        }
+
+        public void AddAngularForce(Vector3 force, bool pushforce)
+        {
+            GetSOP().PhysActor.AddAngularForce(new PhysicsVector(force.X, force.Y, force.Z), pushforce);
+        }
+
+        public void SetMomentum(Vector3 momentum)
+        {
+            GetSOP().PhysActor.SetMomentum(new PhysicsVector(momentum.X, momentum.Y, momentum.Z));
+        }
+
+        #endregion
     }
 }

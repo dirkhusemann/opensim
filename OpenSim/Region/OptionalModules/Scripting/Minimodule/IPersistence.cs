@@ -6,8 +6,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 {
     interface IPersistence
     {
-        Object Get(MRMBase state, Guid storageID);
-        Object Get(MRMBase state);
+        T Get<T>(Guid storageID);
+        T Get<T>();
 
         /// <summary>
         /// Stores 'data' into the persistence system
@@ -15,17 +15,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         /// under the ID 'storageID'. This data may
         /// be accessed by other scripts however.
         /// </summary>
-        /// <param name="state"></param>
         /// <param name="storageID"></param>
         /// <param name="data"></param>
-        void Put(MRMBase state, Guid storageID, Object data);
+        void Put<T>(Guid storageID, T data);
 
         /// <summary>
         /// Stores 'data' into the persistence system
         /// using the default ID for this script.
         /// </summary>
-        /// <param name="state"></param>
         /// <param name="data"></param>
-        void Put(MRMBase state, Object data);
+        void Put<T>(T data);
     }
 }

@@ -1731,6 +1731,17 @@ namespace OpenSim.Region.Framework.Scenes
             return true;
         }
 
+        public virtual bool IncomingCreateObject(UUID userID, UUID itemID)
+        {
+            ScenePresence sp = GetScenePresence(userID);
+            if (sp != null)
+            {
+                uint attPt = (uint)sp.Appearance.GetAttachpoint(itemID);
+                SceneObjectGroup sog = m_sceneGraph.RezSingleAttachment(sp.ControllingClient, itemID, attPt);
+            }
+            return false;
+        }
+
         public bool AddSceneObject(UUID primID, SceneObjectGroup sceneObject)
         {
             // If the user is banned, we won't let any of their objects
@@ -1970,12 +1981,11 @@ namespace OpenSim.Region.Framework.Scenes
             client.OnUnackedTerrain += TerrainUnAcked;
             client.OnObjectOwner += ObjectOwner;
 
-            IGodsModule godsModule = RequestModuleInterface<IGodsModule>();
+            IGodsModule godsModule = RequestModuleInterface<IGodsModule>();            
             client.OnGodKickUser += godsModule.KickUser;
             client.OnRequestGodlikePowers += godsModule.RequestGodlikePowers; 
 
-            if (StatsReporter != null)
-                client.OnNetworkStatsUpdate += StatsReporter.AddPacketsFromClientStats;
+            client.OnNetworkStatsUpdate += StatsReporter.AddPacketsStats;
 
             // EventManager.TriggerOnNewClient(client);
         }
@@ -2791,29 +2801,6 @@ namespace OpenSim.Region.Framework.Scenes
         public virtual void StoreRemoveFriendship(UUID ownerID, UUID ExfriendID)
         {
             m_sceneGridService.RemoveUserFriend(ownerID, ExfriendID);
-        }
-
-        public void AddPacketStats(int inPackets, int outPackets, int unAckedBytes)
-        {
-            StatsReporter.AddInPackets(inPackets);
-            StatsReporter.AddOutPackets(outPackets);
-            StatsReporter.AddunAckedBytes(unAckedBytes);
-        }
-
-        public void AddAgentTime(int ms)
-        {
-            StatsReporter.addFrameMS(ms);
-            StatsReporter.addAgentMS(ms);
-        }
-
-        public void AddAgentUpdates(int count)
-        {
-            StatsReporter.AddAgentUpdates(count);
-        }
-
-        public void AddPendingDownloads(int count)
-        {
-            StatsReporter.addPendingDownload(count);
         }
 
         #endregion

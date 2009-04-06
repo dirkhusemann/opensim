@@ -1,29 +1,28 @@
-/**
- * Copyright (c) 2008, Contributors. All rights reserved.
+/*
+ * Copyright (c) Contributors, http://opensimulator.org/
  * See CONTRIBUTORS.TXT for a full list of copyright holders.
- * 
- * Redistribution and use in source and binary forms, with or without modification, 
- * are permitted provided that the following conditions are met:
- * 
- *     * Redistributions of source code must retain the above copyright notice, 
- *       this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above copyright notice, 
- *       this list of conditions and the following disclaimer in the documentation 
- *       and/or other materials provided with the distribution.
- *     * Neither the name of the Organizations nor the names of Individual
- *       Contributors may be used to endorse or promote products derived from 
- *       this software without specific prior written permission.
- * 
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
- * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL 
- * THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, 
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE 
- * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED 
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
- * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED 
- * OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of the OpenSim Project nor the
+ *       names of its contributors may be used to endorse or promote products
+ *       derived from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE DEVELOPERS ``AS IS'' AND ANY
+ * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE CONTRIBUTORS BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 using System;
@@ -62,14 +61,14 @@ namespace OpenSim.Framework.Communications.Services
         IAssetDataPlugin m_assetProvider = null;
 
         // These two used for remote access
-        string m_UserServerURL = string.Empty;
+        //string m_UserServerURL = string.Empty;
         string m_AssetServerURL = string.Empty;
         SynchronousGridAssetClient m_AssetClient = null;
 
         // Constructor for grid inventory server
         public HGInventoryService(InventoryServiceBase invService, string assetServiceURL, string userServiceURL, IHttpServer httpserver, string thisurl)
         {
-            m_UserServerURL = userServiceURL;
+            //m_UserServerURL = userServiceURL;
             m_AssetServerURL = assetServiceURL;
 
             m_AssetClient = new SynchronousGridAssetClient(m_AssetServerURL);
@@ -108,6 +107,17 @@ namespace OpenSim.Framework.Communications.Services
         public virtual void AddHttpHandlers()
         {
             httpServer.AddHTTPHandler("/InvCap/", CapHandler);
+
+            // Un-cap'ed for now
+            httpServer.AddStreamHandler(new RestDeserialiseSecureHandler<Guid, InventoryItemBase>(
+                    "POST", "/GetItem/", GetInventoryItem, CheckAuthSession));
+
+        }
+
+        public InventoryItemBase GetInventoryItem(Guid id)
+        {
+            UUID itemID = new UUID(id);
+            return m_inventoryService.GetInventoryItem(itemID);
         }
 
         public bool CheckAuthSession(string session_id, string avatar_id)
@@ -234,6 +244,11 @@ namespace OpenSim.Framework.Communications.Services
             }
         }
 
+        public void AddUploadedInventoryItem(UUID agentID, InventoryItemBase item)
+        {
+            AddItem(item);
+        }
+
         public InventoryItemBase UpdateItem(InventoryItemBase item)
         {
             m_log.DebugFormat("[HGStandaloneInvService]: Update item {0} from {1}", item.ID, item.Owner);
@@ -349,10 +364,15 @@ namespace OpenSim.Framework.Communications.Services
                 m_log.DebugFormat("[HGStandaloneInvService]: client with uuid {0} is trying to get an item of owner {1}", item.Owner, item2.Owner);
                 return asset;
             }
+            UUID assetID = item2.AssetID;
+            if (assetID != item.AssetID)
+            {
+                m_log.WarnFormat("[HGStandaloneInvService]: asset IDs don't match {0}, {1}", item.AssetID, item2.AssetID);
+            }
 
             // All good, get the asset
             //AssetBase theasset = m_assetProvider.FetchAsset(item.AssetID);
-            AssetBase theasset = FetchAsset(item.AssetID, (item.InvType == (int)InventoryType.Texture)); 
+            AssetBase theasset = FetchAsset(assetID, (item.InvType == (int)InventoryType.Texture)); 
 
             m_log.Debug("[HGStandaloneInvService] Found asset " + ((theasset == null) ? "NULL" : "Not Null"));
             if (theasset != null)
@@ -370,6 +390,11 @@ namespace OpenSim.Framework.Communications.Services
             StoreAsset(asset);
   
             return true;
+        }
+
+        public void PostAnAsset(AssetBase asset)
+        {
+            PostAsset(asset);
         }
 
         /// <summary>
@@ -598,6 +623,10 @@ namespace OpenSim.Framework.Communications.Services
             Caps caps = new Caps(null, httpServer, m_thisHostname, m_thisPort, authToken, userID, false, "Inventory");
             caps.RegisterInventoryServiceHandlers("/" + authToken + "/InventoryCap/");
             caps.ItemUpdatedCall = UpdateInventoryItemAsset;
+            caps.AddNewInventoryItem = AddUploadedInventoryItem;
+            caps.AddNewAsset = PostAnAsset;
+            //caps.GetClient = 
+
             Hashtable capsHandlers = caps.CapsHandlers.CapsDetails;
 
             httpServer.AddStreamHandler(new RestDeserialiseSecureHandler<Guid, InventoryCollection>(
