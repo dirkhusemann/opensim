@@ -133,11 +133,24 @@ namespace OpenSim.Region.Physics.OdePlugin
             // ode = dode;
             _velocity = new PhysicsVector();
             _target_velocity = new PhysicsVector();
-            _position = pos;
 
-            m_taintPosition.X = pos.X;
-            m_taintPosition.Y = pos.Y;
-            m_taintPosition.Z = pos.Z;
+
+            if (PhysicsVector.isFinite(pos))
+            {
+                _position = pos;
+                m_taintPosition.X = pos.X;
+                m_taintPosition.Y = pos.Y;
+                m_taintPosition.Z = pos.Z;
+            }
+            else
+            {
+                _position = new PhysicsVector(128,128,parent_scene.GetTerrainHeightAtXY(128,128) + 10);
+                m_taintPosition.X = _position.X;
+                m_taintPosition.Y = _position.Y;
+                m_taintPosition.Z = _position.Z;
+                m_log.Warn("[PHYSICS]: Got NaN Position on Character Create");
+            }
+
 
             _acceleration = new PhysicsVector();
             _parent_scene = parent_scene;
@@ -380,10 +393,23 @@ namespace OpenSim.Region.Physics.OdePlugin
             set
             {
                 if (Body == IntPtr.Zero || Shell == IntPtr.Zero)
-                    _position.X = value.X; _position.Y = value.Y; _position.Z = value.Z;
-                  
-                m_taintPosition.X = value.X; m_taintPosition.Y = value.Y; m_taintPosition.Z = value.Z;
-                _parent_scene.AddPhysicsActorTaint(this);
+                {
+                    if (PhysicsVector.isFinite(value))
+                    {
+                        _position.X = value.X;
+                        _position.Y = value.Y;
+                        _position.Z = value.Z;
+
+                        m_taintPosition.X = value.X;
+                        m_taintPosition.Y = value.Y;
+                        m_taintPosition.Z = value.Z;
+                        _parent_scene.AddPhysicsActorTaint(this);
+                    }
+                    else
+                    {
+                        m_log.Warn("[PHYSICS]: Got a NaN Position from Scene on a Character");
+                    }
+                }
             }
         }
 
@@ -402,15 +428,22 @@ namespace OpenSim.Region.Physics.OdePlugin
             get { return new PhysicsVector(CAPSULE_RADIUS*2, CAPSULE_RADIUS*2, CAPSULE_LENGTH); }
             set
             {
-                m_pidControllerActive = true;
-               
+                if (PhysicsVector.isFinite(value))
+                {
+                    m_pidControllerActive = true;
+
                     PhysicsVector SetSize = value;
-                    m_tainted_CAPSULE_LENGTH = (SetSize.Z * 1.15f) - CAPSULE_RADIUS * 2.0f;
+                    m_tainted_CAPSULE_LENGTH = (SetSize.Z*1.15f) - CAPSULE_RADIUS*2.0f;
                     //m_log.Info("[SIZE]: " + CAPSULE_LENGTH.ToString());
 
                     Velocity = new PhysicsVector(0f, 0f, 0f);
-               
-                _parent_scene.AddPhysicsActorTaint(this);
+
+                    _parent_scene.AddPhysicsActorTaint(this);
+                }
+                else
+                {
+                    m_log.Warn("[PHYSICS]: Got a NaN Size from Scene on a Character");
+                }
             }
         }
         
@@ -616,8 +649,15 @@ namespace OpenSim.Region.Physics.OdePlugin
             }
             set
             {
-                m_pidControllerActive = true;
-                _target_velocity = value;
+                if (PhysicsVector.isFinite(value))
+                {
+                    m_pidControllerActive = true;
+                    _target_velocity = value;
+                }
+                else
+                {
+                    m_log.Warn("[PHYSICS]: Got a NaN velocity from Scene in a Character");
+                }
             }
         }
 
@@ -667,22 +707,29 @@ namespace OpenSim.Region.Physics.OdePlugin
         /// <param name="force"></param>
         public override void AddForce(PhysicsVector force, bool pushforce)
         {
-            if (pushforce)
+            if (PhysicsVector.isFinite(force))
             {
-                m_pidControllerActive = false;
-                force *= 100f;
-                doForce(force);
-                //m_log.Debug("Push!");
-                //_target_velocity.X += force.X;
-               // _target_velocity.Y += force.Y;
-                //_target_velocity.Z += force.Z;
+                if (pushforce)
+                {
+                    m_pidControllerActive = false;
+                    force *= 100f;
+                    doForce(force);
+                    //m_log.Debug("Push!");
+                    //_target_velocity.X += force.X;
+                    // _target_velocity.Y += force.Y;
+                    //_target_velocity.Z += force.Z;
+                }
+                else
+                {
+                    m_pidControllerActive = true;
+                    _target_velocity.X += force.X;
+                    _target_velocity.Y += force.Y;
+                    _target_velocity.Z += force.Z;
+                }
             }
             else
             {
-                m_pidControllerActive = true;
-                _target_velocity.X += force.X;
-                _target_velocity.Y += force.Y;
-                _target_velocity.Z += force.Z;
+                m_log.Warn("[PHYSICS]: Got a NaN force applied to a Character");
             }
             //m_lastUpdateSent = false;
         }
@@ -847,8 +894,14 @@ namespace OpenSim.Region.Physics.OdePlugin
                 // end add Kitto Flora
 
             }
-
-            doForce(vec);
+            if (PhysicsVector.isFinite(vec))
+            {
+                doForce(vec);
+            }
+            else
+            {
+                m_log.Warn("[PHYSICS]: Got a NaN force vector in Move()");
+            }
         }
 
         /// <summary>
