@@ -118,12 +118,14 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
         {
             mesher = meshmerizer;
             m_config = config;
+            /*
             if (Environment.OSVersion.Platform == PlatformID.Unix)
             {
                 m_log.Fatal("[BulletDotNET]: This configuration is not supported on *nix currently");
                 Thread.Sleep(5000);
                 Environment.Exit(0);
             }
+            */
             m_broadphase = new btAxisSweep3(worldAabbMin, worldAabbMax, 16000);
             m_collisionConfiguration = new btDefaultCollisionConfiguration();
             m_solver = new btSequentialImpulseConstraintSolver();
@@ -187,8 +189,8 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
             
             newPrim = new BulletDotNETPrim(name, this, pos, siz, rot, mesh, pbs, isphysical);
 
-            lock (m_prims)
-                m_prims.Add(newPrim);
+            //lock (m_prims)
+            //    m_prims.Add(newPrim);
             
 
             return newPrim;
@@ -267,6 +269,7 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
             {
                 foreach (BulletDotNETPrim prim in m_prims)
                 {
+                    if (prim != null)
                     prim.Move(timeStep);
                 }
             }
@@ -279,6 +282,10 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
 
             foreach (BulletDotNETPrim prm in m_activePrims)
             {
+                /*
+                if (prm != null)
+                    if (prm.Body != null)
+                */
                 prm.UpdatePositionAndVelocity();
             }
 
@@ -487,6 +494,7 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
                 {
                     m_world.removeRigidBody(body);
                 }
+                remActivePrim(prm);
                 m_prims.Remove(prm);
             }
 
@@ -662,6 +670,7 @@ namespace OpenSim.Region.Physics.BulletDotNETPlugin
                 {
                     m_prims.Add(pPrim);
                     m_world.addRigidBody(pPrim.Body);
+                    m_log.Debug("ADDED");
                 }
             }
         }
