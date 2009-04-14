@@ -203,6 +203,17 @@
     ;MapImageModule = "MapImageModule"
 
     ; ##
+    ; ## Scripting XMLRPC mapper
+    ; ##
+
+    ; If enabled, this will post an event, "xmlrpc_uri(string)" to the
+    ; script concurrently with the first remote_data event.
+    ; This will contain the fully qualified URI an external site needs
+    ; to use to send XMLRPC requests to that script
+
+    ;XmlRpcRouterModule = "XmlRpcRouterModule"
+
+    ; ##
     ; ## Customized Cache Implementation
     ; ##
     ;
@@ -238,8 +249,8 @@
 
     ; enableprejump = true
 
-[SMTP]
 
+[SMTP]
     enabled=false
 
     ;enabled=true
@@ -250,21 +261,10 @@
     ;SMTP_SERVER_LOGIN=foo
     ;SMTP_SERVER_PASSWORD=bar
 
-[Communications]
 
+[Communications]
     ;InterregionComms = "LocalComms"
     InterregionComms = "RESTComms"
-
-[AutoOAR]
-
-    ;Enable the AutoOAR module. 
-    ;OAR's are automatically exported to Regionname_x_y.oar.tar.gz
-
-    enabled = false
-
-    ;Interval, in minutes, between exports
-
-    interval = 20
 
 
 [StandAlone]
@@ -368,6 +368,7 @@
     ; http://wiki.secondlife.com/wiki/LlHTTPRequest for comments on adding
     ; " (Mozilla Compatible)" to the text where there are problems with a web server
     ;user_agent = "OpenSim LSL (Mozilla Compatible)"
+
 
 [ClientStack.LindenUDP]
     ; This is the multiplier applied to all client throttles for outgoing UDP network data
@@ -785,11 +786,14 @@
 [Cloud]
     ; Enable this to generate classic particle clouds above the sim.
     ; default is disabled - turn it on here
-    enabled = true
+    enabled = false
 
-    ; Density of cloud cover 0.0 to 1.0
+    ; Density of cloud cover 0.0 to 1.0 Defult 0.5
     density = 0.5
 
+    ; update interval for the cloud cover data returned by llCloud().  
+    ; default is 1000
+    cloud_update_rate = 1000
 
 [Trees]
     ; Enable this to allow the tree module to manage your sim trees, including growing, reproducing and dying
@@ -1103,6 +1107,10 @@
     ; Increasing this to large values potentially opens
     ; up the system to malicious scripters
     ; NotecardLineReadCharsMax = 255
+
+    ; Sensor settings
+    SensorMaxRange = 96.0
+    SensorMaxResults = 16
 
     ; OS Functions enable/disable
     ; For each function, you can add one line, as shown

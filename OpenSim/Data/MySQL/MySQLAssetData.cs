@@ -109,6 +109,24 @@ namespace OpenSim.Data.MySQL
 
         public override void Dispose() { }
 
+        /// <summary>
+        /// Database provider version
+        /// </summary>
+        override public string Version
+        {
+            get { return _dbConnection.getVersion(); }
+        }
+
+        /// <summary>
+        /// The name of this DB provider
+        /// </summary>
+        override public string Name
+        {
+            get { return "MySQL Asset storage engine"; }
+        }
+
+        #endregion
+
         #region IAssetDataPlugin Members
 
         /// <summary>
@@ -117,7 +135,7 @@ namespace OpenSim.Data.MySQL
         /// <param name="assetID">Asset UUID to fetch</param>
         /// <returns>Return the asset</returns>
         /// <remarks>On failure : throw an exception and attempt to reconnect to database</remarks>
-        override public AssetBase FetchAsset(UUID assetID)
+        override protected AssetBase FetchStoredAsset(UUID assetID)
         {
             AssetBase asset = null;
             lock (_dbConnection)
@@ -177,7 +195,7 @@ namespace OpenSim.Data.MySQL
         {
             lock (_dbConnection)
             {
-                //m_log.Info("[ASSET DB]: Creating Asset " + Util.ToRawUuidString(asset.FullID));
+                //m_log.Info("[ASSET DB]: Creating Asset " + asset.FullID);
                 if (ExistsAsset(asset.FullID))
                 {
                     //m_log.Info("[ASSET DB]: Asset exists already, ignoring.");
@@ -364,22 +382,6 @@ namespace OpenSim.Data.MySQL
 
         #endregion
 
-        /// <summary>
-        /// Database provider version
-        /// </summary>
-        override public string Version
-        {
-            get { return _dbConnection.getVersion(); }
-        }
 
-        /// <summary>
-        /// The name of this DB provider
-        /// </summary>
-        override public string Name
-        {
-            get { return "MySQL Asset storage engine"; }
-        }
-
-        #endregion
     }
 }

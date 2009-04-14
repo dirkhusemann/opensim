@@ -53,6 +53,9 @@ namespace OpenSim.Framework
 
     public delegate UUID RezSingleAttachmentFromInv(IClientAPI remoteClient, UUID itemID, uint AttachmentPt);
 
+    public delegate void RezMultipleAttachmentsFromInv(IClientAPI remoteClient, RezMultipleAttachmentsFromInvPacket.HeaderDataBlock header,
+                                                       RezMultipleAttachmentsFromInvPacket.ObjectDataBlock[] objects);
+
     public delegate void ObjectAttach(
         IClientAPI remoteClient, uint objectLocalID, uint AttachmentPt, Quaternion rot, bool silent);
 
@@ -157,7 +160,7 @@ namespace OpenSim.Framework
         );
 
     public delegate void SpinStart(UUID objectID, IClientAPI remoteClient);
-    public delegate void SpinUpdate(UUID objectID, Quaternion rotation, IClientAPI remoteClient);
+    public delegate void SpinObject(UUID objectID, Quaternion rotation, IClientAPI remoteClient);
     public delegate void SpinStop(UUID objectID, IClientAPI remoteClient);
 
     public delegate void ParcelAccessListRequest(
@@ -436,6 +439,7 @@ namespace OpenSim.Framework
     public delegate void PickInfoUpdate(IClientAPI client, UUID pickID, UUID creatorID, bool topPick, string name, string desc, UUID snapshotID, int sortOrder, bool enabled);
     public delegate void AvatarNotesUpdate(IClientAPI client, UUID targetID, string notes);
     public delegate void MuteListRequest(IClientAPI client, uint muteCRC);
+    public delegate void AvatarInterestUpdate(IClientAPI client, uint wantmask, string wanttext, uint skillsmask, string skillstext, string languages);
 
     #endregion
 
@@ -566,6 +570,7 @@ namespace OpenSim.Framework
         // [Obsolete("LLClientView Specific - Replace and rename OnAvatarUpdate. Difference from SetAppearance?")]
         event AvatarNowWearing OnAvatarNowWearing;
         event RezSingleAttachmentFromInv OnRezSingleAttachmentFromInv;
+        event RezMultipleAttachmentsFromInv OnRezMultipleAttachmentsFromInv;
         event UUIDNameRequest OnDetachAttachmentIntoInv;
         event ObjectAttach OnObjectAttach;
         event ObjectDeselect OnObjectDetach;
@@ -603,6 +608,9 @@ namespace OpenSim.Framework
         event GrabObject OnGrabObject;
         event ObjectSelect OnDeGrabObject;
         event MoveObject OnGrabUpdate;
+        event SpinStart OnSpinStart;
+        event SpinObject OnSpinUpdate;
+        event SpinStop OnSpinStop;
 
         event UpdateShape OnUpdatePrimShape;
         event ObjectExtraParams OnUpdateExtraParams;

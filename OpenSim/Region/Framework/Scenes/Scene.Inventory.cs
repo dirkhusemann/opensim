@@ -31,6 +31,7 @@ using System.Reflection;
 using System.Text;
 using System.Timers;
 using OpenMetaverse;
+using OpenMetaverse.Packets;
 using log4net;
 using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
@@ -477,7 +478,7 @@ namespace OpenSim.Region.Framework.Scenes
                         // Insert a copy of the item into the recipient
                         InventoryItemBase itemCopy = new InventoryItemBase();
                         itemCopy.Owner = recipient;
-                        itemCopy.Creator = item.Creator;
+                        itemCopy.CreatorId = item.CreatorId;
                         itemCopy.ID = UUID.Random();
                         itemCopy.AssetID = item.AssetID;
                         itemCopy.Description = item.Description;
@@ -835,7 +836,7 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 InventoryItemBase item = new InventoryItemBase();
                 item.Owner = remoteClient.AgentId;
-                item.Creator = remoteClient.AgentId;
+                item.CreatorId = remoteClient.AgentId.ToString();
                 item.ID = UUID.Random();
                 item.AssetID = asset.FullID;
                 item.Description = asset.Description;
@@ -1085,7 +1086,7 @@ namespace OpenSim.Region.Framework.Scenes
             InventoryItemBase agentItem = new InventoryItemBase();
 
             agentItem.ID = UUID.Random();
-            agentItem.Creator = taskItem.CreatorID;
+            agentItem.CreatorId = taskItem.CreatorID.ToString();
             agentItem.Owner = destAgent;
             agentItem.AssetID = taskItem.AssetID;
             agentItem.Description = taskItem.Description;
@@ -1548,7 +1549,7 @@ namespace OpenSim.Region.Framework.Scenes
                 taskItem.Type = itemBase.AssetType;
                 taskItem.InvType = itemBase.InvType;
                 taskItem.OwnerID = itemBase.Owner;
-                taskItem.CreatorID = itemBase.Creator;
+                taskItem.CreatorID = itemBase.CreatorIdAsUuid;
                 taskItem.BasePermissions = itemBase.BasePermissions;
                 taskItem.CurrentPermissions = itemBase.CurrentPermissions;
                 taskItem.EveryonePermissions = itemBase.EveryOnePermissions;
@@ -1945,12 +1946,11 @@ namespace OpenSim.Region.Framework.Scenes
                 }
 
                 item = new InventoryItemBase();
-                item.Creator = objectGroup.RootPart.CreatorID;
+                item.CreatorId = objectGroup.RootPart.CreatorID.ToString();
                 item.ID = UUID.Random();
                 item.InvType = (int)InventoryType.Object;
                 item.Folder = folder.ID;
                 item.Owner = userInfo.UserProfile.ID;
-
             }
 
             AssetBase asset = CreateAsset(
@@ -2114,6 +2114,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                 CachedUserInfo userInfo =
                     CommsManager.UserProfileCacheService.GetUserDetails(AgentId);
+                
                 if (userInfo != null)
                 {
                     AssetBase asset = CreateAsset(
@@ -2124,7 +2125,7 @@ namespace OpenSim.Region.Framework.Scenes
                     CommsManager.AssetCache.AddAsset(asset);
 
                     InventoryItemBase item = new InventoryItemBase();
-                    item.Creator = grp.RootPart.CreatorID;
+                    item.CreatorId = grp.RootPart.CreatorID.ToString();
                     item.Owner = remoteClient.AgentId;
                     item.ID = UUID.Random();
                     item.AssetID = asset.FullID;
@@ -2561,6 +2562,15 @@ namespace OpenSim.Region.Framework.Scenes
 
             }
             return att.UUID;
+        }
+
+        public void RezMultipleAttachments(IClientAPI remoteClient, RezMultipleAttachmentsFromInvPacket.HeaderDataBlock header,
+                                       RezMultipleAttachmentsFromInvPacket.ObjectDataBlock[] objects)
+        {
+            foreach (RezMultipleAttachmentsFromInvPacket.ObjectDataBlock obj in objects)
+            {
+                RezSingleAttachment(remoteClient, obj.ItemID, obj.AttachmentPt);
+            }
         }
 
         public void AttachObject(IClientAPI controllingClient, uint localID, uint attachPoint, Quaternion rot, Vector3 pos, bool silent)

@@ -78,6 +78,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 #pragma warning disable 414
         private EventManager m_EventManager;
 #pragma warning restore 414
+        private IXmlRpcRouter m_XmlRpcRouter;
         private int m_EventLimit;
         private bool m_KillTimedOutScripts;
 
@@ -130,6 +131,11 @@ namespace OpenSim.Region.ScriptEngine.XEngine
             get { return m_ScriptEngines; }
         }
 
+        public IScriptModule ScriptModule
+        {
+            get { return this; }
+        }
+
         // private struct RezScriptParms
         // {
         //     uint LocalID;
@@ -141,6 +147,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
         {
             get { return m_ScriptConfig; }
         }
+
+        public event ScriptRemoved OnScriptRemoved;
+        public event ObjectRemoved OnObjectRemoved;
 
         //
         // IRegionModule functions
@@ -219,6 +228,13 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                         m_MaxScriptQueue, m_StackSize);
 
             m_Scene.StackModuleInterface<IScriptModule>(this);
+
+            m_XmlRpcRouter = m_Scene.RequestModuleInterface<IXmlRpcRouter>();
+            if (m_XmlRpcRouter != null)
+            {
+                OnScriptRemoved += m_XmlRpcRouter.ScriptRemoved;
+                OnObjectRemoved += m_XmlRpcRouter.ObjectRemoved;
+            }
         }
 
         public void PostInitialise()
@@ -337,6 +353,9 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
         public void OnRezScript(uint localID, UUID itemID, string script, int startParam, bool postOnRez, string engine, int stateSource)
         {
+            if (script.StartsWith("//MRM:"))
+                return;
+
             List<IScriptModule> engines = new List<IScriptModule>(m_Scene.RequestModuleInterfaces<IScriptModule>());
 
             List<string> names = new List<string>();
@@ -702,6 +721,8 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 if (part != null)
                     part.RemoveScriptEvents(itemID);
 
+                bool objectRemoved = false;
+
                 lock (m_PrimObjects)
                 {
                     // Remove the script from it's prim
@@ -715,6 +736,7 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                         if (m_PrimObjects[localID].Count == 0)
                         {
                             m_PrimObjects.Remove(localID);
+                            objectRemoved = true;
                         }
                     }
                 }
@@ -731,8 +753,16 @@ namespace OpenSim.Region.ScriptEngine.XEngine
 
                 instance = null;
 
+                ObjectRemoved handlerObjectRemoved = OnObjectRemoved;
+                if (handlerObjectRemoved != null)
+                    handlerObjectRemoved(part.UUID);
+
                 CleanAssemblies();
             }
+
+            ScriptRemoved handlerScriptRemoved = OnScriptRemoved;
+            if (handlerScriptRemoved != null)
+                handlerScriptRemoved(itemID);
         }
 
         public void OnScriptReset(uint localID, UUID itemID)
@@ -901,6 +931,54 @@ namespace OpenSim.Region.ScriptEngine.XEngine
                 return true;
             }
             return false;
+        }
+
+        public bool PostScriptEvent(UUID itemID, string name, Object[] p)
+        {
+            Object[] lsl_p = new Object[p.Length];
+            for (int i = 0; i < p.Length ; i++)
+            {
+                if (p[i] is int)
+                    lsl_p[i] = new LSL_Types.LSLInteger((int)p[i]);
+                else if (p[i] is string)
+                    lsl_p[i] = new LSL_Types.LSLString((string)p[i]);
+                else if (p[i] is Vector3)
+                    lsl_p[i] = new LSL_Types.Vector3(((Vector3)p[i]).X, ((Vector3)p[i]).Y, ((Vector3)p[i]).Z);
+                else if (p[i] is Quaternion)
+                    lsl_p[i] = new LSL_Types.Quaternion(((Quaternion)p[i]).X, ((Quaternion)p[i]).Y, ((Quaternion)p[i]).Z, ((Quaternion)p[i]).W);
+                else if (p[i] is float)
+                    lsl_p[i] = new LSL_Types.LSLFloat((float)p[i]);
+                else
+                    lsl_p[i] = p[i];
+            }
+
+            return PostScriptEvent(itemID, new EventParams(name, lsl_p, new DetectParams[0]));
+        }
+
+        public bool PostObjectEvent(UUID itemID, string name, Object[] p)
+        {
+            SceneObjectPart part = m_Scene.GetSceneObjectPart(itemID);
+            if (part == null)
+                return false;
+
+            Object[] lsl_p = new Object[p.Length];
+            for (int i = 0; i < p.Length ; i++)
+            {
+                if (p[i] is int)
+                    lsl_p[i] = new LSL_Types.LSLInteger((int)p[i]);
+                else if (p[i] is string)
+                    lsl_p[i] = new LSL_Types.LSLString((string)p[i]);
+                else if (p[i] is Vector3)
+                    lsl_p[i] = new LSL_Types.Vector3(((Vector3)p[i]).X, ((Vector3)p[i]).Y, ((Vector3)p[i]).Z);
+                else if (p[i] is Quaternion)
+                    lsl_p[i] = new LSL_Types.Quaternion(((Quaternion)p[i]).X, ((Quaternion)p[i]).Y, ((Quaternion)p[i]).Z, ((Quaternion)p[i]).W);
+                else if (p[i] is float)
+                    lsl_p[i] = new LSL_Types.LSLFloat((float)p[i]);
+                else
+                    lsl_p[i] = p[i];
+            }
+
+            return PostObjectEvent(part.LocalId, new EventParams(name, lsl_p, new DetectParams[0]));
         }
 
         public Assembly OnAssemblyResolve(object sender,

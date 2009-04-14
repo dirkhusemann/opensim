@@ -53,11 +53,61 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         /// <returns></returns>
         private SceneObjectPart GetSOP()
         {
-            if (m_rootScene.Entities.ContainsKey(m_localID))
-                return ((SceneObjectGroup) m_rootScene.Entities[m_localID]).RootPart;
-
-            return null;
+            return m_rootScene.GetSceneObjectPart(m_localID);
         }
+
+        #region OnTouch
+
+        private event OnTouchDelegate _OnTouch;
+        private bool _OnTouchActive = false;
+
+        public event OnTouchDelegate OnTouch
+        {
+            add
+            {
+                if(!_OnTouchActive)
+                {
+                    GetSOP().Flags |= PrimFlags.Touch;
+                    _OnTouchActive = true;
+                    m_rootScene.EventManager.OnObjectGrab += EventManager_OnObjectGrab;
+                }
+
+                _OnTouch += value;
+            }
+            remove
+            {
+                _OnTouch -= value;
+
+                if (_OnTouch == null)
+                {
+                    GetSOP().Flags &= ~PrimFlags.Touch;
+                    _OnTouchActive = false;
+                    m_rootScene.EventManager.OnObjectGrab -= EventManager_OnObjectGrab;
+                }
+            }
+        }
+
+        void EventManager_OnObjectGrab(uint localID, uint originalID, Vector3 offsetPos, IClientAPI remoteClient, SurfaceTouchEventArgs surfaceArgs)
+        {
+            if (_OnTouchActive && m_localID == localID)
+            {
+                TouchEventArgs e = new TouchEventArgs();
+                e.Avatar = new SPAvatar(m_rootScene, remoteClient.AgentId);
+                e.TouchBiNormal = surfaceArgs.Binormal;
+                e.TouchMaterialIndex = surfaceArgs.FaceIndex;
+                e.TouchNormal = surfaceArgs.Normal;
+                e.TouchPosition = surfaceArgs.Position;
+                e.TouchST = new Vector2(surfaceArgs.STCoord.X, surfaceArgs.STCoord.Y);
+                e.TouchUV = new Vector2(surfaceArgs.UVCoord.X, surfaceArgs.UVCoord.Y);
+
+                IObject sender = this;
+
+                if (_OnTouch != null)
+                    _OnTouch(sender, e);
+            }
+        }
+
+        #endregion
 
         public bool Exists
         {
@@ -119,7 +169,7 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 
                 for (int i = 0; i < rets.Length;i++ )
                 {
-                    //rets[i] = new ObjectFace 
+                    rets[i] = new SOPObjectMaterial(i, sop);
                 }
 
                 return rets;

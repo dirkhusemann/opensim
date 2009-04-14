@@ -233,24 +233,12 @@ namespace OpenSim.Region.Framework.Scenes
             get { return m_defaultScriptEngine; }
         }
 
-        // Local reference to the objects in the scene (which are held in the scenegraph)
-        //        public Dictionary<UUID, SceneObjectGroup> Objects
-        //        {
-        //            get { return m_sceneGraph.SceneObjects; }
-        //        }
-
         // Reference to all of the agents in the scene (root and child)
         protected Dictionary<UUID, ScenePresence> m_scenePresences
         {
             get { return m_sceneGraph.ScenePresences; }
             set { m_sceneGraph.ScenePresences = value; }
         }
-
-        //        protected Dictionary<UUID, SceneObjectGroup> m_sceneObjects
-        //        {
-        //            get { return m_sceneGraph.SceneObjects; }
-        //            set { m_sceneGraph.SceneObjects = value; }
-        //        }
 
         public EntityManager Entities
         {
@@ -1744,8 +1732,9 @@ namespace OpenSim.Region.Framework.Scenes
             if (sp != null)
             {
                 uint attPt = (uint)sp.Appearance.GetAttachpoint(itemID);
-                SceneObjectGroup sog = m_sceneGraph.RezSingleAttachment(sp.ControllingClient, itemID, attPt);
+                m_sceneGraph.RezSingleAttachment(sp.ControllingClient, itemID, attPt);
             }
+            
             return false;
         }
 
@@ -1932,9 +1921,12 @@ namespace OpenSim.Region.Framework.Scenes
             client.OnObjectSelect += SelectPrim;
             client.OnObjectDeselect += DeselectPrim;
             client.OnGrabUpdate += m_sceneGraph.MoveObject;
+            client.OnSpinStart += m_sceneGraph.SpinStart;
+            client.OnSpinUpdate += m_sceneGraph.SpinObject;
             client.OnDeRezObject += DeRezObject;
             client.OnRezObject += RezObject;
             client.OnRezSingleAttachmentFromInv += RezSingleAttachment;
+            client.OnRezMultipleAttachmentsFromInv += RezMultipleAttachments;
             client.OnDetachAttachmentIntoInv += DetachSingleAttachmentToInv;
             client.OnObjectAttach += m_sceneGraph.AttachObject;
             client.OnObjectDetach += m_sceneGraph.DetachObject;
@@ -2255,6 +2247,8 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 m_sceneGridService.ClearUserAgent(agentID);
             }
+
+            m_authenticateHandler.RemoveCircuit(avatar.ControllingClient.CircuitCode);
 
             //m_log.InfoFormat("[SCENE] Memory pre  GC {0}", System.GC.GetTotalMemory(false));
             //m_log.InfoFormat("[SCENE] Memory post GC {0}", System.GC.GetTotalMemory(true));
@@ -3145,6 +3139,7 @@ namespace OpenSim.Region.Framework.Scenes
                 catch (Exception e)
                 {
                     m_log.Info("[BUG] in " + RegionInfo.RegionName + ": " + e.ToString());
+                    m_log.Info("[BUG] Stack Trace: " + e.StackTrace);
                 }
             }
         }
@@ -3366,7 +3361,7 @@ namespace OpenSim.Region.Framework.Scenes
                     CommsManager.AssetCache.AddAsset(asset);
 
                     InventoryItemBase item = new InventoryItemBase();
-                    item.Creator = part.CreatorID;
+                    item.CreatorId = part.CreatorID.ToString();
 
                     item.ID = UUID.Random();
                     item.Owner = remoteClient.AgentId;
@@ -3487,7 +3482,6 @@ namespace OpenSim.Region.Framework.Scenes
         protected internal void jointMoved(PhysicsJoint joint)
         {
             // m_parentScene.PhysicsScene.DumpJointInfo(); // non-thread-locked version; we should already be in a lock (OdeLock) when this callback is invoked
-            // FIXME: this causes a sequential lookup of all objects in the scene; use a dictionary
             SceneObjectPart jointProxyObject = GetSceneObjectPart(joint.ObjectNameInScene);
             if (jointProxyObject == null)
             {
@@ -3550,7 +3544,6 @@ namespace OpenSim.Region.Framework.Scenes
         protected internal void jointDeactivated(PhysicsJoint joint)
         {
             //m_log.Debug("[NINJA] SceneGraph.jointDeactivated, joint:" + joint.ObjectNameInScene);
-            // FIXME: this causes a sequential lookup of all objects in the scene; use a dictionary
             SceneObjectPart jointProxyObject = GetSceneObjectPart(joint.ObjectNameInScene);
             if (jointProxyObject == null)
             {
@@ -3575,7 +3568,6 @@ namespace OpenSim.Region.Framework.Scenes
         // from within the OdePhysicsScene.
         public void jointErrorMessage(PhysicsJoint joint, string message)
         {
-            // FIXME: this causes a sequential lookup of all objects in the scene; use a dictionary
             if (joint != null)
             {
                 if (joint.ErrorMessageCount > PhysicsJoint.maxErrorMessages)

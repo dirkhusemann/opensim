@@ -73,13 +73,16 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 
         void EventManager_OnRezScript(uint localID, UUID itemID, string script, int startParam, bool postOnRez, string engine, int stateSource)
         {
-            if (script.StartsWith("//MiniMod:C#"))
+            if (script.StartsWith("//MRM:C#"))
             {
+                if(m_scene.GetSceneObjectPart(localID).OwnerID != m_scene.RegionInfo.MasterAvatarAssignedUUID)
+                    return;
+
                 try
                 {
                     m_log.Info("[MRM] Found C# MRM");
                     IWorld m_world = new World(m_scene);
-                    IHost m_host = new Host(new SOPObject(m_scene, localID));
+                    IHost m_host = new Host(new SOPObject(m_scene, localID), m_scene);
 
                     MRMBase mmb = (MRMBase)AppDomain.CurrentDomain.CreateInstanceFromAndUnwrap(
                                                 CompileFromDotNetText(script, itemID.ToString()),
@@ -91,8 +94,23 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                     m_log.Info("[MRM] Starting MRM");
                     mmb.Start();
                 }
+                catch (UnauthorizedAccessException e)
+                {
+                    m_log.Error("[MRM] UAE " + e.Message);
+                    m_log.Error("[MRM] " + e.StackTrace);
+
+                    if (e.InnerException != null)
+                        m_log.Error("[MRM] " + e.InnerException);
+
+                    m_scene.Broadcast(delegate(IClientAPI user)
+                    {
+                        user.SendAlertMessage(
+                            "MRM UnAuthorizedAccess: " + e);
+                    });
+                }
                 catch (Exception e)
                 {
+                    m_log.Info("[MRM] Error: " + e);
                     m_scene.Broadcast(delegate(IClientAPI user)
                                           {
                                               user.SendAlertMessage(
@@ -133,13 +151,15 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
         /// <returns></returns>
         internal string CompileFromDotNetText(string Script, string uuid)
         {
+            m_log.Info("MRM 1");
             const string ext = ".cs";
             const string FilePrefix = "MiniModule";
 
             // Output assembly name
             string OutFile = Path.Combine("MiniModules", Path.Combine(
                                                              m_scene.RegionInfo.RegionID.ToString(),
-                                                             FilePrefix + "_compiled_" + uuid + ".dll"));
+                                                             FilePrefix + "_compiled_" + uuid + "_" +
+                                                             Util.RandomClass.Next(9000) + ".dll"));
 
             // Create Directories for Assemblies
             if (!Directory.Exists("MiniModules"))
@@ -148,9 +168,18 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             if (!Directory.Exists(tmp))
                 Directory.CreateDirectory(tmp);
 
+
+            m_log.Info("MRM 2");
+
             try
             {
                 File.Delete(OutFile);
+            }
+            catch (UnauthorizedAccessException e)
+            {
+                throw new Exception("Unable to delete old existing " +
+                                    "script-file before writing new. Compile aborted: " +
+                                    e);
             }
             catch (IOException e)
             {
@@ -158,6 +187,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                                     "script-file before writing new. Compile aborted: " +
                                     e);
             }
+
+            m_log.Info("MRM 3");
 
             // DEBUG - write source to disk
             string srcFileName = FilePrefix + "_source_" +
@@ -176,6 +207,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                             srcFileName + "\": " + ex.ToString());
             }
 
+            m_log.Info("MRM 4");
+
             // Do actual compile
             CompilerParameters parameters = new CompilerParameters();
 
@@ -184,20 +217,35 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             string rootPath =
                 Path.GetDirectoryName(AppDomain.CurrentDomain.BaseDirectory);
 
+            List<string> libraries = new List<string>();
+            string[] lines = Script.Split(new string[] {"\n"}, StringSplitOptions.RemoveEmptyEntries);
+            foreach (string s in lines)
+            {
+                if(s.StartsWith("//@DEPENDS:"))
+                {
+                    libraries.Add(s.Replace("//@DEPENDS:", ""));
+                }
+            }
 
-            // TODO: Add Libraries
-            parameters.ReferencedAssemblies.Add(Path.Combine(rootPath,
-                                                             "OpenSim.Region.OptionalModules.dll"));
-            parameters.ReferencedAssemblies.Add(Path.Combine(rootPath,
-                                                             "log4net.dll"));
+            libraries.Add("OpenSim.Region.OptionalModules.dll");
+            libraries.Add("log4net.dll");
+
+            foreach (string library in libraries)
+            {
+                parameters.ReferencedAssemblies.Add(Path.Combine(rootPath, library));
+            }
 
             parameters.GenerateExecutable = false;
             parameters.OutputAssembly = OutFile;
             parameters.IncludeDebugInformation = true;
             parameters.TreatWarningsAsErrors = false;
 
+            m_log.Info("MRM 5");
+
             CompilerResults results = CScodeProvider.CompileAssemblyFromSource(
                 parameters, Script);
+
+            m_log.Info("MRM 6");
 
             int display = 5;
             if (results.Errors.Count > 0)
@@ -232,6 +280,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                 }
             }
 
+            m_log.Info("MRM 7");
+
             if (!File.Exists(OutFile))
             {
                 string errtext = String.Empty;
@@ -256,6 +306,8 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
                 throw new Exception(errtext);
             }
 
+            m_log.Info("MRM 8");
+
             // Convert to base64
             //
             string filetext = Convert.ToBase64String(data);
@@ -264,9 +316,13 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
 
             Byte[] buf = enc.GetBytes(filetext);
 
+            m_log.Info("MRM 9");
+
             FileStream sfs = File.Create(OutFile + ".cil.b64");
             sfs.Write(buf, 0, buf.Length);
             sfs.Close();
+
+            m_log.Info("MRM 10");
 
             return OutFile;
         }

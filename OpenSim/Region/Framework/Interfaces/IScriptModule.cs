@@ -25,15 +25,19 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using System;
 using OpenMetaverse;
 
 namespace OpenSim.Region.Framework.Interfaces
 {
-    public interface IScriptModule
+    public interface IScriptModule : IRegionModule
     {
         string ScriptEngineName { get; }
 
         string GetAssemblyName(UUID itemID);
         string GetXMLState(UUID itemID);
+
+        bool PostScriptEvent(UUID itemID, string name, Object[] args);
+        bool PostObjectEvent(UUID itemID, string name, Object[] args);
     }
 }

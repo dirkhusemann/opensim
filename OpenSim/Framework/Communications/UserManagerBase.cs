@@ -122,6 +122,11 @@ namespace OpenSim.Framework.Communications
             }
         }
 
+        public UserProfileData GetUserProfile(Uri uri)
+        {
+            throw new NotImplementedException();
+        }
+
         public UserAgentData GetAgentByUUID(UUID userId)
         {
             foreach (IUserDataPlugin plugin in _plugins)
@@ -135,6 +140,11 @@ namespace OpenSim.Framework.Communications
             }
 
             return null;
+        }
+
+        public Uri GetUserUri(UserProfileData userProfile)
+        {
+            throw new NotImplementedException();
         }
 
         // see IUserService
@@ -830,6 +840,5 @@ namespace OpenSim.Framework.Communications
         }
 
         #endregion
-
     }
 }

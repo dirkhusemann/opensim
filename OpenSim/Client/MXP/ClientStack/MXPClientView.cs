@@ -572,6 +572,7 @@ namespace OpenSim.Client.MXP.ClientStack
         public event SetAppearance OnSetAppearance;
         public event AvatarNowWearing OnAvatarNowWearing;
         public event RezSingleAttachmentFromInv OnRezSingleAttachmentFromInv;
+        public event RezMultipleAttachmentsFromInv OnRezMultipleAttachmentsFromInv;
         public event UUIDNameRequest OnDetachAttachmentIntoInv;
         public event ObjectAttach OnObjectAttach;
         public event ObjectDeselect OnObjectDetach;
@@ -606,6 +607,9 @@ namespace OpenSim.Client.MXP.ClientStack
         public event GrabObject OnGrabObject;
         public event ObjectSelect OnDeGrabObject;
         public event MoveObject OnGrabUpdate;
+        public event SpinStart OnSpinStart;
+        public event SpinObject OnSpinUpdate;
+        public event SpinStop OnSpinStop;
         public event UpdateShape OnUpdatePrimShape;
         public event ObjectExtraParams OnUpdateExtraParams;
         public event ObjectSelect OnObjectSelect;
@@ -747,6 +751,8 @@ namespace OpenSim.Client.MXP.ClientStack
         public event PickInfoUpdate OnPickInfoUpdate;
         public event AvatarNotesUpdate OnAvatarNotesUpdate;
         public event MuteListRequest OnMuteListRequest;
+        public event AvatarInterestUpdate OnAvatarInterestUpdate;
+
         #pragma warning restore 67
 
         #endregion

@@ -37,9 +37,10 @@ namespace OpenSim.Region.CoreModules
 {
     public class CloudModule : ICloudModule
     {
-        private static readonly log4net.ILog m_log 
-            = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
+//        private static readonly log4net.ILog m_log 
+//            = log4net.LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+        private uint m_frame = 0;
+        private int m_frameUpdateRate = 1000;
         private Random m_rndnums = new Random(Environment.TickCount);
         private Scene m_scene = null;
         private bool m_ready = false;
@@ -47,8 +48,6 @@ namespace OpenSim.Region.CoreModules
         private float m_cloudDensity = 1.0F;
         private float[] cloudCover = new float[16 * 16];
 
-        private Dictionary<UUID, ulong> m_rootAgents = new Dictionary<UUID, ulong>();
-     
         public void Initialise(Scene scene, IConfigSource config)
         {
             IConfig cloudConfig = config.Configs["Cloud"];
@@ -57,6 +56,7 @@ namespace OpenSim.Region.CoreModules
             {
                 m_enabled = cloudConfig.GetBoolean("enabled", false);
                 m_cloudDensity = cloudConfig.GetFloat("density", 0.5F);
+                m_frameUpdateRate = cloudConfig.GetInt("cloud_update_rate", 1000);
             }
 
             if (m_enabled)
@@ -64,10 +64,9 @@ namespace OpenSim.Region.CoreModules
 
                 m_scene = scene;
 
-                scene.EventManager.OnMakeChildAgent += MakeChildAgent;
-                scene.EventManager.OnAvatarEnteringNewParcel += AvatarEnteringParcel;
-                scene.EventManager.OnClientClosed += ClientLoggedOut;
+                scene.EventManager.OnNewClient += CloudsToClient;
                 scene.RegisterModuleInterface<ICloudModule>(this);
+                scene.EventManager.OnFrame += CloudUpdate;
 
                 GenerateCloudCover();
 
@@ -87,9 +86,8 @@ namespace OpenSim.Region.CoreModules
             {
                 m_ready = false;
                 //  Remove our hooks
-                m_scene.EventManager.OnMakeChildAgent -= MakeChildAgent;
-                m_scene.EventManager.OnAvatarEnteringNewParcel -= AvatarEnteringParcel;
-                m_scene.EventManager.OnClientClosed -= ClientLoggedOut;
+                m_scene.EventManager.OnNewClient -= CloudsToClient;
+                m_scene.EventManager.OnFrame -= CloudUpdate;
             }
         }
 
@@ -122,6 +120,72 @@ namespace OpenSim.Region.CoreModules
             return cover;
         }
 
+        private void UpdateCloudCover()
+        {
+            float[] newCover = new float[16 * 16];
+            int rowAbove = new int();
+            int rowBelow = new int();
+            int columnLeft = new int();
+            int columnRight = new int();
+            for (int x = 0; x < 16; x++)
+            {
+                if (x == 0)
+                {
+                    columnRight = x + 1;
+                    columnLeft = 15;
+                }
+                else if (x == 15)
+                {
+                    columnRight = 0;
+                    columnLeft = x - 1;
+                }
+                else 
+                {
+                    columnRight = x + 1;
+                    columnLeft = x - 1;
+                }
+                for (int y = 0; y< 16; y++)
+                {
+                    if (y == 0)
+                    {
+                        rowAbove = y + 1;
+                        rowBelow = 15;
+                    }
+                    else if (y == 15)
+                    {
+                        rowAbove = 0;
+                        rowBelow = y - 1;
+                    }
+                    else
+                    {
+                        rowAbove = y + 1;
+                        rowBelow = y - 1;
+                    }
+                    float neighborAverage = (cloudCover[rowBelow * 16 + columnLeft] + 
+                                             cloudCover[y * 16 + columnLeft] + 
+                                             cloudCover[rowAbove * 16 + columnLeft] + 
+                                             cloudCover[rowBelow * 16 + x] + 
+                                             cloudCover[rowAbove * 16 + x] + 
+                                             cloudCover[rowBelow * 16 + columnRight] + 
+                                             cloudCover[y * 16 + columnRight] + 
+                                             cloudCover[rowAbove * 16 + columnRight] + 
+                                             cloudCover[y * 16 + x]) / 9;
+                    newCover[y * 16 + x] = ((neighborAverage / m_cloudDensity) + 0.175f) % 1.0f;
+                    newCover[y * 16 + x] *= m_cloudDensity;
+                }
+            }
+            Array.Copy(newCover, cloudCover, 16 * 16);
+        }
+  
+       private void CloudUpdate()
+       {
+           if (((m_frame++ % m_frameUpdateRate) != 0) || !m_ready || (m_cloudDensity == 0))
+           {
+               return;
+           }
+           UpdateCloudCover();
+        }
+
         public void CloudsToClient(IClientAPI client)
         {
             if (m_ready)
@@ -142,47 +206,6 @@ namespace OpenSim.Region.CoreModules
                 {
                     cloudCover[y * 16 + x] = (float)(m_rndnums.NextDouble()); // 0 to 1
                     cloudCover[y * 16 + x] *= m_cloudDensity;
-                }
-            }
-        }
-
-        private void ClientLoggedOut(UUID AgentId)
-        {
-            lock (m_rootAgents)
-            {
-                if (m_rootAgents.ContainsKey(AgentId))
-                {
-                    m_rootAgents.Remove(AgentId);
-                }
-            }
-        }
-
-        private void AvatarEnteringParcel(ScenePresence avatar, int localLandID, UUID regionID)
-        {
-            lock (m_rootAgents)
-            {
-                if (m_rootAgents.ContainsKey(avatar.UUID))
-                {
-                    m_rootAgents[avatar.UUID] = avatar.RegionHandle;
-                }
-                else
-                {
-                    m_rootAgents.Add(avatar.UUID, avatar.RegionHandle);
-                    CloudsToClient(avatar.ControllingClient);
-                }
-            }
-        }
-
-        private void MakeChildAgent(ScenePresence avatar)
-        {
-            lock (m_rootAgents)
-            {
-                if (m_rootAgents.ContainsKey(avatar.UUID))
-                {
-                    if (m_rootAgents[avatar.UUID] == avatar.RegionHandle)
-                    {
-                        m_rootAgents.Remove(avatar.UUID);
-                    }
                 }
             }
         }

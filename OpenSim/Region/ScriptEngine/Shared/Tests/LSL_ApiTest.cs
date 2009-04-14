@@ -41,12 +41,12 @@ namespace OpenSim.Region.ScriptEngine.Shared.Tests
     /// <summary>
     /// Tests for LSL_Api
     /// </summary>
-    [TestFixture]
+    [TestFixture, LongRunning]
     public class LSL_ApiTest
     {
 
-        private const double ANGLE_ACCURACY_IN_RADIANS = 1E-7;
-        private LSL_Api lslApi;
+        private const double ANGLE_ACCURACY_IN_RADIANS = 1E-6;
+        private LSL_Api m_lslApi;
 
         [SetUp]
         public void SetUp()
@@ -62,8 +62,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Tests
             XEngine.XEngine engine = new XEngine.XEngine();
             engine.Initialise(scene, initConfigSource);
 
-            lslApi = new LSL_Api();
-            lslApi.Initialize(engine, part, part.LocalId, part.UUID);
+            m_lslApi = new LSL_Api();
+            m_lslApi.Initialize(engine, part, part.LocalId, part.UUID);
 
         }
 
@@ -73,22 +73,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.Tests
             TestllAngleBetween(new Vector3(1, 0, 0), 0);
             TestllAngleBetween(new Vector3(1, 0, 0), 90);
             TestllAngleBetween(new Vector3(1, 0, 0), 180);
-            TestllAngleBetween(new Vector3(1, 0, 0), 270);
 
             TestllAngleBetween(new Vector3(0, 1, 0), 0);
             TestllAngleBetween(new Vector3(0, 1, 0), 90);
             TestllAngleBetween(new Vector3(0, 1, 0), 180);
-            TestllAngleBetween(new Vector3(0, 1, 0), 270);
 
             TestllAngleBetween(new Vector3(0, 0, 1), 0);
             TestllAngleBetween(new Vector3(0, 0, 1), 90);
             TestllAngleBetween(new Vector3(0, 0, 1), 180);
-            TestllAngleBetween(new Vector3(0, 0, 1), 270);
 
             TestllAngleBetween(new Vector3(1, 1, 1), 0);
             TestllAngleBetween(new Vector3(1, 1, 1), 90);
             TestllAngleBetween(new Vector3(1, 1, 1), 180);
-            TestllAngleBetween(new Vector3(1, 1, 1), 270);
         }
 
         private void TestllAngleBetween(Vector3 axis,float originalAngle)
@@ -96,7 +92,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Tests
             Quaternion rotation1 = Quaternion.CreateFromAxisAngle(axis, 0);
             Quaternion rotation2 = Quaternion.CreateFromAxisAngle(axis, ToRadians(originalAngle));
 
-            double deducedAngle = FromLslFloat(lslApi.llAngleBetween(ToLslQuaternion(rotation2), ToLslQuaternion(rotation1)));
+            double deducedAngle = FromLslFloat(m_lslApi.llAngleBetween(ToLslQuaternion(rotation2), ToLslQuaternion(rotation1)));
 
             Assert.Greater(deducedAngle, ToRadians(originalAngle) - ANGLE_ACCURACY_IN_RADIANS);
             Assert.Less(deducedAngle, ToRadians(originalAngle) + ANGLE_ACCURACY_IN_RADIANS);

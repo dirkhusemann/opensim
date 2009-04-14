@@ -9,7 +9,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the OpenSimulator Project nor the
+ *     * Neither the name of the OpenSim Project nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -25,32 +25,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+using OpenMetaverse;
 
-namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
+namespace OpenSim.Region.Framework.Interfaces
 {
-    interface IPersistence
+    public interface IXmlRpcRouter
     {
-        T Get<T>(Guid storageID);
-        T Get<T>();
-
-        /// <summary>
-        /// Stores 'data' into the persistence system
-        /// associated with this object, however saved
-        /// under the ID 'storageID'. This data may
-        /// be accessed by other scripts however.
-        /// </summary>
-        /// <param name="storageID"></param>
-        /// <param name="data"></param>
-        void Put<T>(Guid storageID, T data);
-
-        /// <summary>
-        /// Stores 'data' into the persistence system
-        /// using the default ID for this script.
-        /// </summary>
-        /// <param name="data"></param>
-        void Put<T>(T data);
+        void RegisterNewReceiver(IScriptModule scriptEngine, UUID channelID, UUID objectID, UUID itemID, string url);
+        void ScriptRemoved(UUID itemID);
+        void ObjectRemoved(UUID objectID);
     }
 }

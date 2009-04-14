@@ -9,7 +9,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the OpenSimulator Project nor the
+ *     * Neither the name of the OpenSim Project nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -26,16 +26,65 @@
  */
 
 using System;
-using System.Collections.Generic;
-using System.Text;
+using System.Reflection;
+
+using log4net;
+using Nini.Config;
 using OpenMetaverse;
 
-namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
+using OpenSim.Framework;
+using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes;
+
+
+namespace OpenSim.Region.OptionalModules.Scripting.XmlRpcRouterModule
 {
-    public interface ISocialEntity
+    public class XmlRpcRouter : IRegionModule, IXmlRpcRouter
     {
-        UUID GlobalID { get; }
-        string Name { get; }
-        bool IsUser { get; }
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        
+        public void Initialise(Scene scene, IConfigSource config)
+        {
+            IConfig startupConfig = config.Configs["Startup"];
+            if (startupConfig == null)
+                return;
+
+            if (startupConfig.GetString("XmlRpcRouterModule",
+                    "XmlRpcRouterModule") == "XmlRpcRouterModule")
+            {
+                scene.RegisterModuleInterface<IXmlRpcRouter>(this);
+            }
+        }
+
+        public void PostInitialise()
+        {
+        }
+
+        public void Close()
+        {
+        }
+
+        public string Name
+        {
+            get { return "XmlRpcRouterModule"; }
+        }
+
+        public bool IsSharedModule
+        {
+            get { return false; }
+        }
+
+        public void RegisterNewReceiver(IScriptModule scriptEngine, UUID channel, UUID objectID, UUID itemID, string uri)
+        {
+            scriptEngine.PostScriptEvent(itemID, "xmlrpc_uri", new Object[] {uri});
+        }
+
+        public void ScriptRemoved(UUID itemID)
+        {
+        }
+
+        public void ObjectRemoved(UUID objectID)
+        {
+        }
     }
 }
