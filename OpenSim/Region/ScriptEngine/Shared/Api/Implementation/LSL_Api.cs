@@ -40,7 +40,6 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Region.CoreModules;
 using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.CoreModules.Avatar.Currency.SampleMoney;
 using OpenSim.Region.CoreModules.World.Land;
 using OpenSim.Region.CoreModules.World.Terrain;
 using OpenSim.Region.Framework.Scenes;
@@ -455,11 +454,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
         // Utility function for llRot2Euler
 
-        // normalize an angle between 0 - 2*PI (0 and 360 degrees)
+        // normalize an angle between -PI and PI (-180 to +180 degrees)
         private double NormalizeAngle(double angle)
         {
             angle = angle % (Math.PI * 2);
-            if (angle < 0) angle = angle + Math.PI * 2;
+            // if (angle < 0) angle = angle + Math.PI * 2;
             return angle;
         }
 
@@ -3578,7 +3577,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 {
                     if (item.Name == name)
                     {
-                        m_host.Inventory.RemoveInventoryItem(item.ItemID);
+                        if (item.ItemID == m_itemID)
+                            throw new ScriptDeleteException();
+                        else
+                            m_host.Inventory.RemoveInventoryItem(item.ItemID);
                         return;
                     }
                 }
@@ -5465,15 +5467,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             Vector3 p0 = new Vector3(pos.X, pos.Y,
                                      (float)llGround(
-                                         new LSL_Vector(pos.X, pos.Y, pos.Z)
+                                         new LSL_Vector(offset.x, offset.y, offset.z)
                                          ));
             Vector3 p1 = new Vector3(pos.X + 1, pos.Y,
                                      (float)llGround(
-                                         new LSL_Vector(pos.X + 1, pos.Y, pos.Z)
+                                         new LSL_Vector(offset.x + 1, offset.y, offset.z)
                                          ));
             Vector3 p2 = new Vector3(pos.X, pos.Y + 1,
                                      (float)llGround(
-                                         new LSL_Vector(pos.X, pos.Y + 1, pos.Z)
+                                         new LSL_Vector(offset.x, offset.y + 1, offset.z)
                                          ));
 
             Vector3 v0 = new Vector3(p1.X - p0.X, p1.Y - p0.Y, p1.Z - p0.Z);
@@ -5486,6 +5488,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             tv.X = (v0.Y * v1.Z) - (v0.Z * v1.Y);
             tv.Y = (v0.Z * v1.X) - (v0.X * v1.Z);
             tv.Z = (v0.X * v1.Y) - (v0.Y * v1.X);
+            if ((tv.X == 0) && (tv.Y == 0))
+                tv.Z = 0;
 
             return new LSL_Vector(tv.X, tv.Y, tv.Z);
         }
@@ -6107,6 +6111,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             if (xmlrpcMod.IsEnabled())
             {
                 UUID channelID = xmlrpcMod.OpenXMLRPCChannel(m_localID, m_itemID, UUID.Zero);
+                IXmlRpcRouter xmlRpcRouter = m_ScriptEngine.World.RequestModuleInterface<IXmlRpcRouter>();
+                if (xmlRpcRouter != null)
+                    xmlRpcRouter.RegisterNewReceiver(m_ScriptEngine.ScriptModule, channelID, m_host.UUID, m_itemID, "http://"+System.Environment.MachineName+":"+xmlrpcMod.Port.ToString()+"/");
                 object[] resobj = new object[] { new LSL_Integer(1), new LSL_String(channelID.ToString()), new LSL_String(UUID.Zero.ToString()), new LSL_String(String.Empty), new LSL_Integer(0), new LSL_String(String.Empty) };
                 m_ScriptEngine.PostScriptEvent(m_itemID, new EventParams(
                         "remote_data", resobj,

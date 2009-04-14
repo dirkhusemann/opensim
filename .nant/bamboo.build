@@ -45,26 +45,12 @@
           <include name="../bin/OpenSim.Region.Framework.Tests.dll"/>
           <include name="../bin/OpenSim.Data.SQLite.Tests.dll"/>
           <include name="../bin/OpenSim.Data.MySQL.Tests.dll"/>  
-          <include name="../bin/OpenSim.Region.Physics.OdePlugin.dll"/>  
+          <!-- <include name="../bin/OpenSim.Region.Physics.OdePlugin.dll"/> -->
   
 
         </assemblies>
       </test>
     </nunit2>
-
-    <zip zipfile="../${projectdir}.zip">
-      <fileset basedir="../${projectdir}" prefix="${projectdir}">
-        <include name="**/*" />
-      </fileset>
-    </zip>
-    <tar destfile="../${projectdir}.tar.gz" compression="GZip">
-      <fileset basedir="../${projectdir}" prefix="${projectdir}">
-        <include name="**/*" />
-      </fileset>
-    </tar>
-
-    <copy file="../${projectdir}.zip" tofile="/home/buildsystem/public_html/${projectdir}-TRUNK.zip" overwrite="true" />
-    <copy file="../${projectdir}.tar.gz" tofile="/home/buildsystem/public_html/${projectdir}-TRUNK.tar.gz" overwrite="true" />
 
 <!--
     <echo message="Generating Doxygen documentation" />

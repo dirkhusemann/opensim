@@ -159,14 +159,40 @@ namespace OpenSim.ApplicationPlugins.RegionModulesController
                 scene.AddRegionModule(module.Name, module);
             }
 
+            List<INonSharedRegionModule> list = new List<INonSharedRegionModule>();
             foreach (Type type in m_nonSharedModules)
             {
                 INonSharedRegionModule module = (INonSharedRegionModule)Activator.CreateInstance(type);
                 m_log.DebugFormat("[REGIONMODULE]: Adding scene {0} to non-shared module {1}",
                                   scene.RegionInfo.RegionName, module.Name);
                 module.Initialise(m_openSim.ConfigSource.Source);
+                list.Add(module);
+            }
+
+            foreach (INonSharedRegionModule module in list)
+            {
                 module.AddRegion(scene);
                 scene.AddRegionModule(module.Name, module);
+            }
+
+            // This is needed for all module types. Modules will register
+            // Interfaces with scene in AddScene, and will also need a means
+            // to access interfaces registered by other modules. Without
+            // this extra method, a module attempting to use another modules's
+            // interface would be successful only depending on load order,
+            // which can't be depended upon, or modules would need to resort
+            // to ugly kludges to attempt to request interfaces when needed
+            // and unneccessary caching logic repeated in all modules.
+            // The extra function stub is just that much cleaner
+            //
+            foreach (ISharedRegionModule module in m_sharedInstances)
+            {
+                module.RegionLoaded(scene);
+            }
+
+            foreach (INonSharedRegionModule module in list)
+            {
+                module.RegionLoaded(scene);
             }
         }
 

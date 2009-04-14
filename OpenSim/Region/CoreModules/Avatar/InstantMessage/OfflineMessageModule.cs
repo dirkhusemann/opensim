@@ -129,6 +129,17 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         {
         }
 
+        private Scene FindScene(UUID agentID)
+        {
+            foreach (Scene s in m_SceneList)
+            {
+                ScenePresence presence = s.GetScenePresence(agentID);
+                if (presence != null && !presence.IsChildAgent)
+                    return s;
+            }
+            return null;
+        }
+
         private IClientAPI FindClient(UUID agentID)
         {
             foreach (Scene s in m_SceneList)
@@ -143,23 +154,7 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
         private void OnNewClient(IClientAPI client)
         {
             client.OnRetrieveInstantMessages += RetrieveInstantMessages;
-            // TODO:: Remove when mute lists are supported
-            //
-            //client.OnEconomyDataRequest += OnEconomyDataRequest;
         }
-
-        // TODO: Remove method when mute lists are supported
-        //
-        //private void OnEconomyDataRequest(UUID agentID)
-        //{
-        //    IClientAPI client = FindClient(agentID);
-        //    if (client == null)
-        //    {
-        //        m_log.ErrorFormat("[OFFLINE MESSAGING] Can't find client {0}", agentID.ToString());
-        //        return;
-        //    }
-        //    RetrieveInstantMessages(client);
-        //}
 
         private void RetrieveInstantMessages(IClientAPI client)
         {
@@ -173,7 +168,18 @@ namespace OpenSim.Region.CoreModules.Avatar.InstantMessage
                 DateTime saved = Util.ToDateTime((uint)im.timestamp);
 
                 im.message = "(saved " + saved.ToString() + ") " + im.message;
-                client.SendInstantMessage(im);
+
+                // client.SendInstantMessage(im);
+
+                // Send through scene event manager so all modules get a chance
+                // to look at this message before it gets delivered.
+                //
+                // Needed for proper state management for stored group
+                // invitations
+                //
+                Scene s = FindScene(client.AgentId);
+                if (s != null)
+                    s.EventManager.TriggerIncomingInstantMessage(im);
             }
         }
 

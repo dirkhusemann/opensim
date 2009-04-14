@@ -28,10 +28,11 @@
 using System.IO;
 using NUnit.Framework;
 using OpenSim.Data.Tests;
+using OpenSim.Tests.Common;
 
 namespace OpenSim.Data.SQLite.Tests
 {
-    [TestFixture]
+    [TestFixture, DatabaseTest]
     public class SQLiteAssetTest : BasicAssetTest
     {
         public string file;
@@ -40,6 +41,12 @@ namespace OpenSim.Data.SQLite.Tests
         [TestFixtureSetUp]
         public void Init()
         {
+            if (System.Environment.GetEnvironmentVariable("CPU") == "ppc64")
+            {
+                System.Console.WriteLine(System.Environment.GetEnvironmentVariable("CPU"));
+                Assert.Ignore();
+            }
+
             SuperInit();
             file = Path.GetTempFileName() + ".db";
             connect = "URI=file:" + file + ",version=3";

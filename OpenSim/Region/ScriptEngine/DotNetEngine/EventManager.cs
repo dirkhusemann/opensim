@@ -30,7 +30,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Region.CoreModules.Avatar.Currency.SampleMoney;
 using OpenSim.Region.CoreModules;
 using OpenSim.Region;
 using OpenSim.Region.Framework.Scenes;
@@ -241,6 +240,9 @@ namespace OpenSim.Region.ScriptEngine.DotNetEngine
         public void OnRezScript(uint localID, UUID itemID, string script,
                 int startParam, bool postOnRez, string engine, int stateSource)
         {
+            if (script.StartsWith("//MRM:"))
+                return;
+
             List<IScriptModule> engines =
                 new List<IScriptModule>(
                 myScriptEngine.World.RequestModuleInterfaces<IScriptModule>());

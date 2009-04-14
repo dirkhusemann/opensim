@@ -26,6 +26,7 @@
  */
 
 using System.Collections.Generic;
+using OpenSim.Framework;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 
@@ -44,6 +45,128 @@ namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
             m_heights = new Heightmap(m_internalScene);
             m_objs = new ObjectAccessor(m_internalScene);
         }
+
+        #region Events
+
+        #region OnNewUser
+
+        private event OnNewUserDelegate _OnNewUser;
+        private bool _OnNewUserActive;
+
+        public event OnNewUserDelegate OnNewUser
+        {
+            add
+            {
+                if (!_OnNewUserActive)
+                {
+                    _OnNewUserActive = true;
+                    m_internalScene.EventManager.OnNewPresence += EventManager_OnNewPresence;
+                }
+
+                _OnNewUser += value;
+            }
+            remove
+            {
+                _OnNewUser -= value;
+
+                if (_OnNewUser == null)
+                {
+                    _OnNewUserActive = false;
+                    m_internalScene.EventManager.OnNewPresence -= EventManager_OnNewPresence;
+                }
+            }
+        }
+
+        void EventManager_OnNewPresence(ScenePresence presence)
+        {
+            if (_OnNewUser != null)
+            {
+                NewUserEventArgs e = new NewUserEventArgs();
+                e.Avatar = new SPAvatar(m_internalScene, presence.UUID);
+                _OnNewUser(this, e);
+            }
+        }
+
+        #endregion
+
+        #region OnChat
+        private event OnChatDelegate _OnChat;
+        private bool _OnChatActive;
+
+        public event OnChatDelegate OnChat
+        {
+            add
+            {
+                if (!_OnChatActive)
+                {
+                    _OnChatActive = true;
+                    m_internalScene.EventManager.OnChatFromClient += EventManager_OnChatFromClient;
+                    m_internalScene.EventManager.OnChatFromWorld += EventManager_OnChatFromWorld;
+                }
+
+                _OnChat += value;
+            }
+            remove
+            {
+                _OnChat -= value;
+
+                if (_OnChat == null)
+                {
+                    _OnChatActive = false;
+                    m_internalScene.EventManager.OnChatFromClient -= EventManager_OnChatFromClient;
+                    m_internalScene.EventManager.OnChatFromWorld -= EventManager_OnChatFromWorld;
+                }
+            }
+        }
+
+        void EventManager_OnChatFromWorld(object sender, OSChatMessage chat)
+        {
+            if (_OnChat != null)
+            {
+                HandleChatPacket(chat);
+                return;
+            }
+        }
+
+        private void HandleChatPacket(OSChatMessage chat)
+        {
+            if(string.IsNullOrEmpty(chat.Message))
+                return;
+
+            // Object?
+            if (chat.Sender == null && chat.SenderObject != null)
+            {
+                ChatEventArgs e = new ChatEventArgs();
+                e.Sender = new SOPObject(m_internalScene, ((SceneObjectPart) chat.SenderObject).LocalId);
+                e.Text = chat.Message;
+
+                _OnChat(this, e);
+                return;
+            }
+            // Avatar?
+            if (chat.Sender != null && chat.SenderObject == null)
+            {
+                ChatEventArgs e = new ChatEventArgs();
+                e.Sender = new SPAvatar(m_internalScene, chat.SenderUUID);
+                e.Text = chat.Message;
+
+                _OnChat(this, e);
+                return;
+            }
+            // Skip if other
+        }
+
+        void EventManager_OnChatFromClient(object sender, OSChatMessage chat)
+        {
+            if (_OnChat != null)
+            {
+                HandleChatPacket(chat);
+                return;
+            }
+        }
+        #endregion
+
+        #endregion
 
         public IObjectAccessor Objects
         {

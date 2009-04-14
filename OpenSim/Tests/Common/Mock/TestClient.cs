@@ -74,6 +74,7 @@ namespace OpenSim.Tests.Common.Mock
         public event SetAppearance OnSetAppearance;
         public event AvatarNowWearing OnAvatarNowWearing;
         public event RezSingleAttachmentFromInv OnRezSingleAttachmentFromInv;
+        public event RezMultipleAttachmentsFromInv OnRezMultipleAttachmentsFromInv;
         public event UUIDNameRequest OnDetachAttachmentIntoInv;
         public event ObjectAttach OnObjectAttach;
         public event ObjectDeselect OnObjectDetach;
@@ -106,6 +107,9 @@ namespace OpenSim.Tests.Common.Mock
         public event GrabObject OnGrabObject;
         public event ObjectSelect OnDeGrabObject;
         public event MoveObject OnGrabUpdate;
+        public event SpinStart OnSpinStart;
+        public event SpinObject OnSpinUpdate;
+        public event SpinStop OnSpinStop;
         public event ViewerEffectEventHandler OnViewerEffect;
 
         public event FetchInventory OnAgentDataUpdateRequest;
@@ -274,6 +278,8 @@ namespace OpenSim.Tests.Common.Mock
         public event AvatarNotesUpdate OnAvatarNotesUpdate;
 
         public event MuteListRequest OnMuteListRequest;
+
+        public event AvatarInterestUpdate OnAvatarInterestUpdate;
 
 #pragma warning restore 67
 

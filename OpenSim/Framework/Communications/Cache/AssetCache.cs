@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using GlynnTucker.Cache;
 using log4net;
@@ -335,7 +336,7 @@ namespace OpenSim.Framework.Communications.Cache
         {
             AssetInfo assetInf = new AssetInfo(asset);
 
-            ProcessReceivedAsset(IsTexture, assetInf);
+            ProcessReceivedAsset(IsTexture, assetInf, null);
 
             if (!m_memcache.Contains(assetInf.FullID))
             {
@@ -390,24 +391,28 @@ namespace OpenSim.Framework.Communications.Cache
             }
         }
 
-        protected void ProcessReceivedAsset(bool IsTexture, AssetInfo assetInf)
+        protected void ProcessReceivedAsset(bool IsTexture, AssetInfo assetInf, IUserService userService)
         {            
+            if(!IsTexture && assetInf.ContainsReferences && false )
+            {
+                assetInf.Data = ProcessAssetData(assetInf.Data, userService );
+            }
         }
 
         // See IAssetReceiver
-        public virtual void AssetNotFound(UUID assetID, bool IsTexture)
+        public virtual void AssetNotFound(UUID assetId, bool isTexture)
         {
-//            m_log.WarnFormat("[ASSET CACHE]: AssetNotFound for {0}", assetID);
+//            m_log.WarnFormat("[ASSET CACHE]: AssetNotFound for {0}", assetId);
 
             // Remember the fact that this asset could not be found to prevent delays from repeated requests
-            m_memcache.Add(assetID, null, TimeSpan.FromHours(24));
+            m_memcache.Add(assetId, null, TimeSpan.FromHours(24));
 
             // Notify requesters for this asset
             AssetRequestsList reqList;
             lock (RequestLists)
             {
-                if (RequestLists.TryGetValue(assetID, out reqList))
-                    RequestLists.Remove(assetID);
+                if (RequestLists.TryGetValue(assetId, out reqList))
+                    RequestLists.Remove(assetId);
             }
 
             if (reqList != null)
@@ -417,7 +422,7 @@ namespace OpenSim.Framework.Communications.Cache
 
                 foreach (NewAssetRequest req in reqList.Requests)
                 {
-                    req.Callback(assetID, null);
+                    req.Callback(assetId, null);
                 }
             }
         }
@@ -547,8 +552,65 @@ namespace OpenSim.Framework.Communications.Cache
                 req.RequestUser.SendAsset(req2);
 
             }
-
         }
+
+        public byte[] ProcessAssetData(byte[] assetData, IUserService userService)
+        {
+            string data = Encoding.ASCII.GetString(assetData);
+
+            data = ProcessAssetDataString(data, userService );
+
+            return Encoding.ASCII.GetBytes( data );
+        }
+
+        public string ProcessAssetDataString(string data, IUserService userService)
+        {
+            Regex regex = new Regex("(creator_url|owner_url)\\s+(\\S+)");
+
+            data = regex.Replace(data, delegate(Match m)
+            {
+                string result = String.Empty;
+
+                string key = m.Groups[1].Captures[0].Value;
+
+                string value = m.Groups[2].Captures[0].Value;
+
+                Uri userUri;
+
+                switch (key)
+                {
+                    case "creator_url":
+                        userUri = new Uri(value);
+                        result = "creator_id " + ResolveUserUri(userService, userUri);
+                        break;
+
+                    case "owner_url":
+                        userUri = new Uri(value);
+                        result = "owner_id " + ResolveUserUri(userService, userUri);
+                        break;
+                }
+
+                return result;
+            });
+
+            return data;
+        }
+
+        private Guid ResolveUserUri(IUserService userService, Uri userUri)
+        {
+            Guid id;
+            UserProfileData userProfile = userService.GetUserProfile(userUri);
+            if( userProfile == null )
+            {
+                id = Guid.Empty;
+            }
+            else
+            {
+                id = userProfile.ID.Guid;
+            }
+            return id;
+        }
+
 
         public class AssetRequest
         {
@@ -578,6 +640,8 @@ namespace OpenSim.Framework.Communications.Cache
                 Name = aBase.Name;
                 Description = aBase.Description;
             }
+
+            public const string Secret = "secret";
         }
 
         public class TextureImage : AssetBase

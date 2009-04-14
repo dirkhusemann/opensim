@@ -37,18 +37,12 @@ using OpenSim.Framework;
 namespace OpenSim.Data.SQLite
 {
     /// <summary>
-    /// A User storage interface for the DB4o database system
+    /// An asset storage interface for the SQLite database system
     /// </summary>
     public class SQLiteAssetData : AssetDataBase
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        /// <summary>
-        /// The database manager
-        /// </summary>
-        /// <summary>
-        /// Artificial constructor called upon plugin load
-        /// </summary>
         private const string SelectAssetSQL = "select * from assets where UUID=:UUID";
         private const string SelectAssetMetadataSQL = "select Name, Description, Type, Temporary, UUID from assets limit :start, :count";
         private const string DeleteAssetSQL = "delete from assets where UUID=:UUID";
@@ -96,13 +90,13 @@ namespace OpenSim.Data.SQLite
         /// </summary>
         /// <param name="uuid">UUID of ... ?</param>
         /// <returns>Asset base</returns>
-        override public AssetBase FetchAsset(UUID uuid)
+        override protected AssetBase FetchStoredAsset(UUID uuid)
         {
             lock (this)
             {
                 using (SqliteCommand cmd = new SqliteCommand(SelectAssetSQL, m_conn))
                 {
-                    cmd.Parameters.Add(new SqliteParameter(":UUID", Util.ToRawUuidString(uuid)));
+                    cmd.Parameters.Add(new SqliteParameter(":UUID", uuid.ToString()));
                     using (IDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -127,7 +121,7 @@ namespace OpenSim.Data.SQLite
         /// <param name="asset">Asset Base</param>
         override public void CreateAsset(AssetBase asset)
         {
-            //m_log.Info("[ASSET DB]: Creating Asset " + Util.ToRawUuidString(asset.FullID));
+            //m_log.Info("[ASSET DB]: Creating Asset " + asset.FullID.ToString());
             if (ExistsAsset(asset.FullID))
             {
                 //m_log.Info("[ASSET DB]: Asset exists already, ignoring.");
@@ -138,7 +132,7 @@ namespace OpenSim.Data.SQLite
                 {
                     using (SqliteCommand cmd = new SqliteCommand(InsertAssetSQL, m_conn))
                     {
-                        cmd.Parameters.Add(new SqliteParameter(":UUID", Util.ToRawUuidString(asset.FullID)));
+                        cmd.Parameters.Add(new SqliteParameter(":UUID", asset.FullID.ToString()));
                         cmd.Parameters.Add(new SqliteParameter(":Name", asset.Name));
                         cmd.Parameters.Add(new SqliteParameter(":Description", asset.Description));
                         cmd.Parameters.Add(new SqliteParameter(":Type", asset.Type));
@@ -164,7 +158,7 @@ namespace OpenSim.Data.SQLite
             {
                 using (SqliteCommand cmd = new SqliteCommand(UpdateAssetSQL, m_conn))
                 {
-                    cmd.Parameters.Add(new SqliteParameter(":UUID", Util.ToRawUuidString(asset.FullID)));
+                    cmd.Parameters.Add(new SqliteParameter(":UUID", asset.FullID.ToString()));
                     cmd.Parameters.Add(new SqliteParameter(":Name", asset.Name));
                     cmd.Parameters.Add(new SqliteParameter(":Description", asset.Description));
                     cmd.Parameters.Add(new SqliteParameter(":Type", asset.Type));
@@ -204,7 +198,7 @@ namespace OpenSim.Data.SQLite
             lock (this) {
                 using (SqliteCommand cmd = new SqliteCommand(SelectAssetSQL, m_conn))
                 {
-                    cmd.Parameters.Add(new SqliteParameter(":UUID", Util.ToRawUuidString(uuid)));
+                    cmd.Parameters.Add(new SqliteParameter(":UUID", uuid.ToString()));
                     using (IDataReader reader = cmd.ExecuteReader())
                     {
                         if (reader.Read())
@@ -230,7 +224,7 @@ namespace OpenSim.Data.SQLite
         {
             using (SqliteCommand cmd = new SqliteCommand(DeleteAssetSQL, m_conn))
             {
-                cmd.Parameters.Add(new SqliteParameter(":UUID", Util.ToRawUuidString(uuid)));
+                cmd.Parameters.Add(new SqliteParameter(":UUID", uuid.ToString()));
 
                 cmd.ExecuteNonQuery();
             }
