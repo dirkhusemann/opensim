@@ -40,6 +40,7 @@ using OpenMetaverse.Imaging;
 using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
+using OpenSim.Framework.Communications.Clients;
 using OpenSim.Framework.Console;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes.Scripting;
@@ -55,7 +56,14 @@ namespace OpenSim.Region.Framework.Scenes
     {
         public delegate void SynchronizeSceneHandler(Scene scene);
         public SynchronizeSceneHandler SynchronizeScene = null;
-        public int splitID = 0;
+
+        /* Used by the loadbalancer plugin on GForge */
+        protected int m_splitRegionID = 0;
+        public int SplitRegionID
+        {
+            get { return m_splitRegionID; }
+            set { m_splitRegionID = value; }
+        }
 
         private const long DEFAULT_MIN_TIME_FOR_PERSISTENCE = 60L;
         private const long DEFAULT_MAX_TIME_FOR_PERSISTENCE = 600L;
@@ -878,7 +886,7 @@ namespace OpenSim.Region.Framework.Scenes
                     if (m_frame % m_update_backup == 0)
                         CleanTempObjects();
 
-                    if (Region_Status != RegionStatus.SlaveScene)
+                    if (RegionStatus != RegionStatus.SlaveScene)
                     {
                         if (m_frame % m_update_events == 0)
                             UpdateEvents();
@@ -2372,64 +2380,80 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="agent"></param>
         public bool NewUserConnection(AgentCircuitData agent)
         {
-            CapsModule.NewUserConnection(agent);
+            bool goodUserConnection = AuthenticateUser(agent);
 
-            ScenePresence sp = m_sceneGraph.GetScenePresence(agent.AgentID);
-            if (sp != null)
+            if (goodUserConnection)
             {
-                m_log.DebugFormat(
-                    "[SCENE]: Adjusting known seeds for existing agent {0} in {1}",
-                    agent.AgentID, RegionInfo.RegionName);
+                CapsModule.NewUserConnection(agent);
 
-                sp.AdjustKnownSeeds();
+                ScenePresence sp = m_sceneGraph.GetScenePresence(agent.AgentID);
+                if (sp != null)
+                {
+                    m_log.DebugFormat(
+                        "[SCENE]: Adjusting known seeds for existing agent {0} in {1}",
+                        agent.AgentID, RegionInfo.RegionName);
+
+                    sp.AdjustKnownSeeds();
+
+                    return true;
+                }
+
+                // Don't disable this log message - it's too helpful
+                m_log.InfoFormat(
+                    "[CONNECTION BEGIN]: Region {0} told of incoming client {1} {2} {3} (circuit code {4})",
+                    RegionInfo.RegionName, agent.firstname, agent.lastname, agent.AgentID, agent.circuitcode);
+
+                if (m_regInfo.EstateSettings.IsBanned(agent.AgentID))
+                {
+                    m_log.WarnFormat(
+                   "[CONNECTION BEGIN]: Incoming user {0} at {1} is on the region banlist",
+                   agent.AgentID, RegionInfo.RegionName);
+                    //return false;
+                }
+
+                CapsModule.AddCapsHandler(agent.AgentID);
+
+                if (!agent.child)
+                {
+                    // Honor parcel landing type and position.
+                    ILandObject land = LandChannel.GetLandObject(agent.startpos.X, agent.startpos.Y);
+                    if (land != null)
+                    {
+                        if (land.landData.LandingType == (byte)1 && land.landData.UserLocation != Vector3.Zero)
+                        {
+                            agent.startpos = land.landData.UserLocation;
+                        }
+                    }
+                }
+
+                m_authenticateHandler.AddNewCircuit(agent.circuitcode, agent);
+
+                // rewrite session_id
+                CachedUserInfo userinfo = CommsManager.UserProfileCacheService.GetUserDetails(agent.AgentID);
+                if (userinfo != null)
+                {
+                    userinfo.SessionID = agent.SessionID;
+                }
+                else
+                {
+                    m_log.WarnFormat(
+                        "[CONNECTION BEGIN]: We couldn't find a User Info record for {0}.  This is usually an indication that the UUID we're looking up is invalid", agent.AgentID);
+                }
 
                 return true;
             }
-
-            // Don't disable this log message - it's too helpful
-            m_log.InfoFormat(
-                "[CONNECTION BEGIN]: Region {0} told of incoming client {1} {2} {3} (circuit code {4})",
-                RegionInfo.RegionName, agent.firstname, agent.lastname, agent.AgentID, agent.circuitcode);
-
-            if (m_regInfo.EstateSettings.IsBanned(agent.AgentID))
-            {
-                m_log.WarnFormat(
-               "[CONNECTION BEGIN]: Incoming user {0} at {1} is on the region banlist",
-               agent.AgentID, RegionInfo.RegionName);
-                //return false;
-            }
-
-            CapsModule.AddCapsHandler(agent.AgentID);
-
-            if (!agent.child)
-            {
-                // Honor parcel landing type and position.
-                ILandObject land = LandChannel.GetLandObject(agent.startpos.X, agent.startpos.Y);
-                if (land != null)
-                {
-                    if (land.landData.LandingType == (byte)1 && land.landData.UserLocation != Vector3.Zero)
-                    {
-                        agent.startpos = land.landData.UserLocation;
-                    }
-                }
-            }
-
-            m_authenticateHandler.AddNewCircuit(agent.circuitcode, agent);
-
-            // rewrite session_id
-            CachedUserInfo userinfo = CommsManager.UserProfileCacheService.GetUserDetails(agent.AgentID);
-
-            if (userinfo != null)
-            {
-                userinfo.SessionID = agent.SessionID;
-            }
             else
             {
-                m_log.WarnFormat(
-                    "[CONNECTION BEGIN]: We couldn't find a User Info record for {0}.  This is usually an indication that the UUID we're looking up is invalid", agent.AgentID);
+                m_log.WarnFormat("[CONNECTION BEGIN]: failed to authenticate user {0} {1}. Denying connection.", agent.firstname, agent.lastname);
+                return false;
             }
+        }
 
-            return true;
+        public virtual bool AuthenticateUser(AgentCircuitData agent)
+        {
+            bool result = CommsManager.UserService.VerifySession(agent.AgentID, agent.SessionID);
+            m_log.Debug("[CONNECTION BEGIN]: User authentication returned " + result);
+            return result;
         }
 
         public void UpdateCircuitData(AgentCircuitData data)

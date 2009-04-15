@@ -62,13 +62,14 @@ namespace OpenSim.Framework.Communications.Tests
             TestAssetDataPlugin assetPlugin = new TestAssetDataPlugin();
             assetPlugin.CreateAsset(asset);
             
-            IAssetCache assetCache = new AssetCache(new SQLAssetServer(assetPlugin));
-                        
-            lock (this)
-            {
-                assetCache.GetAsset(assetId, AssetRequestCallback, false);                     
-                Monitor.Wait(this, 60000);
-            }            
+            SQLAssetServer assetServer = new SQLAssetServer(assetPlugin);
+            IAssetCache assetCache = new AssetCache(assetServer);
+            
+            assetCache.GetAsset(assetId, AssetRequestCallback, false);
+            
+            // Manually pump the asset server
+            while (assetServer.HasWaitingRequests())
+                assetServer.ProcessNextRequest();
             
             Assert.That(
                 assetId, Is.EqualTo(m_assetIdReceived), "Asset id stored differs from asset id received");
@@ -176,6 +177,11 @@ namespace OpenSim.Framework.Communications.Tests
             public List<FriendListItem> GetUserFriendList(UUID friendlistowner)
             {
                 throw new NotImplementedException();
+            }
+
+            public bool VerifySession(UUID userID, UUID sessionID)
+            {
+                return true;
             }
         }
 
