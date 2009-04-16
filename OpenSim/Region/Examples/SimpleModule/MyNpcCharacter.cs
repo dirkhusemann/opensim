@@ -166,6 +166,7 @@ namespace OpenSim.Region.Examples.SimpleModule
         public event ParcelAccessListUpdateRequest OnParcelAccessListUpdateRequest;
         public event ParcelSelectObjects OnParcelSelectObjects;
         public event ParcelObjectOwnerRequest OnParcelObjectOwnerRequest;
+        public event ParcelDeedToGroup OnParcelDeedToGroup;
         public event ObjectDeselect OnObjectDeselect;
         public event RegionInfoRequest OnRegionInfoRequest;
         public event EstateCovenantRequest OnEstateCovenantRequest;
@@ -884,7 +885,7 @@ namespace OpenSim.Region.Examples.SimpleModule
         {
         }
         
-        public void SendLandObjectOwners(Dictionary<UUID, int> ownersAndCount)
+        public void SendLandObjectOwners(LandData land, List<UUID> groups, Dictionary<UUID, int> ownersAndCount)
         {
         }
         

@@ -260,6 +260,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private UUIDNameRequest handlerUUIDGroupNameRequest;
 
+        private ParcelDeedToGroup handlerParcelDeedToGroup;
+
         private RequestObjectPropertiesFamily handlerObjectGroupRequest;
         private ScriptReset handlerScriptReset;
         private GetScriptRunning handlerGetScriptRunning;
@@ -309,7 +311,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         private MuteListRequest handlerMuteListRequest;
 
-        private AvatarInterestUpdate handlerAvatarInterestUpdate;
+        //private AvatarInterestUpdate handlerAvatarInterestUpdate;
 
         private readonly IGroupsModule m_GroupsModule;
 
@@ -1014,6 +1016,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public event ParcelGodForceOwner OnParcelGodForceOwner;
         public event ParcelReclaim OnParcelReclaim;
         public event ParcelReturnObjectsRequest OnParcelReturnObjectsRequest;
+        public event ParcelDeedToGroup OnParcelDeedToGroup;
         public event RegionInfoRequest OnRegionInfoRequest;
         public event EstateCovenantRequest OnEstateCovenantRequest;
         public event FriendActionDelegate OnApproveFriendRequest;
@@ -1107,7 +1110,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public event MuteListRequest OnMuteListRequest;
 
-        public event AvatarInterestUpdate OnAvatarInterestUpdate;
+        //public event AvatarInterestUpdate OnAvatarInterestUpdate;
 
         public void ActivateGesture(UUID assetId, UUID gestureId)
         {
@@ -3417,7 +3420,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             }
         }
 
-        public void SendLandObjectOwners(Dictionary<UUID, int> ownersAndCount)
+        public void SendLandObjectOwners(LandData land, List<UUID> groups, Dictionary<UUID, int> ownersAndCount)
         {
             int notifyCount = ownersAndCount.Count;
             ParcelObjectOwnersReplyPacket pack = (ParcelObjectOwnersReplyPacket)PacketPool.Instance.GetPacket(PacketType.ParcelObjectOwnersReply);
@@ -3441,7 +3444,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 {
                     dataBlock[num] = new ParcelObjectOwnersReplyPacket.DataBlock();
                     dataBlock[num].Count = ownersAndCount[owner];
-                    dataBlock[num].IsGroupOwned = false; //TODO: fix me when group support is added
+
+                    if (land.GroupID == owner || groups.Contains(owner))
+                        dataBlock[num].IsGroupOwned = true;
+
                     dataBlock[num].OnlineStatus = true; //TODO: fix me later
                     dataBlock[num].OwnerID = owner;
 
@@ -8596,6 +8602,23 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     }
 
                     break;
+
+
+                case PacketType.ParcelDeedToGroup:
+                    ParcelDeedToGroupPacket parcelDeedToGroup = (ParcelDeedToGroupPacket)Pack;
+                    if (m_GroupsModule != null)
+                    {
+                        handlerParcelDeedToGroup = OnParcelDeedToGroup;
+                        if (handlerParcelDeedToGroup != null)
+                        {
+                            handlerParcelDeedToGroup(parcelDeedToGroup.Data.LocalID, parcelDeedToGroup.Data.GroupID,this);
+
+                        }
+                    }
+
+                    break;
+
+
                 case PacketType.GroupNoticesListRequest:
                     GroupNoticesListRequestPacket groupNoticesListRequest =
                         (GroupNoticesListRequestPacket)Pack;
@@ -9111,11 +9134,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                                 Utils.BytesToString(avatarNotesUpdate.Data.Notes));
                     break;
 
-                case PacketType.AvatarInterestsUpdate:
-                    AvatarInterestsUpdatePacket avatarInterestUpdate =
-                            (AvatarInterestsUpdatePacket)Pack;
-
-                    break;
+//                case PacketType.AvatarInterestsUpdate:
+//                    AvatarInterestsUpdatePacket avatarInterestUpdate =
+//                            (AvatarInterestsUpdatePacket)Pack;
+//
+//                    break;
 
                 default:
                     m_log.Warn("[CLIENT]: unhandled packet " + Pack);
