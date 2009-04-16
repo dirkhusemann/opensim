@@ -668,6 +668,7 @@ namespace OpenSim.Client.MXP.ClientStack
         public event ParcelGodForceOwner OnParcelGodForceOwner;
         public event ParcelReclaim OnParcelReclaim;
         public event ParcelReturnObjectsRequest OnParcelReturnObjectsRequest;
+        public event ParcelDeedToGroup OnParcelDeedToGroup;
         public event RegionInfoRequest OnRegionInfoRequest;
         public event EstateCovenantRequest OnEstateCovenantRequest;
         public event FriendActionDelegate OnApproveFriendRequest;
@@ -1227,7 +1228,7 @@ namespace OpenSim.Client.MXP.ClientStack
             // Need to translate to MXP somehow
         }
 
-        public void SendLandObjectOwners(Dictionary<UUID, int> ownersAndCount)
+        public void SendLandObjectOwners(LandData land, List<UUID> groups, Dictionary<UUID, int> ownersAndCount)
         {
             // Need to translate to MXP somehow
         }
