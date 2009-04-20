@@ -96,6 +96,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
         internal int depends = 0;
 
+        // This variable counts the number of resets that have been performed
+        // on the connector. When a listener thread terminates, it checks to 
+        // see of the reset count has changed before it schedules another 
+        // reset.
+
+        internal int m_resetk = 0;
+
         // Working threads
 
         private Thread m_listener = null;
@@ -229,7 +236,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
             // Add the newly created connector to the known connectors list
 
-            m_connectors.Add(this);
+            // m_connectors.Add(this);
 
             m_log.InfoFormat("[IRC-Connector-{0}]: Initialization complete", idn);
 
@@ -393,6 +400,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
                 if (m_connected)
                 {
+
                     m_log.InfoFormat("[IRC-Connector-{0}] Resetting connector", idn);
 
                     // Mark as disconnected. This will allow the listener thread
@@ -410,6 +418,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
                     m_connected = false;
                     m_pending   = false;
+                    m_resetk++;
 
                 }
 
@@ -478,7 +487,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
 
         public void ListenerRun()
         {
+
             string inputLine;
+            int    resetk = m_resetk;
 
             try
             {
@@ -534,7 +545,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
             // The connection is marked as not connected the first time
             // through reconnect.
 
-            if (m_enabled) Reconnect();
+            if (m_enabled && (m_resetk == resetk))
+			    Reconnect();
 
         }
 
@@ -823,20 +835,21 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
         protected static void WatchdogHandler(Object source, ElapsedEventArgs args)
         {
 
-            // m_log.InfoFormat("[IRC-Watchdog] Status scan");
+            m_log.InfoFormat("[IRC-Watchdog] Status scan");
 
             _pdk_ = (_pdk_+1)%PING_PERIOD;    // cycle the ping trigger
             _icc_++;    // increment the inter-consecutive-connect-delay counter
 
             foreach (IRCConnector connector in m_connectors)
             {
+                m_log.InfoFormat("[IRC-Watchdog] Scanning {0}", connector);
                 if (connector.Enabled)
                 {
                     if (!connector.Connected)
                     {
                         try
                         {
-                            // m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
+                            m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
                             connector.Connect();
                         }
                         catch (Exception e)
@@ -865,10 +878,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                                 connector.m_writer.WriteLine(String.Format("PING :{0}", connector.m_server));
                                 connector.m_writer.Flush();
                             }
-                            catch (Exception /*e*/)
+                            catch (Exception e)
                             {
-                                // m_log.ErrorFormat("[IRC-PingRun] Exception on connector {0}: {1} ", connector.idn, e.Message);
-                                // m_log.Debug(e);
+                                m_log.ErrorFormat("[IRC-PingRun] Exception on connector {0}: {1} ", connector.idn, e.Message);
+                                m_log.Debug(e);
                                 connector.Reconnect();
                             }
                         }
