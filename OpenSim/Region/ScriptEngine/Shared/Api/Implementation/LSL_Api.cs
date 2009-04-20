@@ -8797,7 +8797,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             Vector3 position = m_host.AbsolutePosition;
             Vector3 velocity = m_host.Velocity;
             Quaternion rotation = m_host.RotationOffset;
+            string ownerName = String.Empty;
             ScenePresence scenePresence = World.GetScenePresence(m_host.ObjectOwner);
+            if (scenePresence == null)
+                ownerName = resolveName(m_host.ObjectOwner);
+            else
+                ownerName = scenePresence.Name;
+
             RegionInfo regionInfo = World.RegionInfo;
 
             Dictionary<string, string> httpHeaders = new Dictionary<string, string>();
@@ -8819,7 +8825,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             httpHeaders["X-SecondLife-Local-Position"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000})", position.X, position.Y, position.Z);
             httpHeaders["X-SecondLife-Local-Velocity"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000})", velocity.X, velocity.Y, velocity.Z);
             httpHeaders["X-SecondLife-Local-Rotation"] = string.Format("({0:0.000000}, {1:0.000000}, {2:0.000000}, {3:0.000000})", rotation.X, rotation.Y, rotation.Z, rotation.W);
-            httpHeaders["X-SecondLife-Owner-Name"] = scenePresence == null ? string.Empty : scenePresence.ControllingClient.Name;
+            httpHeaders["X-SecondLife-Owner-Name"] = ownerName;
             httpHeaders["X-SecondLife-Owner-Key"] = m_host.ObjectOwner.ToString();
             string userAgent = config.Configs["Network"].GetString("user_agent", null);
             if (userAgent != null)
@@ -9161,41 +9167,71 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         }
 
         public LSL_String llGetNumberOfNotecardLines(string name)
-        {
+        {       
             m_host.AddScriptLPS(1);
 
             TaskInventoryDictionary itemsDictionary = (TaskInventoryDictionary)m_host.TaskInventory.Clone();
             
-            foreach (TaskInventoryItem item in itemsDictionary.Values)
+            UUID assetID = UUID.Zero;
+
+            if (!UUID.TryParse(name, out assetID))
             {
-                if (item.Type == 7 && item.Name == name)
+                foreach (TaskInventoryItem item in itemsDictionary.Values)
                 {
-                    UUID tid = AsyncCommands.
-                            DataserverPlugin.RegisterRequest(m_localID,
-                            m_itemID, item.AssetID.ToString());
-                    if (NotecardCache.IsCached(item.AssetID))
+                    if (item.Type == 7 && item.Name == name)
                     {
-                        AsyncCommands.
-                        DataserverPlugin.DataserverReply(item.AssetID.ToString(),
-                                NotecardCache.GetLines(item.AssetID).ToString());
-                        // ScriptSleep(100);
-                        return tid.ToString();
+                        assetID = item.AssetID;
+                        break;
                     }
-                    WithNotecard(item.AssetID, delegate (UUID id, AssetBase a)
-                    {
-                        System.Text.ASCIIEncoding enc =
-                            new System.Text.ASCIIEncoding();
-                        string data = enc.GetString(a.Data);
-                        //m_log.Debug(data);
-                        NotecardCache.Cache(id, data);
-                        AsyncCommands.
-                                DataserverPlugin.DataserverReply(id.ToString(),
-                                NotecardCache.GetLines(id).ToString());
-                    });
-                    // ScriptSleep(100);
-                    return tid.ToString();
                 }
             }
+
+            if (assetID == UUID.Zero)
+            {
+                // => complain loudly, as specified by the LSL docs
+                ShoutError("Notecard '" + name + "' could not be found.");
+            }
+
+            UUID tid = UUID.Zero;
+
+            if (NotecardCache.IsCached(assetID))
+            {
+                tid = AsyncCommands.
+                        DataserverPlugin.RegisterRequest(m_localID,
+                        m_itemID, assetID.ToString());
+                
+                AsyncCommands.
+                DataserverPlugin.DataserverReply(assetID.ToString(),
+                NotecardCache.GetLines(assetID).ToString());
+                // ScriptSleep(100);
+                return tid.ToString();
+            }
+            
+            WithNotecard(assetID, delegate (UUID id, AssetBase a)
+            {
+                if (a.Type != 7)
+                    return;
+
+                tid = AsyncCommands.
+                        DataserverPlugin.RegisterRequest(m_localID,
+                        m_itemID, assetID.ToString());
+                
+                System.Text.ASCIIEncoding enc =
+                    new System.Text.ASCIIEncoding();
+                string data = enc.GetString(a.Data);
+                //m_log.Debug(data);
+                NotecardCache.Cache(id, data);
+                AsyncCommands.
+                        DataserverPlugin.DataserverReply(id.ToString(),
+                        NotecardCache.GetLines(id).ToString());
+            });
+
+            if (tid != UUID.Zero)
+            {
+                // ScriptSleep(100);
+                return tid.ToString();
+            }
+
             // if we got to here, we didn't find the notecard the script was asking for
             // => complain loudly, as specified by the LSL docs
             ShoutError("Notecard '" + name + "' could not be found.");
@@ -9210,38 +9246,64 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             TaskInventoryDictionary itemsDictionary = (TaskInventoryDictionary)m_host.TaskInventory.Clone();
             
-            foreach (TaskInventoryItem item in itemsDictionary.Values)
-            {
-                if (item.Type == 7 && item.Name == name)
-                {
-                    UUID tid = AsyncCommands.
-                            DataserverPlugin.RegisterRequest(m_localID,
-                            m_itemID, item.AssetID.ToString());
-                    
-                    if (NotecardCache.IsCached(item.AssetID))
-                    {
-                        AsyncCommands.
-                        DataserverPlugin.DataserverReply(item.AssetID.ToString(),
-                        NotecardCache.GetLine(item.AssetID, line, m_notecardLineReadCharsMax));
-                        // ScriptSleep(100);
-                        return tid.ToString();
-                    }
-                    
-                    WithNotecard(item.AssetID, delegate (UUID id, AssetBase a)
-                    {
-                        System.Text.ASCIIEncoding enc =
-                            new System.Text.ASCIIEncoding();
-                        string data = enc.GetString(a.Data);
-                        //m_log.Debug(data);
-                        NotecardCache.Cache(id, data);
-                        AsyncCommands.
-                                DataserverPlugin.DataserverReply(id.ToString(),
-                                NotecardCache.GetLine(id, line, m_notecardLineReadCharsMax));
-                    });
+            UUID assetID = UUID.Zero;
 
-                    // ScriptSleep(100);
-                    return tid.ToString();
+            if (!UUID.TryParse(name, out assetID))
+            {
+                foreach (TaskInventoryItem item in itemsDictionary.Values)
+                {
+                    if (item.Type == 7 && item.Name == name)
+                    {
+                        assetID = item.AssetID;
+                        break;
+                    }
                 }
+            }
+
+            if (assetID == UUID.Zero)
+            {
+                // => complain loudly, as specified by the LSL docs
+                ShoutError("Notecard '" + name + "' could not be found.");
+            }
+
+            UUID tid = UUID.Zero;
+
+            if (NotecardCache.IsCached(assetID))
+            {
+                tid = AsyncCommands.
+                        DataserverPlugin.RegisterRequest(m_localID,
+                        m_itemID, assetID.ToString());
+                
+                AsyncCommands.
+                DataserverPlugin.DataserverReply(assetID.ToString(),
+                NotecardCache.GetLine(assetID, line, m_notecardLineReadCharsMax));
+                // ScriptSleep(100);
+                return tid.ToString();
+            }
+            
+            WithNotecard(assetID, delegate (UUID id, AssetBase a)
+            {
+                if (a.Type != 7)
+                    return;
+
+                tid = AsyncCommands.
+                        DataserverPlugin.RegisterRequest(m_localID,
+                        m_itemID, assetID.ToString());
+                
+                System.Text.ASCIIEncoding enc =
+                    new System.Text.ASCIIEncoding();
+                string data = enc.GetString(a.Data);
+                //m_log.Debug(data);
+                NotecardCache.Cache(id, data);
+                AsyncCommands.
+                        DataserverPlugin.DataserverReply(id.ToString(),
+                        NotecardCache.GetLine(id, line, m_notecardLineReadCharsMax));
+            });
+
+            if (tid != UUID.Zero)
+            {
+                // ScriptSleep(100);
+                return tid.ToString();
             }
 
             // if we got to here, we didn't find the notecard the script was asking for
