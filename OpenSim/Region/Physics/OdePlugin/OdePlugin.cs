@@ -123,6 +123,28 @@ namespace OpenSim.Region.Physics.OdePlugin
         Selected = 0x00000100
     }
 
+    /// <summary>
+    /// Material type for a primitive
+    /// </summary>
+    public enum Material : int
+    {
+        /// <summary></summary>
+        Stone = 0,
+        /// <summary></summary>
+        Metal = 1,
+        /// <summary></summary>
+        Glass = 2,
+        /// <summary></summary>
+        Wood = 3,
+        /// <summary></summary>
+        Flesh = 4,
+        /// <summary></summary>
+        Plastic = 5,
+        /// <summary></summary>
+        Rubber = 6
+
+    }
+
     public sealed class OdeScene : PhysicsScene
     {
         private readonly ILog m_log;
@@ -184,6 +206,7 @@ namespace OpenSim.Region.Physics.OdePlugin
         private float minimumGroundFlightOffset = 3f;
 
         public bool meshSculptedPrim = true;
+        public bool forceSimplePrimMeshing = false;
 
         public float meshSculptLOD = 32;
         public float MeshSculptphysicalLOD = 16;
@@ -238,6 +261,7 @@ namespace OpenSim.Region.Physics.OdePlugin
         private d.Contact AvatarMovementprimContact;
         private d.Contact AvatarMovementTerrainContact;
         private d.Contact WaterContact;
+        private d.Contact[,] m_materialContacts;
 
 //Ckrinke: Comment out until used. We declare it, initialize it, but do not use it
 //Ckrinke        private int m_randomizeWater = 200;
@@ -317,6 +341,11 @@ namespace OpenSim.Region.Physics.OdePlugin
             // zero out a heightmap array float array (single dimention [flattened]))
             _heightmap = new float[514*514];
             _watermap = new float[258 * 258];
+
+
+
+
+
 
             // Zero out the prim spaces array (we split our space into smaller spaces so
             // we can hit test less.
@@ -408,6 +437,7 @@ namespace OpenSim.Region.Physics.OdePlugin
                     bodyPIDD = physicsconfig.GetFloat("body_pid_derivative", 35f);
                     bodyPIDG = physicsconfig.GetFloat("body_pid_gain", 25f);
 
+                    forceSimplePrimMeshing = physicsconfig.GetBoolean("force_simple_prim_meshing", forceSimplePrimMeshing);
                     meshSculptedPrim = physicsconfig.GetBoolean("mesh_sculpted_prim", true);
                     meshSculptLOD = physicsconfig.GetFloat("mesh_lod", 32f);
                     MeshSculptphysicalLOD = physicsconfig.GetFloat("mesh_physical_lod", 16f);
@@ -476,6 +506,131 @@ namespace OpenSim.Region.Physics.OdePlugin
             AvatarMovementTerrainContact.surface.mu = mTerrainContactFriction;
             AvatarMovementTerrainContact.surface.bounce = mTerrainContactBounce;
             AvatarMovementTerrainContact.surface.soft_erp = mTerrainContactERP;
+
+
+            /*
+                <summary></summary>
+                Stone = 0,
+                /// <summary></summary>
+                Metal = 1,
+                /// <summary></summary>
+                Glass = 2,
+                /// <summary></summary>
+                Wood = 3,
+                /// <summary></summary>
+                Flesh = 4,
+                /// <summary></summary>
+                Plastic = 5,
+                /// <summary></summary>
+                Rubber = 6
+             */
+
+            m_materialContacts = new d.Contact[7,2];
+
+            m_materialContacts[(int)Material.Stone, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Stone, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Stone, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Stone, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Stone, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Stone, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Stone, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Stone, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Stone, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Stone, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Stone, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Stone, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Metal, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Metal, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Metal, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Metal, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Metal, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Metal, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Metal, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Metal, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Metal, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Metal, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Metal, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Metal, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Glass, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Glass, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Glass, 0].surface.mu = 1f;
+            m_materialContacts[(int)Material.Glass, 0].surface.bounce = 0.5f;
+            m_materialContacts[(int)Material.Glass, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Glass, 0].surface.soft_erp = 0.010f;
+
+            /*
+                private float nmAvatarObjectContactFriction = 250f;
+                private float nmAvatarObjectContactBounce = 0.1f;
+
+                private float mAvatarObjectContactFriction = 75f;
+                private float mAvatarObjectContactBounce = 0.1f;
+            */
+            m_materialContacts[(int)Material.Glass, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Glass, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Glass, 1].surface.mu = 1f;
+            m_materialContacts[(int)Material.Glass, 1].surface.bounce = 0.5f;
+            m_materialContacts[(int)Material.Glass, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Glass, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Wood, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Wood, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Wood, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Wood, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Wood, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Wood, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Wood, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Wood, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Wood, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Wood, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Wood, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Wood, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Flesh, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Flesh, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Flesh, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Flesh, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Flesh, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Flesh, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Flesh, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Flesh, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Flesh, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Flesh, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Flesh, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Flesh, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Plastic, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Plastic, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Plastic, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Plastic, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Plastic, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Plastic, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Plastic, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Plastic, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Plastic, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Plastic, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Plastic, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Plastic, 1].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Rubber, 0] = new d.Contact();
+            m_materialContacts[(int)Material.Rubber, 0].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Rubber, 0].surface.mu = nmAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Rubber, 0].surface.bounce = nmAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Rubber, 0].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Rubber, 0].surface.soft_erp = 0.010f;
+
+            m_materialContacts[(int)Material.Rubber, 1] = new d.Contact();
+            m_materialContacts[(int)Material.Rubber, 1].surface.mode |= d.ContactFlags.SoftERP;
+            m_materialContacts[(int)Material.Rubber, 1].surface.mu = mAvatarObjectContactFriction;
+            m_materialContacts[(int)Material.Rubber, 1].surface.bounce = mAvatarObjectContactBounce;
+            m_materialContacts[(int)Material.Rubber, 1].surface.soft_cfm = 0.010f;
+            m_materialContacts[(int)Material.Rubber, 1].surface.soft_erp = 0.010f;
 
             d.HashSpaceSetLevels(space, worldHashspaceLow, worldHashspaceHigh);
 
@@ -867,13 +1022,63 @@ namespace OpenSim.Region.Physics.OdePlugin
                         }
                         else
                         {
-                            // Use the non moving terrain contact
-                            TerrainContact.geom = contacts[i];
-                            _perloopContact.Add(contacts[i]);
-                            if (m_global_contactcount < maxContactsbeforedeath)
+                            if (p2.PhysicsActorType == (int)ActorTypes.Agent)
                             {
-                                joint = d.JointCreateContact(world, contactgroup, ref TerrainContact);
-                                m_global_contactcount++;
+                                // Use the non moving terrain contact
+                                TerrainContact.geom = contacts[i];
+                                _perloopContact.Add(contacts[i]);
+                                if (m_global_contactcount < maxContactsbeforedeath)
+                                {
+                                    joint = d.JointCreateContact(world, contactgroup, ref TerrainContact);
+                                    m_global_contactcount++;
+                                }
+                            }
+                            else
+                            {
+                                if (p2.PhysicsActorType == (int)ActorTypes.Prim && p1.PhysicsActorType == (int)ActorTypes.Prim)
+                                {
+                                    // prim prim contact
+                                    int pj294950 = 0;
+                                    int movintYN = 0;
+                                    // prim terrain contact
+                                    if (Math.Abs(p2.Velocity.X) > 0.01f || Math.Abs(p2.Velocity.Y) > 0.01f)
+                                    {
+                                        movintYN = 1;
+                                    }
+                                    int material = ((OdePrim)p2).m_material;
+                                    //m_log.DebugFormat("Material: {0}", material);
+                                    m_materialContacts[material, movintYN].geom = contacts[i];
+                                    _perloopContact.Add(contacts[i]);
+
+                                    if (m_global_contactcount < maxContactsbeforedeath)
+                                    {
+                                        joint = d.JointCreateContact(world, contactgroup, ref m_materialContacts[material, movintYN]);
+                                        m_global_contactcount++;
+
+                                    }
+                                    
+                                }
+                                else
+                                {
+
+                                    int movintYN = 0;
+                                    // prim terrain contact
+                                    if (Math.Abs(p2.Velocity.X) > 0.01f || Math.Abs(p2.Velocity.Y) > 0.01f)
+                                    {
+                                        movintYN = 1;
+                                    }
+                                    int material = ((OdePrim)p2).m_material;
+                                    //m_log.DebugFormat("Material: {0}", material);
+                                    m_materialContacts[material, movintYN].geom = contacts[i];
+                                    _perloopContact.Add(contacts[i]);
+
+                                    if (m_global_contactcount < maxContactsbeforedeath)
+                                    {
+                                        joint = d.JointCreateContact(world, contactgroup, ref m_materialContacts[material, movintYN]);
+                                        m_global_contactcount++;
+
+                                    }
+                                }
                             }
                         }
                         //if (p2.PhysicsActorType == (int)ActorTypes.Prim)
@@ -883,13 +1088,14 @@ namespace OpenSim.Region.Physics.OdePlugin
                     }
                     else if (name1 == "Water" || name2 == "Water")
                     {
+                        /*
                         if ((p2.PhysicsActorType == (int) ActorTypes.Prim))
                         {
                         }
                         else
                         {
                         }
-
+                        */
                         //WaterContact.surface.soft_cfm = 0.0000f;
                         //WaterContact.surface.soft_erp = 0.00000f;
                         if (contacts[i].depth > 0.1f)
@@ -911,28 +1117,46 @@ namespace OpenSim.Region.Physics.OdePlugin
                     {
                         // we're colliding with prim or avatar
                         // check if we're moving
-                        if ((p2.PhysicsActorType == (int) ActorTypes.Agent) &&
-                            (Math.Abs(p2.Velocity.X) > 0.01f || Math.Abs(p2.Velocity.Y) > 0.01f))
+                        if ((p2.PhysicsActorType == (int)ActorTypes.Agent))
                         {
-                            // Use the Movement prim contact
-                            AvatarMovementprimContact.geom = contacts[i];
-                            _perloopContact.Add(contacts[i]);
-                            if (m_global_contactcount < maxContactsbeforedeath)
+                            if ((Math.Abs(p2.Velocity.X) > 0.01f || Math.Abs(p2.Velocity.Y) > 0.01f))
                             {
-                                joint = d.JointCreateContact(world, contactgroup, ref AvatarMovementprimContact);
-                                m_global_contactcount++;
+                                // Use the Movement prim contact
+                                AvatarMovementprimContact.geom = contacts[i];
+                                _perloopContact.Add(contacts[i]);
+                                if (m_global_contactcount < maxContactsbeforedeath)
+                                {
+                                    joint = d.JointCreateContact(world, contactgroup, ref AvatarMovementprimContact);
+                                    m_global_contactcount++;
+                                }
+                            }
+                            else
+                            {
+                                // Use the non movement contact
+                                contact.geom = contacts[i];
+                                _perloopContact.Add(contacts[i]);
+
+                                if (m_global_contactcount < maxContactsbeforedeath)
+                                {
+                                    joint = d.JointCreateContact(world, contactgroup, ref contact);
+                                    m_global_contactcount++;
+                                }
                             }
                         }
-                        else
+                        else if (p2.PhysicsActorType == (int)ActorTypes.Prim)
                         {
-                            // Use the non movement contact
-                            contact.geom = contacts[i];
+                            //p1.PhysicsActorType
+                            int material = ((OdePrim)p2).m_material;
+                            
+                            //m_log.DebugFormat("Material: {0}", material);
+                            m_materialContacts[material, 0].geom = contacts[i];
                             _perloopContact.Add(contacts[i]);
 
                             if (m_global_contactcount < maxContactsbeforedeath)
                             {
-                                joint = d.JointCreateContact(world, contactgroup, ref contact);
+                                joint = d.JointCreateContact(world, contactgroup, ref m_materialContacts[material, 0]);
                                 m_global_contactcount++;
+
                             }
                         }
                     }
@@ -1428,18 +1652,6 @@ namespace OpenSim.Region.Physics.OdePlugin
         {
             PhysicsActor result;
             IMesh mesh = null;
-
-            //switch (pbs.ProfileShape)
-            //{
-            //    case ProfileShape.Square:
-            //         //support simple box & hollow box now; later, more shapes
-            //        if (needsMeshing(pbs))
-            //        {
-            //            mesh = mesher.CreateMesh(primName, pbs, size, 32f, isPhysical);
-            //        }
-
-            //        break;
-            //}
 
             if (needsMeshing(pbs))
                 mesh = mesher.CreateMesh(primName, pbs, size, 32f, isPhysical);
@@ -2152,23 +2364,26 @@ namespace OpenSim.Region.Physics.OdePlugin
             }
 
             // if it's a standard box or sphere with no cuts, hollows, twist or top shear, return false since ODE can use an internal representation for the prim
-            if ((pbs.ProfileShape == ProfileShape.Square && pbs.PathCurve == (byte)Extrusion.Straight)
-                || (pbs.ProfileShape == ProfileShape.HalfCircle && pbs.PathCurve == (byte)Extrusion.Curve1
-                && pbs.Scale.X == pbs.Scale.Y && pbs.Scale.Y == pbs.Scale.Z))
+            if (!forceSimplePrimMeshing)
             {
-
-                if (pbs.ProfileBegin == 0 && pbs.ProfileEnd == 0
-                    && pbs.ProfileHollow == 0
-                    && pbs.PathTwist == 0 && pbs.PathTwistBegin == 0
-                    && pbs.PathBegin == 0 && pbs.PathEnd == 0
-                    && pbs.PathTaperX == 0 && pbs.PathTaperY == 0
-                    && pbs.PathScaleX == 100 && pbs.PathScaleY == 100
-                    && pbs.PathShearX == 0 && pbs.PathShearY == 0)
+                if ((pbs.ProfileShape == ProfileShape.Square && pbs.PathCurve == (byte)Extrusion.Straight)
+                    || (pbs.ProfileShape == ProfileShape.HalfCircle && pbs.PathCurve == (byte)Extrusion.Curve1
+                    && pbs.Scale.X == pbs.Scale.Y && pbs.Scale.Y == pbs.Scale.Z))
                 {
+
+                    if (pbs.ProfileBegin == 0 && pbs.ProfileEnd == 0
+                        && pbs.ProfileHollow == 0
+                        && pbs.PathTwist == 0 && pbs.PathTwistBegin == 0
+                        && pbs.PathBegin == 0 && pbs.PathEnd == 0
+                        && pbs.PathTaperX == 0 && pbs.PathTaperY == 0
+                        && pbs.PathScaleX == 100 && pbs.PathScaleY == 100
+                        && pbs.PathShearX == 0 && pbs.PathShearY == 0)
+                    {
 #if SPAM
                     m_log.Warn("NonMesh");
 #endif
-                    return false;
+                        return false;
+                    }
                 }
             }
 
