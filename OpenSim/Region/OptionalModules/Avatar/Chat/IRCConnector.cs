@@ -835,14 +835,14 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
         protected static void WatchdogHandler(Object source, ElapsedEventArgs args)
         {
 
-            m_log.InfoFormat("[IRC-Watchdog] Status scan");
+            // m_log.InfoFormat("[IRC-Watchdog] Status scan");
 
             _pdk_ = (_pdk_+1)%PING_PERIOD;    // cycle the ping trigger
             _icc_++;    // increment the inter-consecutive-connect-delay counter
 
             foreach (IRCConnector connector in m_connectors)
             {
-                m_log.InfoFormat("[IRC-Watchdog] Scanning {0}", connector);
+                // m_log.InfoFormat("[IRC-Watchdog] Scanning {0}", connector);
                 if (connector.Enabled)
                 {
                     if (!connector.Connected)
