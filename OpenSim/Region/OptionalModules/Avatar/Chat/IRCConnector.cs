@@ -849,7 +849,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                     {
                         try
                         {
-                            m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
+                            // m_log.DebugFormat("[IRC-Watchdog] Connecting {1}:{2}", connector.idn, connector.m_server, connector.m_ircChannel);
                             connector.Connect();
                         }
                         catch (Exception e)
@@ -864,7 +864,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Chat
                         {
                             if (connector.m_timeout == 0)
                             {
-                                m_log.ErrorFormat("[IRC-Watchdog] Login timed-out for connector {0}, reconnecting", connector.idn);
+                                // m_log.ErrorFormat("[IRC-Watchdog] Login timed-out for connector {0}, reconnecting", connector.idn);
                                 connector.Reconnect();
                             }
                             else
