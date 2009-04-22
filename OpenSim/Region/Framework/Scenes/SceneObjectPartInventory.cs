@@ -285,7 +285,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             if(m_part.ParentGroup.m_savedScriptState.ContainsKey(oldID))
             {
-				string fpath = Path.Combine("ScriptEngines/"+m_part.ParentGroup.Scene.RegionInfo.RegionID.ToString(),
+                string fpath = Path.Combine("ScriptEngines/"+m_part.ParentGroup.Scene.RegionInfo.RegionID.ToString(),
                                     newID.ToString()+".state");
                 FileStream fs = File.Create(fpath);
                 Byte[] buffer = enc.GetBytes(m_part.ParentGroup.m_savedScriptState[oldID]);
