@@ -71,6 +71,8 @@ namespace OpenSim.Framework.Communications.Tests
             Assert.That(existingUserInfo, Is.Not.Null, "User info not found by name");                       
         }
         
+        /**
+         * Disabled as not fully implemented
         [Test]
         public void TestUpdateProfile()
         {
@@ -86,9 +88,11 @@ namespace OpenSim.Framework.Communications.Tests
             
             TestCommunicationsManager commsManager = new TestCommunicationsManager();
             UserProfileCacheService userCacheService = commsManager.UserProfileCacheService;
+            IUserDataPlugin userDataPlugin = commsManager.UserDataPlugin;
             
             // Check that we can't update info before it exists
             Assert.That(userCacheService.UpdateProfile(newProfile), Is.False);
+            Assert.That(userDataPlugin.GetUserByUUID(userId), Is.Null);
             
             // Check that we can update a profile once it exists
             LocalUserServices lus = (LocalUserServices)commsManager.UserService;           
@@ -97,7 +101,9 @@ namespace OpenSim.Framework.Communications.Tests
             Assert.That(userCacheService.UpdateProfile(newProfile), Is.True);
             UserProfileData retrievedProfile = userCacheService.GetUserDetails(userId).UserProfile;
             Assert.That(retrievedProfile.SurName, Is.EqualTo(newLastName));
+            Assert.That(userDataPlugin.GetUserByUUID(userId).SurName, Is.EqualTo(newLastName));
         }
+        */
 
         [Test]
         public void TestFetchInventory()
