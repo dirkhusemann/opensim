@@ -443,8 +443,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     throw new Exception(String.Format("region \"{0}\": avatar \"{1}\": land data not yet available",
                                                       scene.RegionInfo.RegionName, avatarName));
 
-
-
                 // get channel_uri: check first whether estate
                 // settings allow voice, then whether parcel allows
                 // voice, if all do retrieve or obtain the parcel

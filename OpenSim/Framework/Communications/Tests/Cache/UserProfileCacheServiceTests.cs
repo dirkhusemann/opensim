@@ -29,6 +29,7 @@ using NUnit.Framework;
 using NUnit.Framework.SyntaxHelpers;
 using OpenMetaverse;
 using OpenSim.Data;
+using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Region.Communications.Local;
 using OpenSim.Tests.Common.Mock;
@@ -69,6 +70,40 @@ namespace OpenSim.Framework.Communications.Tests
             existingUserInfo = commsManager.UserProfileCacheService.GetUserDetails(firstName, lastName);
             Assert.That(existingUserInfo, Is.Not.Null, "User info not found by name");                       
         }
+        
+        /**
+         * Disabled as not fully implemented
+        [Test]
+        public void TestUpdateProfile()
+        {
+            UUID userId = UUID.Parse("00000000-0000-0000-0000-000000000292");
+            string firstName = "Inspector";
+            string originalLastName = "Morse";     
+            string newLastName = "Gadget";
+            
+            UserProfileData newProfile = new UserProfileData();
+            newProfile.ID = userId;
+            newProfile.FirstName = firstName;
+            newProfile.SurName = newLastName;
+            
+            TestCommunicationsManager commsManager = new TestCommunicationsManager();
+            UserProfileCacheService userCacheService = commsManager.UserProfileCacheService;
+            IUserDataPlugin userDataPlugin = commsManager.UserDataPlugin;
+            
+            // Check that we can't update info before it exists
+            Assert.That(userCacheService.UpdateProfile(newProfile), Is.False);
+            Assert.That(userDataPlugin.GetUserByUUID(userId), Is.Null);
+            
+            // Check that we can update a profile once it exists
+            LocalUserServices lus = (LocalUserServices)commsManager.UserService;           
+            lus.AddUser(firstName, originalLastName, "pingu", "ted@excellentadventure.com", 1000, 1000, userId);
+            
+            Assert.That(userCacheService.UpdateProfile(newProfile), Is.True);
+            UserProfileData retrievedProfile = userCacheService.GetUserDetails(userId).UserProfile;
+            Assert.That(retrievedProfile.SurName, Is.EqualTo(newLastName));
+            Assert.That(userDataPlugin.GetUserByUUID(userId).SurName, Is.EqualTo(newLastName));
+        }
+        */
 
         [Test]
         public void TestFetchInventory()
