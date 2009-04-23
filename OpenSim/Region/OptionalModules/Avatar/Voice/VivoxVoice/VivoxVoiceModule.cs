@@ -102,7 +102,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
                     m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                     m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
-                    m_vivoxChannelType = m_config.GetString("vivox_channel_type", "channel");
+                    m_vivoxChannelType = m_config.GetString("vivox_channel_type", "positional");
                     m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
 
                     m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
