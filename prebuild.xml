@@ -1304,6 +1304,7 @@
       <Reference name="System.Drawing"/>
       <Reference name="System.Runtime.Remoting"/>
       <Reference name="System.Xml"/>
+      <Reference name="OpenSim.Data"/>
       <Reference name="OpenSim.Framework"/>
       <Reference name="OpenSim.Framework.Communications" />
       <Reference name="OpenSim.Framework.Servers"/>
@@ -1549,6 +1550,7 @@
       <Reference name="OpenMetaverse.StructuredData.dll"/>
       <Reference name="Nini.dll" />
       <Reference name="OpenSim"/>
+      <Reference name="OpenSim.Data"/>
       <Reference name="OpenSim.Region.ClientStack"/>
       <Reference name="OpenSim.Region.CoreModules"/>
       <Reference name="OpenSim.Region.Framework"/>
@@ -1828,6 +1830,7 @@
       <Reference name="OpenMetaverseTypes.dll"/>
       <Reference name="OpenMetaverse.dll"/>
       <Reference name="System"/>
+	  <Reference name="System.Drawing"/>
       <Reference name="OpenSim.Framework"/>
 	  <Reference name="OpenSim.Framework.Servers"/>
       <Reference name="OpenSim.Region.Framework"/>
