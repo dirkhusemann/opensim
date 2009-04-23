@@ -25,6 +25,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+using System;
 using System.Collections.Generic;
 using OpenMetaverse;
 using OpenSim.Framework;
@@ -48,22 +49,29 @@ namespace OpenSim.Data
         /// </summary>
         /// <param name="fname">Account firstname</param>
         /// <param name="lname">Account lastname</param>
-        /// <returns>The user data profile</returns>
+        /// <returns>The user data profile.  Null if no user is found</returns>
         UserProfileData GetUserByName(string fname, string lname);
+        
+        /// <summary>
+        /// Get a user from a given uri.
+        /// </summary>  
+        /// <param name="uri"></param>
+        /// <returns>The user data profile.  Null if no user is found.</returns>
+        UserProfileData GetUserByUri(Uri uri);
 
         /// <summary>
         /// Returns a list of UUIDs firstnames and lastnames that match string query entered into the avatar picker.
         /// </summary>
         /// <param name="queryID">ID associated with the user's query. This must match what the client sent</param>
         /// <param name="query">The filtered contents of the search box when the user hit search.</param>
-        /// <returns>The user data profile</returns>
+        /// <returns>A list of user details.  If there are no results than either an empty list or null</returns>
         List<AvatarPickerAvatar> GeneratePickerResults(UUID queryID, string query);
 
         /// <summary>
         /// Returns the current agent for a user searching by it's UUID
         /// </summary>
         /// <param name="user">The users UUID</param>
-        /// <returns>The current agent session</returns>
+        /// <returns>The current agent session.  Null if no session was found</returns>
         UserAgentData GetAgentByUUID(UUID user);
 
         /// <summary>
@@ -132,6 +140,7 @@ namespace OpenSim.Data
         /// Returns a list of FriendsListItems that describe the friends and permissions in the friend relationship for UUID friendslistowner
         /// </summary>
         /// <param name="friendlistowner">The agent that we're retreiving the friends Data.</param>
+        /// <returns>The user's friends.  If there are no results than either an empty list or null</returns>
         List<FriendListItem> GetUserFriendList(UUID friendlistowner);
 
         /// <summary>
