@@ -165,6 +165,8 @@ namespace OpenSim.ApplicationPlugins.Rest.Inventory
                     DoPost(rdata);
                     break;
                 case "delete" :
+                    DoDelete(rdata);
+                    break;
                 default :
                     Rest.Log.WarnFormat("{0} File: Method not supported: {1}",
                                         MsgId, rdata.method);
@@ -313,7 +315,7 @@ namespace OpenSim.ApplicationPlugins.Rest.Inventory
 
             Rest.Log.DebugFormat("{0} REST File handler, Method = <{1}> ENTRY", MsgId, rdata.method);
 
-            if (rdata.Parameters.Length > 0)
+            if (rdata.Parameters.Length > 1)
             {
                 try
                 {
@@ -339,6 +341,67 @@ namespace OpenSim.ApplicationPlugins.Rest.Inventory
                 {
                     Rest.Log.DebugFormat("{0} Exception during file processing : {1}", MsgId, 
                           e.Message);
+                }
+            }
+            else
+            {
+                Rest.Log.DebugFormat("{0} Invalid parameters: <{1}>", MsgId, rdata.path);
+                rdata.Fail(Rest.HttpStatusCodeNotFound, "invalid parameters");
+            }
+
+            if (created)
+            {
+                rdata.appendStatus(String.Format("<p> Created file {0} <p>", path));
+                rdata.Complete(Rest.HttpStatusCodeCreated);
+            }
+            else
+            {
+                if (modified)
+                {
+                    rdata.appendStatus(String.Format("<p> Modified file {0} <p>", path));
+                    rdata.Complete(Rest.HttpStatusCodeOK);
+                }
+                else
+                {
+                    rdata.Complete(Rest.HttpStatusCodeNoContent);
+                }
+            }
+
+            rdata.Respond(String.Format("File {0} : Normal completion", rdata.method));
+
+        }
+
+        /// <summary>
+        /// CREATE new item, replace if it exists. URI identifies the context for the item in question.
+        /// No parameters are required for POST, just thepayload.
+        /// </summary>
+
+        private void DoDelete(FileRequestData rdata)
+        {
+
+            bool modified = false;
+            bool created  = false;
+            string path   = String.Empty;
+
+            Rest.Log.DebugFormat("{0} REST File handler, Method = <{1}> ENTRY", MsgId, rdata.method);
+
+            if (rdata.Parameters.Length > 1)
+            {
+                try
+                {
+					path = rdata.path.Substring(rdata.Parameters[0].Length+qPrefix.Length+2);
+
+					if(File.Exists(path))
+                    {
+                        File.Delete(path);
+                    }					
+                }
+                catch (Exception e)
+                {
+                    Rest.Log.DebugFormat("{0} Exception during file processing : {1}", MsgId, 
+                          e.Message);
+                    rdata.Fail(Rest.HttpStatusCodeNotFound, String.Format("invalid parameters : {0} {1}",
+                          path, e.Message));
                 }
             }
             else
