@@ -185,7 +185,15 @@ namespace OpenSim.Framework.Communications.Cache
                 }
                 catch (Exception e)
                 {
-                    m_log.Error("[ASSET CACHE]: " + e.ToString());
+                    if (e != null) 
+                    {
+                        m_log.ErrorFormat("[ASSET CACHE]: {0}", e);
+                    } 
+                    else 
+                    {
+                        // this looks weird, but we've seen this show up as an issue in unit tests, so leave it here until we know why
+                        m_log.Error("[ASSET CACHE]: an exception was thrown in RunAssetManager, but is now null.  Something is very wrong.");
+                    }
                 }
             }
         }
@@ -507,7 +515,10 @@ namespace OpenSim.Framework.Communications.Cache
             req.Params = transferRequest.TransferInfo.Params;
             req.AssetInf = new AssetInfo(asset);
             req.NumPackets = CalculateNumPackets(asset.Data);
-            lock (AssetRequests) AssetRequests.Add(req);
+            lock (AssetRequests) 
+            {
+                AssetRequests.Add(req);
+            }
         }
 
         /// <summary>
@@ -528,26 +539,25 @@ namespace OpenSim.Framework.Communications.Cache
             AssetRequest req;
             AssetRequestToClient req2 = new AssetRequestToClient();
 
-            for (int i = 0; i < num; i++)
+            lock (AssetRequests)
             {
-                lock (AssetRequests)
+                for (int i = 0; i < num; i++)
                 {
                    req = AssetRequests[0];
                    AssetRequests.RemoveAt(0);
+                   req2.AssetInf = req.AssetInf;
+                   req2.AssetRequestSource = req.AssetRequestSource;
+                   req2.DataPointer = req.DataPointer;
+                   req2.DiscardLevel = req.DiscardLevel;
+                   req2.ImageInfo = req.ImageInfo;
+                   req2.IsTextureRequest = req.IsTextureRequest;
+                   req2.NumPackets = req.NumPackets;
+                   req2.PacketCounter = req.PacketCounter;
+                   req2.Params = req.Params;
+                   req2.RequestAssetID = req.RequestAssetID;
+                   req2.TransferRequestID = req.TransferRequestID;
+                   req.RequestUser.SendAsset(req2);
                 }
-
-                req2.AssetInf = req.AssetInf;
-                req2.AssetRequestSource = req.AssetRequestSource;
-                req2.DataPointer = req.DataPointer;
-                req2.DiscardLevel = req.DiscardLevel;
-                req2.ImageInfo = req.ImageInfo;
-                req2.IsTextureRequest = req.IsTextureRequest;
-                req2.NumPackets = req.NumPackets;
-                req2.PacketCounter = req.PacketCounter;
-                req2.Params = req.Params;
-                req2.RequestAssetID = req.RequestAssetID;
-                req2.TransferRequestID = req.TransferRequestID;
-                req.RequestUser.SendAsset(req2);
             }
         }
 
