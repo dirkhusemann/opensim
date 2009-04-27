@@ -1305,6 +1305,36 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
         }
 
+        public void SetTexGen(SceneObjectPart part, int face,int style)
+        {
+            Primitive.TextureEntry tex = part.Shape.Textures;
+            MappingType textype;
+            textype = MappingType.Default;
+            if (style == (int)ScriptBaseClass.PRIM_TEXGEN_PLANAR)
+                textype = MappingType.Planar;
+
+            if (face >= 0 && face < GetNumberOfSides(part))
+            {
+                tex.CreateFace((uint) face);
+                tex.FaceTextures[face].TexMapType = textype;
+                part.UpdateTexture(tex);
+                return;
+            }
+            else if (face == ScriptBaseClass.ALL_SIDES)
+            {
+                for (uint i = 0; i < GetNumberOfSides(part); i++)
+                {
+                    if (tex.FaceTextures[i] != null)
+                    {
+                        tex.FaceTextures[i].TexMapType = textype;
+                    }
+                    tex.DefaultTexture.TexMapType = textype;
+                }
+                part.UpdateTexture(tex);
+                return;
+            }
+        }
+
         public void SetGlow(SceneObjectPart part, int face, float glow)
         {
             Primitive.TextureEntry tex = part.Shape.Textures;
@@ -6822,6 +6852,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                         part.ScriptSetTemporaryStatus(tempOnRez);
                         break;
+
+                    case (int)ScriptBaseClass.PRIM_TEXGEN:
+                        if (remain < 2)
+                            return;
+                            //face,type
+                        face = rules.GetLSLIntegerItem(idx++);
+                        int style = rules.GetLSLIntegerItem(idx++);
+                        SetTexGen(part, face, style);
+                        break;
                 }
             }
         }
@@ -6854,7 +6893,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 throw new Exception("Error in base64Decode" + e.Message);
             }
         }
-
 
         public LSL_String llXorBase64Strings(string str1, string str2)
         {
@@ -7176,7 +7214,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 // vector profilecut
                                 res.Add(new LSL_Vector(Shape.ProfileBegin / 50000.0, 1 - Shape.ProfileEnd / 50000.0, 0));
 
-
                                 // vector tapera
                                 res.Add(new LSL_Vector(Shape.PathTaperX / 100.0, Shape.PathTaperY / 100.0, 0));
 
@@ -7189,7 +7226,6 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                                 // float skew
                                 res.Add(new LSL_Float(Shape.PathSkew / 100.0));
                                 break;
-
                         }
                         break;
 
@@ -7207,11 +7243,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                                 res.Add(new LSL_String(texface.TextureID.ToString()));
                                 res.Add(new LSL_Vector(texface.RepeatU,
-                                                              texface.RepeatV,
-                                                              0));
+                                                       texface.RepeatV,
+                                                       0));
                                 res.Add(new LSL_Vector(texface.OffsetU,
-                                                              texface.OffsetV,
-                                                              0));
+                                                       texface.OffsetV,
+                                                       0));
                                 res.Add(new LSL_Float(texface.Rotation));
                             }
                         }
@@ -7223,11 +7259,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
                                 res.Add(new LSL_String(texface.TextureID.ToString()));
                                 res.Add(new LSL_Vector(texface.RepeatU,
-                                                              texface.RepeatV,
-                                                              0));
+                                                       texface.RepeatV,
+                                                       0));
                                 res.Add(new LSL_Vector(texface.OffsetU,
-                                                              texface.OffsetV,
-                                                              0));
+                                                       texface.OffsetV,
+                                                       0));
                                 res.Add(new LSL_Float(texface.Rotation));
                             }
                         }
@@ -7247,8 +7283,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             {
                                 texcolor = tex.GetFace((uint)face).RGBA;
                                 res.Add(new LSL_Vector(texcolor.R,
-                                                              texcolor.G,
-                                                              texcolor.B));
+                                                       texcolor.G,
+                                                       texcolor.B));
                                 res.Add(new LSL_Float(texcolor.A));
                             }
                         }
@@ -7256,8 +7292,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         {
                             texcolor = tex.GetFace((uint)face).RGBA;
                             res.Add(new LSL_Vector(texcolor.R,
-                                                          texcolor.G,
-                                                          texcolor.B));
+                                                   texcolor.G,
+                                                   texcolor.B));
                             res.Add(new LSL_Float(texcolor.A));
                         }
                         break;
@@ -7296,8 +7332,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         res.Add(new LSL_Float(shape.FlexiWind));      // wind
                         res.Add(new LSL_Float(shape.FlexiTension));   // tension
                         res.Add(new LSL_Vector(shape.FlexiForceX,       // force
-                                                      shape.FlexiForceY,
-                                                      shape.FlexiForceZ));
+                                               shape.FlexiForceY,
+                                               shape.FlexiForceZ));
                         break;
 
                     case (int)ScriptBaseClass.PRIM_TEXGEN:
@@ -7319,8 +7355,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                         else
                             res.Add(new LSL_Integer(0));
                         res.Add(new LSL_Vector(shape.LightColorR,       // color
-                                                      shape.LightColorG,
-                                                      shape.LightColorB));
+                                               shape.LightColorG,
+                                               shape.LightColorB));
                         res.Add(new LSL_Float(shape.LightIntensity)); // intensity
                         res.Add(new LSL_Float(shape.LightRadius));    // radius
                         res.Add(new LSL_Float(shape.LightFalloff));   // falloff

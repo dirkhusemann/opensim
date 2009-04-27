@@ -37,30 +37,18 @@ using OpenSim.Region.Framework.Scenes;
 
 namespace OpenSim.Region.CoreModules.Hypergrid
 {
-    public class HGWorldMapModule : WorldMapModule, IRegionModule
+    public class HGWorldMapModule : WorldMapModule
     {
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        #region IRegionModule Members
+        #region INonSharedRegionModule Members
 
-        public override void Initialise(Scene scene, IConfigSource config)
+        public override void Initialise(IConfigSource config)
         {
             IConfig startupConfig = config.Configs["Startup"];
-            if (startupConfig.GetString("WorldMapModule", "WorldMap") == "HGWorldMap") 
+            if (startupConfig.GetString("WorldMapModule", "WorldMap") == "HGWorldMap")
                 m_Enabled = true;
-
-            if (!m_Enabled)
-                return;
-            m_log.Info("[HGMap] Initializing...");
-            m_scene = scene;
-
-            m_scene.RegisterModuleInterface<IWorldMapModule>(this);
-
-            m_scene.AddCommand(
-                this, "export-map",
-                "export-map [<path>]",
-                "Save an image of the world map", HandleExportWorldMapConsoleCommand);            
         }
 
         public override string Name
@@ -70,73 +58,17 @@ namespace OpenSim.Region.CoreModules.Hypergrid
 
         #endregion
 
-        /// <summary>
-        /// Requests map blocks in area of minX, maxX, minY, MaxY in world cordinates
-        /// </summary>
-        /// <param name="minX"></param>
-        /// <param name="minY"></param>
-        /// <param name="maxX"></param>
-        /// <param name="maxY"></param>
-        public override void RequestMapBlocks(IClientAPI remoteClient, int minX, int minY, int maxX, int maxY, uint flag)
+        protected override void GetAndSendBlocks(IClientAPI remoteClient, int minX, int minY, int maxX, int maxY, uint flag)
         {
+            List<MapBlockData> mapBlocks = m_scene.SceneGridService.RequestNeighbourMapBlocks(minX - 4, minY - 4, maxX + 4, maxY + 4);
+
+            // Different from super
+            FillInMap(mapBlocks, minX, minY, maxX, maxY);
             //
-            // WARNING!!! COPY & PASTE FROM SUPERCLASS
-            // The only difference is at the very end
-            //
 
-            m_log.Info("[HGMap]: Request map blocks " + minX + "-" + maxX + " " + minY + "-" + maxY);
-
-            //m_scene.ForEachScenePresence(delegate (ScenePresence sp) {
-            //    if (!sp.IsChildAgent && sp.UUID == remoteClient.AgentId)
-            //    {
-            //        m_log.Debug("XXX Root agent");
-            //        DoRequestMapBlocks(remoteClient, minX, minY, maxX, maxY, flag);
-            //    }
-            //};
-
-            List<MapBlockData> mapBlocks;
-            if ((flag & 0x10000) != 0)  // user clicked on the map a tile that isn't visible
-            {
-                List<MapBlockData> response = new List<MapBlockData>();
-
-                // this should return one mapblock at most. But make sure: Look whether the one we requested is in there
-                mapBlocks = m_scene.SceneGridService.RequestNeighbourMapBlocks(minX, minY, maxX, maxY);
-                if (mapBlocks != null)
-                {
-                    foreach (MapBlockData block in mapBlocks)
-                    {
-                        if (block.X == minX && block.Y == minY)
-                        {
-                            // found it => add it to response
-                            response.Add(block);
-                            break;
-                        }
-                    }
-                }
-
-                if (response.Count == 0)
-                {
-                    // response still empty => couldn't find the map-tile the user clicked on => tell the client
-                    MapBlockData block = new MapBlockData();
-                    block.X = (ushort)minX;
-                    block.Y = (ushort)minY;
-                    block.Access = 254; // == not there
-                    response.Add(block);
-                }
-                remoteClient.SendMapBlock(response, 0);
-            }
-            else
-            {
-                // normal mapblock request. Use the provided values
-                mapBlocks = m_scene.SceneGridService.RequestNeighbourMapBlocks(minX - 4, minY - 4, maxX + 4, maxY + 4);
-
-                // Different from super
-                FillInMap(mapBlocks, minX, minY, maxX, maxY);
-                //
-
-                remoteClient.SendMapBlock(mapBlocks, flag);
-            }
+            remoteClient.SendMapBlock(mapBlocks, flag);
         }
+
 
         private void FillInMap(List<MapBlockData> mapBlocks, int minX, int minY, int maxX, int maxY)
         {
@@ -158,5 +90,5 @@ namespace OpenSim.Region.CoreModules.Hypergrid
                 }
             }
         }
-    }    
+    }
 }

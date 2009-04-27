@@ -22,6 +22,9 @@
     ; Set this to true if you are connecting your OpenSimulator regions to a grid
     ; Set this to false if you are running OpenSimulator in standalone mode
     gridmode = false
+    
+    ; Set this to true if you want this OpenSimulator to run the Hypergrid functionality
+    hypergrid = false
 
     startup_console_commands_file = "startup_commands.txt"
     shutdown_console_commands_file = "shutdown_commands.txt"
@@ -411,9 +414,9 @@
     InstantMessageModule = InstantMessageModule
     ; MessageTransferModule = MessageTransferModule
     ; OfflineMessageModule = OfflineMessageModule
-    ; OfflineMessagesURL = http://yourserver/offlines.php
+    ; OfflineMessageURL = http://yourserver/Offline.php
     ; MuteListModule = MuteListModule
-    ; MuteListsURL = http://yourserver/mutes.php
+    ; MuteListURL = http://yourserver/Mute.php
 
 
 [ODEPhysicsSettings]
