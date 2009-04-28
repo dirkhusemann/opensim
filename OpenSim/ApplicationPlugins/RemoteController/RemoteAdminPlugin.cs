@@ -102,6 +102,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     Dictionary<string, XmlRpcMethod> availableMethods = new Dictionary<string, XmlRpcMethod>();
                     availableMethods["admin_create_region"] = XmlRpcCreateRegionMethod;
                     availableMethods["admin_delete_region"] = XmlRpcDeleteRegionMethod;
+                    availableMethods["admin_modify_region"] = XmlRpcModifyRegionMethod;
                     availableMethods["admin_region_query"] = XmlRpcRegionQueryMethod;
                     availableMethods["admin_shutdown"] = XmlRpcShutdownMethod;
                     availableMethods["admin_broadcast"] = XmlRpcAlertMethod;
@@ -408,6 +409,29 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             }
         }
 
+        private bool getBoolean(Hashtable requestData, string tag, bool defv)
+        {
+			// If an access value has been provided, apply it.
+			if(requestData.Contains(tag))
+			{
+				switch(((string)requestData[tag]).ToLower())
+				{
+					case "true" :
+					case "t" :
+					case "1" :
+						return true;
+					case "false" :
+					case "f" :
+					case "0" :
+						return false;
+					default :
+                        return defv;
+				}
+			}
+            else
+                return defv;
+        }
+
         /// <summary>
         /// Create a new region.
         /// <summary>
@@ -442,6 +466,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         /// <item><term>persist</term>
         ///       <description>if true, persist the region info
         ///       ('true' or 'false')</description></item>
+        /// <item><term>public</term>
+        ///       <description>if true, the region is public
+        ///       ('true' or 'false')</description></item>
         /// </list>
         ///
         /// XmlRpcCreateRegionMethod returns
@@ -465,7 +492,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             lock (rslock)
             {
-                int m_regionLimit = m_config.GetInt("region_limit", 0);
+
+                int  m_regionLimit = m_config.GetInt("region_limit", 0);
+                bool m_publicAccess = true;
 
                 try
                 {
@@ -488,7 +517,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // check whether we still have space left (iff we are using limits)
                     if (m_regionLimit != 0 && m_app.SceneManager.Scenes.Count >= m_regionLimit)
                         throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first", m_regionLimit));
-
 
                     // extract or generate region ID now
                     Scene scene = null;
@@ -619,8 +647,26 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                           region.RegionID, regionXmlPath);
                         region.SaveRegionToFile("dynamic region", regionXmlPath);
                     }
+
+                    // Create the region and perform any initial initialization
+
                     IScene newscene;
                     m_app.CreateRegion(region, out newscene);
+
+                    // If an access specification was provided, use it.
+                    // Otherwise accept the default.
+                    newscene.RegionInfo.EstateSettings.PublicAccess = getBoolean(requestData,"public", m_publicAccess);
+
+                    // For sprint 10 we will simply coerce these
+                    // settings.
+
+                    List<ILandObject> parcels = ((Scene)newscene).LandChannel.AllParcels();
+
+                    foreach(ILandObject parcel in parcels)
+                    {
+                         parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
+                         parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
+                    }
 
                     responseData["success"] = "true";
                     responseData["region_name"] = region.RegionName;
@@ -707,6 +753,79 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 }
 
                 m_log.Info("[RADMIN]: DeleteRegion: request complete");
+                return response;
+            }
+        }
+
+        /// <summary>
+        /// Change characteristics of an existing region.
+        /// <summary>
+        /// <param name="request">incoming XML RPC request</param>
+        /// <remarks>
+        /// XmlRpcModifyRegionMethod takes the following XMLRPC
+        /// parameters
+        /// <list type="table">
+        /// <listheader><term>parameter name</term><description>description</description></listheader>
+        /// <item><term>password</term>
+        ///       <description>admin password as set in OpenSim.ini</description></item>
+        /// <item><term>region_name</term>
+        ///       <description>desired region name</description></item>
+        /// <item><term>region_id</term>
+        ///       <description>(optional) desired region UUID</description></item>
+        /// <item><term>public</term>
+        ///       <description>if true, the region is public
+        ///       ('true' or 'false')</description></item>
+        /// </list>
+        ///
+        /// XmlRpcModifyRegionMethod returns
+        /// <list type="table">
+        /// <listheader><term>name</term><description>description</description></listheader>
+        /// <item><term>success</term>
+        ///       <description>true or false</description></item>
+        /// <item><term>error</term>
+        ///       <description>error message if success is false</description></item>
+        /// </list>
+        /// </remarks>
+
+        public XmlRpcResponse XmlRpcModifyRegionMethod(XmlRpcRequest request)
+        {
+            m_log.Info("[RADMIN]: ModifyRegion: new request");
+            XmlRpcResponse response = new XmlRpcResponse();
+            Hashtable responseData = new Hashtable();
+
+            lock (rslock)
+            {
+                try
+                {
+                    Hashtable requestData = (Hashtable) request.Params[0];
+                    checkStringParameters(request, new string[] {"password", "region_name"});
+
+                    Scene scene = null;
+                    string regionName = (string) requestData["region_name"];
+                    if (!m_app.SceneManager.TryGetScene(regionName, out scene))
+                        throw new Exception(String.Format("region \"{0}\" does not exist", regionName));
+
+                    // Modify access 
+                    scene.RegionInfo.EstateSettings.PublicAccess = 
+                        getBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
+
+                    responseData["success"] = "true";
+                    responseData["region_name"] = regionName;
+
+                    response.Value = responseData;
+                }
+                catch (Exception e)
+                {
+                    m_log.ErrorFormat("[RADMIN] ModifyRegion: failed {0}", e.Message);
+                    m_log.DebugFormat("[RADMIN] ModifyRegion: failed {0}", e.ToString());
+
+                    responseData["success"] = "false";
+                    responseData["error"] = e.Message;
+
+                    response.Value = responseData;
+                }
+
+                m_log.Info("[RADMIN]: ModifyRegion: request complete");
                 return response;
             }
         }
