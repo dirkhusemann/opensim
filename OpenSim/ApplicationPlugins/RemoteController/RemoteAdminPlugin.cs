@@ -57,7 +57,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private BaseHttpServer m_httpd;
         private IConfig m_config;
         private IConfigSource m_configSource;
-        private string requiredPassword = String.Empty;
+        private string m_requiredPassword = String.Empty;
 
         // TODO: required by IPlugin, but likely not at all right
         private string m_name = "RemoteAdminPlugin";
@@ -94,7 +94,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 {
                     m_config = m_configSource.Configs["RemoteAdmin"];
                     m_log.Info("[RADMIN]: Remote Admin Plugin Enabled");
-                    requiredPassword = m_config.GetString("access_password", String.Empty);
+                    m_requiredPassword = m_config.GetString("access_password", String.Empty);
 
                     m_app = openSim;
                     m_httpd = openSim.HttpServer;
@@ -174,8 +174,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 m_log.Info("[RADMIN]: Request to restart Region.");
                 checkStringParameters(request, new string[] {"password", "regionID"});
 
-                if (requiredPassword != String.Empty &&
-                    (!requestData.Contains("password") || (string) requestData["password"] != requiredPassword))
+                if (m_requiredPassword != String.Empty &&
+                    (!requestData.Contains("password") || (string) requestData["password"] != m_requiredPassword))
                 {
                     throw new Exception("wrong password");
                 }
@@ -223,8 +223,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 checkStringParameters(request, new string[] {"password", "message"});
 
-                if (requiredPassword != String.Empty &&
-                    (!requestData.Contains("password") || (string) requestData["password"] != requiredPassword))
+                if (m_requiredPassword != String.Empty &&
+                    (!requestData.Contains("password") || (string) requestData["password"] != m_requiredPassword))
                     throw new Exception("wrong password");
 
                 string message = (string) requestData["message"];
@@ -277,8 +277,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 checkStringParameters(request, new string[] {"password", "filename", "regionid"});
 
-                if (requiredPassword != String.Empty &&
-                    (!requestData.Contains("password") || (string) requestData["password"] != requiredPassword))
+                if (m_requiredPassword != String.Empty &&
+                    (!requestData.Contains("password") || (string) requestData["password"] != m_requiredPassword))
                     throw new Exception("wrong password");
 
                 string file = (string) requestData["filename"];
@@ -326,8 +326,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             {
                 Hashtable requestData = (Hashtable) request.Params[0];
 
-                if (requiredPassword != String.Empty &&
-                    (!requestData.Contains("password") || (string) requestData["password"] != requiredPassword))
+                if (m_requiredPassword != String.Empty &&
+                    (!requestData.Contains("password") || (string) requestData["password"] != m_requiredPassword))
                     throw new Exception("wrong password");
 
                 responseData["accepted"] = "true";
@@ -412,9 +412,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private bool getBoolean(Hashtable requestData, string tag, bool defv)
         {
             // If an access value has been provided, apply it.
-        if (requestData.Contains(tag))
+            if(requestData.Contains(tag))
             {
-            switch (((string)requestData[tag]).ToLower())
+                switch(((string)requestData[tag]).ToLower())
                 {
                     case "true" :
                     case "t" :
@@ -468,7 +468,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         ///       ('true' or 'false')</description></item>
         /// <item><term>public</term>
         ///       <description>if true, the region is public
-        ///       ('true' or 'false')</description></item>
+        ///       ('true' or 'false') (optional, default: true)</description></item>
+        /// <item><term>enable_voice</term>
+        ///       <description>if true, enable voice on all parcels,
+        ///       ('true' or 'false') (optional, default: false)</description></item>
         /// </list>
         ///
         /// XmlRpcCreateRegionMethod returns
@@ -494,7 +497,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             {
 
                 int  m_regionLimit = m_config.GetInt("region_limit", 0);
-                bool m_publicAccess = true;
+                bool m_enableVoiceForNewRegions = m_config.GetBoolean("create_region_enable_voice", false);
+                bool m_publicAccess = m_config.GetBoolean("create_region_public", true);
 
                 try
                 {
@@ -511,13 +515,13 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     checkIntegerParams(request, new string[] {"region_x", "region_y", "listen_port"});
 
                     // check password
-                    if (!String.IsNullOrEmpty(requiredPassword) &&
-                        (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                    if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                        (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                     // check whether we still have space left (iff we are using limits)
                     if (m_regionLimit != 0 && m_app.SceneManager.Scenes.Count >= m_regionLimit)
-                        throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first", m_regionLimit));
-
+                        throw new Exception(String.Format("cannot instantiate new region, server capacity {0} already reached; delete regions first", 
+                                                          m_regionLimit));
                     // extract or generate region ID now
                     Scene scene = null;
                     UUID regionID = UUID.Zero;
@@ -655,17 +659,20 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                     // If an access specification was provided, use it.
                     // Otherwise accept the default.
-                    newscene.RegionInfo.EstateSettings.PublicAccess = getBoolean(requestData,"public", m_publicAccess);
+                    newscene.RegionInfo.EstateSettings.PublicAccess = getBoolean(requestData, "public", m_publicAccess);
 
-                    // For sprint 10 we will simply coerce these
-                    // settings.
-
-                    List<ILandObject> parcels = ((Scene)newscene).LandChannel.AllParcels();
-
-                   foreach (ILandObject parcel in parcels)
+                    // enable voice on newly created region if
+                    // requested by either the XmlRpc request or the
+                    // configuration
+                    if (getBoolean(requestData, "enable_voice", m_enableVoiceForNewRegions))
                     {
-                         parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
-                         parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
+                        List<ILandObject> parcels = ((Scene)newscene).LandChannel.AllParcels();
+
+                        foreach(ILandObject parcel in parcels)
+                        {
+                            parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
+                            parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
+                        }
                     }
 
                     responseData["success"] = "true";
@@ -695,7 +702,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         /// <summary>
         /// <param name="request">incoming XML RPC request</param>
         /// <remarks>
-        /// XmlRpcCreateRegionMethod takes the following XMLRPC
+        /// XmlRpcDeleteRegionMethod takes the following XMLRPC
         /// parameters
         /// <list type="table">
         /// <listheader><term>parameter name</term><description>description</description></listheader>
@@ -707,7 +714,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         ///       <description>(optional) desired region UUID</description></item>
         /// </list>
         ///
-        /// XmlRpcCreateRegionMethod returns
+        /// XmlRpcDeleteRegionMethod returns
         /// <list type="table">
         /// <listheader><term>name</term><description>description</description></listheader>
         /// <item><term>success</term>
@@ -773,8 +780,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         /// <item><term>region_id</term>
         ///       <description>(optional) desired region UUID</description></item>
         /// <item><term>public</term>
-        ///       <description>if true, the region is public
-        ///       ('true' or 'false')</description></item>
+        ///       <description>if true, set the region to public
+        ///       ('true' or 'false'), else to private</description></item>
+        /// <item><term>enable_voice</term>
+        ///       <description>if true, enable voice on all parcels of
+        ///       the region, else disable</description></item>
         /// </list>
         ///
         /// XmlRpcModifyRegionMethod returns
@@ -808,6 +818,26 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // Modify access 
                     scene.RegionInfo.EstateSettings.PublicAccess = 
                         getBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
+
+                    if (requestData.ContainsKey("enable_voice"))
+                    {
+                        bool enableVoice = getBoolean(requestData, "enable_voice", true);
+                        List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
+
+                        foreach(ILandObject parcel in parcels)
+                        {
+                            if (enableVoice)
+                            {
+                                parcel.landData.Flags |= (uint)Parcel.ParcelFlags.AllowVoiceChat;
+                                parcel.landData.Flags |= (uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+                            }
+                            else
+                            {
+                                parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
+                                parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+                            }
+                        }
+                    }
 
                     responseData["success"] = "true";
                     responseData["region_name"] = regionName;
@@ -889,8 +919,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     checkIntegerParams(request, new string[] {"start_region_x", "start_region_y"});
 
                     // check password
-                    if (!String.IsNullOrEmpty(requiredPassword) &&
-                        (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                    if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                        (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                     // do the job
                     string firstname = (string) requestData["user_firstname"];
@@ -1096,8 +1126,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                             "user_lastname"});
 
                     // check password
-                    if (!String.IsNullOrEmpty(requiredPassword) &&
-                        (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                    if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                        (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                     // do the job
                     string firstname = (string) requestData["user_firstname"];
@@ -1278,8 +1308,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     }
 
                     // check password
-                    if (!String.IsNullOrEmpty(requiredPassword) &&
-                        (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                    if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                        (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                     string filename = (string) requestData["filename"];
                     Scene scene = null;
@@ -1375,8 +1405,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 }
 
                 // check password
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 string filename = (string) requestData["filename"];
                 Scene scene = null;
@@ -1441,8 +1471,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     }
 
                     // check password
-                    if (!String.IsNullOrEmpty(requiredPassword) &&
-                        (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                    if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                        (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                     string filename = (string) requestData["filename"];
                     if (requestData.Contains("region_uuid"))
@@ -1524,8 +1554,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 }
 
                 // check password
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 string filename = (string) requestData["filename"];
                 if (requestData.Contains("region_uuid"))
@@ -1601,8 +1631,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 // check completeness
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (requestData.Contains("region_uuid"))
                 {
@@ -1657,8 +1687,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 // check completeness
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (!requestData.Contains("command"))
                     throw new Exception(String.Format("missing required parameter"));
@@ -1695,8 +1725,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (requestData.Contains("region_uuid"))
                 {
@@ -1750,8 +1780,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (requestData.Contains("region_uuid"))
                 {
@@ -1829,8 +1859,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (requestData.Contains("region_uuid"))
                 {
@@ -1909,8 +1939,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 if (!requestData.Contains("password"))
                     throw new Exception(String.Format("missing required parameter"));
-                if (!String.IsNullOrEmpty(requiredPassword) &&
-                    (string) requestData["password"] != requiredPassword) throw new Exception("wrong password");
+                if (!String.IsNullOrEmpty(m_requiredPassword) &&
+                    (string) requestData["password"] != m_requiredPassword) throw new Exception("wrong password");
 
                 if (requestData.Contains("region_uuid"))
                 {
