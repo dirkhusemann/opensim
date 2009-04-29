@@ -212,11 +212,19 @@ namespace OpenSim.Region.CoreModules.Scripting.LoadImageURL
 
                     m_textureManager.ReturnData(state.RequestID, imageJ2000);
                 }
+                else
+                {
+                    m_log.WarnFormat("[LOADIMAGEURLMODULE] Request failed, code = {0}, {1}",
+                        response.StatusCode, response.StatusDescription);
+                }
             }
-            catch (WebException)
+            catch (Exception e)
             {
-                
+                m_log.WarnFormat("[LOADIMAGEURLMODULE] Exception during URL processing of request {0} : {1}",
+                        state.RequestID, e.Message);
+                m_log.DebugFormat("[LOADIMAGEURLMODULE] {0}", e);
             }
+            m_textureManager.ReturnData(state.RequestID, null);
         }
 
         #region Nested type: RequestState
