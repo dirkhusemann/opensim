@@ -1807,13 +1807,17 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     Scene s = m_app.SceneManager.CurrentScene;
                     Hashtable users = (Hashtable) requestData["users"];
                     List<UUID> uuids = new List<UUID>();
-                   foreach (string name in users.Values)
+                    foreach (string name in users.Values)
                     {
                         string[] parts = name.Split();
-                        uuids.Add(ups.GetUserDetails(parts[0],parts[1]).UserProfile.ID);
+                        CachedUserInfo udata = ups.GetUserDetails(parts[0],parts[1]);
+                        if(udata != null)
+                        {
+                            uuids.Add(udata.UserProfile.ID);
+                        }
                     }
                     List<UUID> acl = new List<UUID>(s.RegionInfo.EstateSettings.EstateAccess);
-                   foreach (UUID uuid in uuids)
+                    foreach (UUID uuid in uuids)
                     {
                        if (!acl.Contains(uuid))
                         {
@@ -1889,7 +1893,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                    foreach (string name in users.Values)
                     {
                         string[] parts = name.Split();
-                        uuids.Add(ups.GetUserDetails(parts[0],parts[1]).UserProfile.ID);
+                        CachedUserInfo udata = ups.GetUserDetails(parts[0],parts[1]);
+                        if(udata != null)
+                        {
+                            uuids.Add(udata.UserProfile.ID);
+                        }
                     }
                     List<UUID> acl = new List<UUID>(s.RegionInfo.EstateSettings.EstateAccess);
                    foreach (UUID uuid in uuids)
@@ -1964,8 +1972,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                foreach (UUID user in acl)
                 {
-                    users[user.ToString()] = 
-                       m_app.CommunicationsManager.UserProfileCacheService.GetUserDetails(user).UserProfile.Name;
+                    CachedUserInfo udata = m_app.CommunicationsManager.UserProfileCacheService.GetUserDetails(user);
+                    if(udata != null)
+                    {
+						users[user.ToString()] = udata.UserProfile.Name;
+                    }
                 }
                 
                 responseData["users"] = users;
