@@ -29,6 +29,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Xml;
 using System.Net;
 using System.Reflection;
 using System.Timers;
@@ -38,6 +39,7 @@ using Nwc.XmlRpc;
 using OpenMetaverse;
 using OpenSim;
 using OpenSim.Framework;
+using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
@@ -51,6 +53,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
     {
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
+        private static bool daload = false;
         private static Object   rslock = new Object();
 
         private OpenSimBase m_app;
@@ -962,7 +965,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         if (requestData.Contains("model"))
                             model = (string)requestData["model"];
 
-                        updateUserAppearance(response, userID, model);
+                        updateUserAppearance(responseData, userID, model);
                     }
                     catch (Exception e)
                     {
@@ -1104,6 +1107,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         ///       <description>error message if success is false</description></item>
         /// </list>
         /// </remarks>
+
         public XmlRpcResponse XmlRpcUpdateUserAccountMethod(XmlRpcRequest request)
         {
             m_log.Info("[RADMIN]: UpdateUserAccount: new request");
@@ -1212,7 +1216,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         if (requestData.Contains("model"))
                             model = (string)requestData["model"];
 
-                        updateUserAppearance(response, userProfile.ID, model);
+                        updateUserAppearance(responseData, userProfile.ID, model);
 
                     }
                     catch (Exception e)
@@ -1247,20 +1251,378 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             return response;
         }
 
-        private void updateUserAppearance(XmlRpcResponse response, UUID userid, string model)
+        private void updateUserAppearance(Hashtable responseData, UUID userid, string model)
         {
+
             m_log.DebugFormat("[RADMIN] Setting appearance for avatar {0}, using model {1}", userid, model);
 
-            string[] nomens = mode.Split();
+            string[] nomens = model.Split();
             if(nomens.Length != 2)
             {
-                
-            UserProfileData udata = m_app.CommunicationsManager.UserService.GetUserProfile(firstname, lastname);
-                            AvatarAppearance ava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(udata.ID);
-                            m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(userProfile.ID, ava);
-                        }
+                m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Invalid model name : <{1}>",
+                    userid, model);
+            }
+
+            UserProfileData mprof = m_app.CommunicationsManager.UserService.GetUserProfile(nomens[0], nomens[1]);
+
+            // Is this the first time one of the default models has been used? Create it if that is the case
+            // otherwise default to male.
+
+            if(mprof == null)
+            {
+                switch(model)
+                {
+                    case "Default Male" :
+                    case "Default Female" :
+                        break;
+                    default :
+                        nomens[0] = "Default";
+                        nomens[1] = "Male";
+                        break;
+                }
+                if(createDefaultAvatars())
+                {
+					mprof = m_app.CommunicationsManager.UserService.GetUserProfile(nomens[0], nomens[1]);
+                }
+            }
+
+            if(mprof == null)
+            {
+                m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Model avatar not found : <{1}>",
+                    userid, model);
+            }
+
+            // Set current user's appearance. This bit is easy. The appearance structure is populated with 
+            // actual asset ids, however to complete the magic we need to populate the inventory with the
+            // assets in question.
+
+            AvatarAppearance mava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(mprof.ID);
+            if(mava == null)
+                mava = new AvatarAppearance();
+            m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(userid, mava);
+
+            // This could be a separate subroutnine called "FillInventoryFromAppearance", but this is the
+            // only place where it currently needs to be done. As a short cut we'll just try and copy
+            // inventory to inventory.
+
+            m_log.DebugFormat("[RADMIN] Finished setting appearance for avatar {0}, using model {1}",
+                userid, model);
+
         }
 
+        private bool createDefaultAvatars()
+        {
+
+			m_log.DebugFormat("[RADMIN] Creating default avatar entries");
+
+            string dafn   = "default_appearance.xml";
+            string email  = String.Empty;
+            uint   regX   = 1000;
+            uint   regY   = 1000;
+            string passwd = UUID.Random().ToString(); // No requirement to sign-in.
+            UICallback uic = new UICallback();
+            IInventoryServices iserv = m_app.CommunicationsManager.InventoryService;
+
+			CachedUserInfo UI;
+            UUID ID = UUID.Zero;
+
+            if(daload)
+            {
+                return false;
+            }
+
+            daload = true;
+
+            try
+            {
+				if(File.Exists(dafn))
+				{
+
+					XmlDocument doc = new XmlDocument();
+					doc.LoadXml(File.ReadAllText(dafn));
+					XmlNodeList avatars = doc.GetElementsByTagName("Avatar");
+                    AvatarAppearance mava;
+
+					foreach(XmlElement avatar in avatars)
+					{
+						m_log.DebugFormat("[RADMIN] Loading appearance for {0}, gender = {1}",
+							avatar.Attributes["name"].Value, avatar.Attributes["gender"].Value);
+
+						// Create the user identified by the avatar entry
+
+						string name = avatar.Attributes["name"].Value;
+						string[] nomens = name.Split();
+						UI = m_app.CommunicationsManager.UserProfileCacheService.GetUserDetails(nomens[0], nomens[1]);
+						if (null == UI)
+						{
+							ID = m_app.CommunicationsManager.UserAdminService.AddUser(nomens[0], nomens[1],
+																					 passwd, email, regX, regY);
+							if (ID == UUID.Zero)
+							{
+								m_log.ErrorFormat("[RADMIN] Avatar {0} {1} was not created", nomens[0], nomens[1]);
+								return false;
+							}
+						}
+                        else
+                            ID = UI.UserProfile.ID;
+
+                        m_log.DebugFormat("[RADMIN] User {0}[{1}] created or retrieved", name, ID);
+
+						// OK, User has been created OK, now we can install the inventory.
+						// First retrieve the current inventory (the user may already exist)
+						// Note that althought he inventory is retrieved, the hierarchy has
+						// not been interpreted at all.
+
+						iserv.RequestInventoryForUser(ID, uic.callback);
+
+                        if ((mava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(ID)) == null)
+                        {
+                            mava = new AvatarAppearance();
+                        }
+
+						uic.wait();
+
+						if (uic.OK)
+						{
+
+                            m_log.DebugFormat("[RADMIN] {0} folders, {1} items in inventory", 
+                               uic.folders.Count, uic.items.Count);
+
+                            Dictionary<UUID, InventoryFolderImpl> folders = new Dictionary<UUID, InventoryFolderImpl>();
+
+                            // Got the inventory OK. So now merge the content of the default appearance
+                            // file with whatever we walready have in-world.
+
+							InventoryFolderImpl root = null;
+
+                            m_log.DebugFormat("[RADMIN] User {0} inventory retrieved", name);
+
+                            // Find root and build an index
+
+							foreach(InventoryFolderImpl folder in uic.folders)
+							{
+								if(folder.ParentID == UUID.Zero)
+								{
+                                    if(root == null)
+										root = folder;
+                                    else
+                                        m_log.ErrorFormat("[RADMIN] Multiple root folders found");
+
+								}
+                                folders.Add(folder.ID, folder);
+							}
+
+							if(root == null)
+							{
+								m_log.ErrorFormat("[RADMIN] Root folder not found for {0}/{1}", name, ID);
+								return false;
+							}
+
+                            // Construct the folder hierarchy
+							foreach(InventoryFolderImpl folder in uic.folders)
+							{
+								if(folder.ID != root.ID)
+								{
+                                    m_log.DebugFormat("[RADMIN] Adding folder {0} to folder {1}",
+                                        folder.Name, folders[folder.ParentID].Name);
+									folders[folder.ParentID].AddChildFolder(folder);
+								}
+							}
+
+                            // Find a home for every pre-existing item
+							foreach(InventoryItemBase item in uic.items)
+							{
+                                 folders[item.Folder].Items.Add(item.ID, item);
+							}
+
+                            InventoryFolderImpl cfolder = root.FindFolderForType(5);
+
+                            if (cfolder == null)
+                            {
+								m_log.ErrorFormat("[RADMIN] Creating clothing folder for {0}/{1}", name, ID);
+								cfolder = new InventoryFolderImpl();
+								cfolder.Name     = "Clothing";
+								cfolder.Type     = 5;
+								cfolder.Version  = 1;
+								cfolder.Owner    = ID;
+								root.AddChildFolder(cfolder); // make connection
+								iserv.AddFolder(cfolder);     // store base record
+                            }
+
+							// OK, now we have an inventory for the user, read in the outfits from the
+							// default appearance XMl file.
+
+							XmlNodeList outfits = avatar.GetElementsByTagName("Ensemble");
+                            InventoryFolderImpl efolder;
+                            string oname;
+                            UUID assetid;
+
+							foreach(XmlElement outfit in outfits)
+							{
+
+								m_log.DebugFormat("[RADMIN] Loading outfit {0} for {1}",
+									outfit.Attributes["name"].Value, avatar.Attributes["name"].Value);
+
+								oname = outfit.Attributes["name"].Value;
+								efolder = null;
+
+								foreach(InventoryFolderImpl folder in uic.folders)
+								{
+									if(folder.Name == oname && folder.ParentID == cfolder.ID)
+									{
+										efolder = folder;
+										break;
+									}
+								}
+
+								if(efolder == null)
+								{
+                                    m_log.DebugFormat("[RADMIN] Creating outfit folder {0} for {1}", oname, name);
+									efolder = new InventoryFolderImpl();
+									efolder.ID       = UUID.Random();
+									efolder.Name     = oname;
+									efolder.Type     = 5;
+									efolder.Version  = 1;
+									efolder.Owner    = ID;
+									cfolder.AddChildFolder(efolder); // make connection
+									iserv.AddFolder(efolder);        // store base record
+                                    m_log.DebugFormat("[RADMIN] Adding outfile folder {0} to folder {1}", efolder.ID, cfolder.ID);
+								}
+
+								XmlNodeList items = outfit.GetElementsByTagName("Item");
+
+								foreach(XmlElement item in items)
+								{
+									assetid = UUID.Zero;
+									XmlNodeList children = item.ChildNodes;
+									foreach(XmlNode child in children)
+									{
+										switch(child.Name)
+										{
+											case "Permissions" :
+												// Ignore for now.
+												break;
+											case "Asset" :
+												assetid = new UUID(child.InnerText);
+												break;
+										}
+									}
+
+									InventoryItemBase iitem = null;
+
+									if((iitem = efolder.FindAsset(assetid)) == null)   
+									{
+										iitem = new InventoryItemBase();
+										iitem.ID = UUID.Random(); 
+										iitem.Name = item.Attributes["name"].Value;
+										iitem.Description = item.Attributes["desc"].Value;
+										iitem.InvType = Convert.ToInt32(item.Attributes["invtype"].Value);
+										iitem.AssetType = Convert.ToInt32(item.Attributes["assettype"].Value);
+										iitem.Flags = Convert.ToUInt32(item.Attributes["flags"].Value);
+										iitem.AssetID = assetid; // associated asset
+										iitem.Folder = efolder.ID; // Parent folder
+										iitem.Owner = ID; // Agent ID
+                                        m_log.DebugFormat("[RADMIN] Adding item {0} to folder {1}", iitem.ID, efolder.ID);
+										iserv.AddItem(iitem);
+									}
+
+                                    try
+                                    {
+										if(item.Attributes["wear"].Value == "true")
+                                        {
+                                            switch(iitem.Flags)
+                                            {
+                                                case  0 : // body
+                                                    mava.BodyItem  = iitem.ID;
+                                                    mava.BodyAsset = iitem.AssetID;
+                                                    break;
+                                                case  1 : // skin
+                                                    mava.SkinItem  = iitem.ID;
+                                                    mava.SkinAsset = iitem.AssetID;
+                                                    break;
+                                                case  2 : // hair
+                                                    mava.HairItem  = iitem.ID;
+                                                    mava.HairAsset = iitem.AssetID;
+                                                    break;
+                                                case  3 : // eyes
+                                                    mava.EyesItem  = iitem.ID;
+                                                    mava.EyesAsset = iitem.AssetID;
+                                                    break;
+                                                case  4 : // shirt
+                                                    mava.ShirtItem  = iitem.ID;
+                                                    mava.ShirtAsset = iitem.AssetID;
+                                                    break;
+                                                case  5 : // pants
+                                                    mava.PantsItem  = iitem.ID;
+                                                    mava.PantsAsset = iitem.AssetID;
+                                                    break;
+                                                case  6 : // shoes
+                                                    mava.ShoesItem  = iitem.ID;
+                                                    mava.ShoesAsset = iitem.AssetID;
+                                                    break;
+                                                case  7 : // socks
+                                                    mava.SocksItem  = iitem.ID;
+                                                    mava.SocksAsset = iitem.AssetID;
+                                                    break;
+                                                case  8 : // jacket
+                                                    mava.JacketItem  = iitem.ID;
+                                                    mava.JacketAsset = iitem.AssetID;
+                                                    break;
+                                                case  9 : // gloves
+                                                    mava.GlovesItem  = iitem.ID;
+                                                    mava.GlovesAsset = iitem.AssetID;
+                                                    break;
+                                                case 10 : // undershirt
+                                                    mava.UnderShirtItem  = iitem.ID;
+                                                    mava.UnderShirtAsset = iitem.AssetID;
+                                                    break;
+                                                case 11 : // underpants
+                                                    mava.UnderPantsItem  = iitem.ID;
+                                                    mava.UnderPantsAsset = iitem.AssetID;
+                                                    break;
+                                                case 12 : // skirt
+                                                    mava.SkirtItem  = iitem.ID;
+                                                    mava.SkirtAsset = iitem.AssetID;
+                                                    break;
+                                                default :
+                                                    m_log.DebugFormat("[RADMIN] Unsupported wearable : {0}", iitem.Flags);
+                                                    break;
+                                            }
+                                        }
+                                    }
+                                    catch {}
+                                    
+								}
+                                m_log.DebugFormat("[RADMIN] Outfit {0} load completed", oname);
+							}
+                            m_log.DebugFormat("[RADMIN] Inventory update complete for {0}", name);
+                            m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(ID, mava);
+						}
+                        else
+                        {
+                            m_log.WarnFormat("[RADMIN] Unable to retrieve inventory for {0}[{1}]",
+                                name, ID);
+                            return false;
+                        }
+					}
+                    m_log.DebugFormat("[RADMIN] Default avatar loading complete");
+				}
+				else
+				{
+					m_log.DebugFormat("[RADMIN] No default avatar information available");
+                    return false;
+				}
+            }
+            catch (Exception e)
+            {
+                m_log.WarnFormat("[RADMIN] Exception whilst loading default avatars ; {0}", e.Message);
+                return false;
+            }
+
+            return true;
+
+        }
+    
         /// <summary>
         /// Load an OAR file into a region..
         /// <summary>
@@ -2004,6 +2366,36 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             m_log.Info("[RADMIN]: Access List List Request complete");
             return response;
+        }
+
+        class UICallback
+        {
+
+              private  Object uilock = new Object();
+              internal List<InventoryFolderImpl> folders;
+              internal List<InventoryItemBase> items;
+              internal bool OK = false;
+
+              public void callback(ICollection<InventoryFolderImpl> p_folders, ICollection<InventoryItemBase> p_items)
+              {
+                  lock(uilock)
+                  {
+                      folders = (List<InventoryFolderImpl>) p_folders;
+                      items   = (List<InventoryItemBase>)   p_items;
+                      OK = true;
+                      System.Threading.Monitor.Pulse(uilock);
+                  }
+              }
+
+              public void wait()
+              {
+                  if(OK == false)
+                  lock(uilock)
+                  {
+                      if(OK == false)
+                      System.Threading.Monitor.Wait(uilock);
+                  }
+              }
         }
 
         public void Dispose()
