@@ -962,11 +962,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         if (requestData.Contains("model"))
                             model = (string)requestData["model"];
 
-                        string[] uname = model.Split();
-                        UserProfileData udata = m_app.CommunicationsManager.UserService.GetUserProfile(uname[0],uname[1]);
-                        AvatarAppearance ava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(udata.ID);
-                        m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(userID, ava);
-
+                        updateUserAppearance(response, userID, model);
                     }
                     catch (Exception e)
                     {
@@ -1202,7 +1198,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                     try
                     {
+
                         string model = "*none*";
+
                         if (requestData.Contains("gender"))
                         {
                             if ((string)requestData["gender"] == "f")
@@ -1214,13 +1212,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         if (requestData.Contains("model"))
                             model = (string)requestData["model"];
 
-                        if (model != "*none*")
-                        {
-                            string[] uname = model.Split();
-                            UserProfileData udata = m_app.CommunicationsManager.UserService.GetUserProfile(uname[0],uname[1]);
-                            AvatarAppearance ava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(udata.ID);
-                            m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(userProfile.ID, ava);
-                        }
+                        updateUserAppearance(response, userProfile.ID, model);
+
                     }
                     catch (Exception e)
                     {
@@ -1252,6 +1245,20 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             m_log.Info("[RADMIN]: UpdateUserAccount: request complete");
             return response;
+        }
+
+        private void updateUserAppearance(XmlRpcResponse response, UUID userid, string model)
+        {
+            m_log.DebugFormat("[RADMIN] Setting appearance for avatar {0}, using model {1}", userid, model);
+
+            string[] nomens = mode.Split();
+            if(nomens.Length != 2)
+            {
+                
+            UserProfileData udata = m_app.CommunicationsManager.UserService.GetUserProfile(firstname, lastname);
+                            AvatarAppearance ava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(udata.ID);
+                            m_app.CommunicationsManager.AvatarService.UpdateUserAppearance(userProfile.ID, ava);
+                        }
         }
 
         /// <summary>
