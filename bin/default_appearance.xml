@@ -1,109 +1,109 @@
 <DefaultAppearance>
-<Avatar gender="m" name="Default Male">
-<Ensemble name="Business">
-<Item name="Mens_suit Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
+<Avatar gender="m" name="Default Male" email="anon@anon" regx="1000" regy="1000" password="xyzzy">
+<Ensemble name="Business" default="yes">
+<Item name="Mens suit Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>6dbe2ebd-b8a8-447a-9252-a7c7c95d3d11</Asset>
 </Item>
-<Item name="Mens_suit Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="6" wear="true">
+<Item name="Mens suit Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="6" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>943de2bd-ed7f-4093-8de9-5e3534bdf0cd</Asset>
 </Item>
-<Item name="Mens_suit Pants" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="5" wear="true">
+<Item name="Mens suit Pants" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="5" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>41299760-c2f2-44ec-ab65-6ac144d9c381</Asset>
 </Item>
-<Item name="Mens_suit Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="7" wear="true">
+<Item name="Mens suit Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="7" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>846129ca-2ca6-44af-8f69-a4cdfae7ee76</Asset>
 </Item>
-<Item name="Mens_suit Jacket" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="8" wear="true">
+<Item name="Mens suit Jacket" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="8" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>6d2be7dc-25c0-46b8-9e48-f93391eabcbd</Asset>
 </Item>
-<Item name="Mens_suit Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="2" wear="true">
+<Item name="Mens suit Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="2" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>b30e1c3d-598b-47ae-826d-729b4c503a00</Asset>
 </Item>
-<Item name="Mens_suit Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="0" wear="true">
+<Item name="Mens suit Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="0" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>66280c1c-9e19-435e-9868-ba70bcb1d9e8</Asset>
 </Item>
 </Ensemble>
 <Ensemble name="Casual">
-<Item name="Mens_suit Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="6" wear="true">
+<Item name="Mens suit Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="6" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>943de2bd-ed7f-4093-8de9-5e3534bdf0cd</Asset>
 </Item>
-<Item name="hawaiian4" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 4" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>fb1091ee-12c2-4d72-b1b7-b28adb9d3d68</Asset>
 </Item>
-<Item name="Mens_suit Pants" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="5" wear="true">
+<Item name="Mens suit Pants" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="5" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>41299760-c2f2-44ec-ab65-6ac144d9c381</Asset>
 </Item>
-<Item name="Mens_suit Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="7" wear="true">
+<Item name="Mens suit Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="7" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>846129ca-2ca6-44af-8f69-a4cdfae7ee76</Asset>
 </Item>
-<Item name="hawaiian2" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 2" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>2ce8f45a-6d5c-4ae6-80ad-45bea4545848</Asset>
 </Item>
-<Item name="hawaiian1" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 1" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>ea06ef92-e457-47e1-9433-a0cfb8cd6b36</Asset>
 </Item>
-<Item name="hawaiian3" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
+<Item name="Hawaiian 3" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>5f4c4860-3f3d-46ec-a6a5-c592253c9434</Asset>
 </Item>
-<Item name="Mens_suit Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="2" wear="true">
+<Item name="Mens suit Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="2" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>b30e1c3d-598b-47ae-826d-729b4c503a00</Asset>
 </Item>
-<Item name="Mens_suit Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="0" wear="true">
+<Item name="Mens suit Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="13" flags="0" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>66280c1c-9e19-435e-9868-ba70bcb1d9e8</Asset>
 </Item>
 </Ensemble>
 </Avatar>
-<Avatar gender="f" name="Default Female">
-<Ensemble name="Business">
-<Item name="hawaiian4" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
+<Avatar gender="f" name="Default Female" email="anon@anon" regx="1000" regy="1000" password="xyzzy">
+<Ensemble name="Business" default="yes" >
+<Item name="Hawaiian 4" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>fb1091ee-12c2-4d72-b1b7-b28adb9d3d68</Asset>
 </Item>
-<Item name="Jumper_dress Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="7" wear="true">
+<Item name="Jumper dress Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="7" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>1dff2f5d-98e0-4b97-b647-5de99f26f8ee</Asset>
 </Item>
-<Item name="Jumper_dress Skirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="12" wear="true">
+<Item name="Jumper dress Skirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="12" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>bc4ae139-ea5b-4fb3-ad04-f0c86b3f9028</Asset>
 </Item>
-<Item name="Jumper_dress Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4" wear="true">
+<Item name="Jumper dress Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>9cb33458-7fe4-4604-8615-bcf2b2ccde94</Asset>
 </Item>
-<Item name="Jumper_dress Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="6" wear="true">
+<Item name="Jumper dress Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="6" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>62cfbf50-9d8f-4308-8c8c-b130e3a048b4</Asset>
 </Item>
-<Item name="hawaiian3" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 3" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>5f4c4860-3f3d-46ec-a6a5-c592253c9434</Asset>
 </Item>
-<Item name="hawaiian2" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 2" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>2ce8f45a-6d5c-4ae6-80ad-45bea4545848</Asset>
 </Item>
-<Item name="Jumper_dress Jacket" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="8" wear="true">
+<Item name="Jumper dress Jacket" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="8" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>bb36989f-0b6c-4ab5-a8ff-38fc6c5f9fa3</Asset>
 </Item>
-<Item name="hawaiian1" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
+<Item name="Hawaiian 1" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="5" flags="4">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>ea06ef92-e457-47e1-9433-a0cfb8cd6b36</Asset>
 </Item>
@@ -111,39 +111,39 @@
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>174e05de-81e5-4b49-bc8c-e8c7e7938a3c</Asset>
 </Item>
-<Item name="medium blonde hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Medium Blonde Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>9c807d38-0e85-4405-9709-3e26484a41d1</Asset>
 </Item>
-<Item name="medium brown hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Medium Brown Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>03875a09-0ee2-4755-b20b-da9c5206b3c3</Asset>
 </Item>
-<Item name="long blonde hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Long Blonde Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>3d454db5-2368-4255-979d-4c172e6c65b8</Asset>
 </Item>
-<Item name="AH short blonde hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Short Blonde Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>5498a270-adcf-4823-8772-b24f3d7620eb</Asset>
 </Item>
-<Item name="long brown hair with highlights" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Long Brown Hair with Highlights" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>93ed5b2d-0881-47e7-9bdb-187e0b3b2df5</Asset>
 </Item>
-<Item name="short brown hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
+<Item name="Short Brown Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="6" assettype="6" flags="0">
 <Permissions current="8E00F" next="8E000" group="0" everyone="0" base="8E007"/>
 <Asset>40628308-98b0-4dfd-ad46-f8c32d134aed</Asset>
 </Item>
-<Item name="Jumper_dress Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="0" wear="true">
+<Item name="Jumper Dress Shape" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="0" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>1dd7f36e-fc29-46ba-ad82-e217ec2e5f34</Asset>
 </Item>
-<Item name="Jumper_dress Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="2" wear="true">
+<Item name="Jumper Dress Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="2" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>791a446e-b222-4c8d-9f78-7c746829d959</Asset>
 </Item>
-<Item name="attached_hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="2">
+<Item name="Attached Hair" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241116362" invtype="18" assettype="13" flags="2">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>392fda93-452a-4d57-8ff7-a2bab19e9fe3</Asset>
 </Item>
