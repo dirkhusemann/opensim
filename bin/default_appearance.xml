@@ -1,4 +1,32 @@
 <DefaultAppearance>
+<Avatar gender="n" name="Default Default" email="anon@anon" regx="1000" regy="1000" password="xyzzy">
+<Ensemble name="Casual" default="yes">
+<Item name="Shoes" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="6" wear="true">
+<Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
+<Asset>943de2bd-ed7f-4093-8de9-5e3534bdf0cd</Asset>
+</Item>
+<Item name="Pants" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="5" wear="true">
+<Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
+<Asset>41299760-c2f2-44ec-ab65-6ac144d9c381</Asset>
+</Item>
+<Item name="Socks" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="7" wear="true">
+<Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
+<Asset>846129ca-2ca6-44af-8f69-a4cdfae7ee76</Asset>
+</Item>
+<Item name="Hair" desc="" creator="6358e45c-bfea-4fbf-8243-0663ff7d0e8b" creationdate="1241198433" invtype="18" assettype="13" flags="2" wear="true">
+<Permissions current="7FFFFFFF" next="7FFFFFFF" group="7FFFFFFF" everyone="7FFFFFFF" base="7FFFFFFF"/>
+<Asset>84ee5000-acc6-492f-8628-3a09bccffff4</Asset>
+</Item>
+<Item name="Shape" desc="" creator="" creationdate="1241197157" invtype="18" assettype="13" flags="0" wear="true">
+<Permissions current="7FFFFFFF" next="7FFFFFFF" group="7FFFFFFF" everyone="7FFFFFFF" base="7FFFFFFF"/>
+<Asset>488e94f2-b763-4bdc-90f5-d71a5ff35aec</Asset>
+</Item>
+<Item name="Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
+<Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
+<Asset>5f4c4860-3f3d-46ec-a6a5-c592253c9434</Asset>
+</Item>
+</Ensemble>
+</Avatar>
 <Avatar gender="m" name="Default Male" email="anon@anon" regx="1000" regy="1000" password="xyzzy">
 <Ensemble name="Business" default="yes">
 <Item name="Mens suit Shirt" desc="" creator="0d76842a-faee-4fbb-a76c-bbccad7e0264" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
@@ -149,4 +177,10 @@
 </Item>
 </Ensemble>
 </Avatar>
+<RequiredAsset id="488e94f2-b763-4bdc-90f5-d71a5ff35aec" name="Neutral Body Shape" desc="" type="13" local="False" temporary="False">
+TExXZWFyYWJsZSB2ZXJzaW9uIDIyCk5ldXRyYWwgQm9keSBTaGFwZQoKCXBlcm1pc3Npb25zIDAKCXsKCQliYXNlX21hc2sJMDAwODIwMDAKCQlvd25lcl9tYXNrCTAwMDgyMDAwCgkJZ3JvdXBfbWFzawkwMDAwMDAwMAoJCWV2ZXJ5b25lX21hc2sJMDAwMDAwMDAKCQluZXh0X293bmVyX21hc2sJMDAwODIwMDAKCQljcmVhdG9yX2lkCTJjNWVjNjU1LWM2ZjAtNGZjMi04YWM2LTE2MTQzYmVhYWUxYgoJCW93bmVyX2lkCTYzNThlNDVjLWJmZWEtNGZiZi04MjQzLTA2NjNmZjdkMGU4YgoJCWxhc3Rfb3duZXJfaWQJNjM1OGU0NWMtYmZlYS00ZmJmLTgyNDMtMDY2M2ZmN2QwZThiCgkJZ3JvdXBfaWQJMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwCgl9CglzYWxlX2luZm8JMAoJewoJCXNhbGVfdHlwZQlub3QKCQlzYWxlX3ByaWNlCTEwCgl9CnR5cGUgMApwYXJhbWV0ZXJzIDgyCjEgMAoyIDAKNCAwCjUgMAo2IDAKNyAwCjggMAoxMCAwCjExIDAKMTIgMAoxMyAwCjE0IDAKMTUgMAoxNyAwCjE4IDAKMTkgMAoyMCAwCjIxIDAKMjIgMAoyMyAtLjE2CjI0IC0uMTcKMjUgMAoyNyAwCjMzIC42NwozNCAtLjE5CjM1IDAKMzYgLS4wNAozNyAtLjIKMzggMAo4MCAxCjEwNSAuMTgKMTU1IC0uMDQKMTU3IDAKMTg1IDAKMTkzIC41CjE5NiAwCjUwNSAuNDQKNTA2IDAKNTA3IC0uNTIKNTE1IDAKNTE3IDAKNTE4IC41NQo2MjkgLjUKNjM3IC4yNwo2NDYgMAo2NDcgMAo2NDkgLjQ2CjY1MCAwCjY1MiAuNQo2NTMgLjM4CjY1NiAwCjY1OSAuNQo2NjIgLjUKNjYzIDAKNjY0IDAKNjY1IDAKNjc1IC0uMDUKNjc2IDAKNjc4IC41CjY4MiAuNDcKNjgzIC0uMDYKNjg0IC4xNQo2ODUgMAo2OTAgLjUKNjkyIC4xNgo2OTMgLjM4Cjc1MyAtLjI5Cjc1NiAwCjc1OCAwCjc1OSAuNQo3NjAgMAo3NjQgMAo3NjUgLS4xNgo3NjkgLjUKNzczIC41Cjc5NSAwCjc5NiAwCjc5OSAuNQo4NDEgMAo4NDIgLjE0Cjg3OSAwCjg4MCAwCnRleHR1cmVzIDAK
+</RequiredAsset>
+<RequiredAsset id="84ee5000-acc6-492f-8628-3a09bccffff4" name="Neutral hair" desc="" type="13" local="False" temporary="False">
+TExXZWFyYWJsZSB2ZXJzaW9uIDIyCk5ldXRyYWwgaGFpcgoKCXBlcm1pc3Npb25zIDAKCXsKCQliYXNlX21hc2sJMDAwODIwMDAKCQlvd25lcl9tYXNrCTAwMDgyMDAwCgkJZ3JvdXBfbWFzawkwMDAwMDAwMAoJCWV2ZXJ5b25lX21hc2sJMDAwMDAwMDAKCQluZXh0X293bmVyX21hc2sJMDAwODIwMDAKCQljcmVhdG9yX2lkCTJjNWVjNjU1LWM2ZjAtNGZjMi04YWM2LTE2MTQzYmVhYWUxYgoJCW93bmVyX2lkCTYzNThlNDVjLWJmZWEtNGZiZi04MjQzLTA2NjNmZjdkMGU4YgoJCWxhc3Rfb3duZXJfaWQJNjM1OGU0NWMtYmZlYS00ZmJmLTgyNDMtMDY2M2ZmN2QwZThiCgkJZ3JvdXBfaWQJMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAwCgl9CglzYWxlX2luZm8JMAoJewoJCXNhbGVfdHlwZQlub3QKCQlzYWxlX3ByaWNlCTEwCgl9CnR5cGUgMgpwYXJhbWV0ZXJzIDM5CjE2IDAKMzEgLjcKMTEyIDAKMTEzIC4yNAoxMTQgLjM0CjExNSAuMwoxMTkgLjUKMTMwIC40NAoxMzEgLjQ4CjEzMiAuMzkKMTMzIDAKMTM0IC42MQoxMzUgLjU0CjEzNiAuNQoxMzcgLjUKMTQwIDAKMTQxIDAKMTQyIDAKMTQzIC4xMgoxNjYgMAoxNjcgMAoxNjggMAoxNjkgMAoxNzcgLjI4CjE4MSAuMTQKMTgyIC43NgoxODMgLjA2CjE4NCAwCjE5MiAwCjY3NCAtLjMKNzUwIC43Cjc1MiAuNQo3NTQgLS4wMQo3NTUgLjA1Cjc1NyAtMQo3NjIgLjA5Cjc2MyAuNDYKNzg1IDAKNzg5IDAKdGV4dHVyZXMgMQo0IDdjYTM5YjRjLWJkMTktNDY5OS1hZmY3LWY5M2ZkMDNkM2U3Ygo=
+</RequiredAsset>
 </DefaultAppearance>

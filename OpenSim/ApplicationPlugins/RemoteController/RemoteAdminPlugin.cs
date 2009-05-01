@@ -902,27 +902,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         throw new Exception(String.Format("failed to create new user {0} {1}",
                                                           firstname, lastname));
 
-                    // User has been created. Now establish gender and appearance.
-                    // Default appearance is 'Default Male'. Specifying gender can
-                    // establish "Default Female". Specifying a specific model can
-                    // establish a specific appearance without regard for gender.
+                    // Establish the avatar's initial appearance
 
-                    try
-                    {
-                        string model = "Default Male";
-                        if (requestData.Contains("gender"))
-                            if ((string)requestData["gender"] == "f")
-                                model = "Default Female";
-                        
-                        if (requestData.Contains("model"))
-                            model = (string)requestData["model"];
-
-                        updateUserAppearance(responseData, userID, model);
-                    }
-                    catch (Exception e)
-                    {
-                        m_log.ErrorFormat("[RADMIN] Error establishing initial appearance : {0}", e.Message);
-                    }
+                    updateUserAppearance(responseData, requestData, userID);
 
                     responseData["success"] = "true";
                     responseData["avatar_uuid"] = userID.ToString();
@@ -1152,29 +1134,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // establish "Default Female". Specifying a specific model can
                     // establish a specific appearance without regard for gender.
 
-                    try
-                    {
-
-                        string model = "*none*";
-
-                        if (requestData.Contains("gender"))
-                        {
-                            if ((string)requestData["gender"] == "f")
-                                model = "Default Female";
-                            else
-                                model = "Default Male";
-                        }
-                        
-                        if (requestData.Contains("model"))
-                            model = (string)requestData["model"];
-
-                        updateUserAppearance(responseData, userProfile.ID, model);
-
-                    }
-                    catch (Exception e)
-                    {
-                        m_log.ErrorFormat("[RADMIN] Error establishing initial appearance : {0}", e.Message);
-                    }
+                    updateUserAppearance(responseData, requestData, userProfile.ID);
 
                     if (!m_app.CommunicationsManager.UserService.UpdateUserProfile(userProfile))
                         throw new Exception("did not manage to update user profile");
@@ -1203,16 +1163,52 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             return response;
         }
 
-        private void updateUserAppearance(Hashtable responseData, UUID userid, string model)
+        /// <summary>
+        /// This method is called by the user-create and user-modify methods to establish
+        /// or change, the user's appearance. Default avatar names can be specified via
+        /// the config file, but must correspond to avatars in the default appearance 
+        /// file, or pre-existing in the user database.
+        /// This should probably get moved into somewhere more core eventually.
+        /// </summary>
+
+        private void updateUserAppearance(Hashtable responseData, Hashtable requestData, UUID userid)
         {
+
+            m_log.DebugFormat("[RADMIN] updateUserAppearance");
+
+            string dmale   = m_config.GetString("default_male", "Default Male");
+            string dfemale = m_config.GetString("default_female", "Default Female");
+            string dneut   = m_config.GetString("default_female", "Default Default");
+            string dmodel  = dneut;
+            string model   = dneut;
+
+            // Has a gender preference been supplied?
+
+			if (requestData.Contains("gender"))
+            {
+				if ((string)requestData["gender"] == "f")
+					dmodel = dmale;
+                else
+					dmodel = dfemale;
+            }
+            else
+                dmodel = dneut;
+			
+            // Has an explicit model been specified?
+
+			if (requestData.Contains("model"))
+				model = (string)requestData["model"];
+            else
+                model = dmodel;
 
             m_log.DebugFormat("[RADMIN] Setting appearance for avatar {0}, using model {1}", userid, model);
 
             string[] nomens = model.Split();
-           if (nomens.Length != 2)
+            if (nomens.Length != 2)
             {
                 m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Invalid model name : <{1}>",
                     userid, model);
+                nomens = dmodel.Split();
             }
 
             UserProfileData mprof = m_app.CommunicationsManager.UserService.GetUserProfile(nomens[0], nomens[1]);
@@ -1220,27 +1216,21 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             // Is this the first time one of the default models has been used? Create it if that is the case
             // otherwise default to male.
 
-           if (mprof == null)
+            if (mprof == null)
             {
-               switch (model)
+                if(model != dmale && model != dfemale)
                 {
-                    case "Default Male" :
-                    case "Default Female" :
-                        break;
-                    default :
-                        m_log.WarnFormat("[RADMIN] Requested model ({0}) not found. Default male appearance assumed",
-                            model);
-                        nomens[0] = "Default";
-                        nomens[1] = "Male";
-                        break;
+                    m_log.WarnFormat("[RADMIN] Requested model ({0}) not found. Default appearance assumed",
+                        model);
+                    nomens = dmodel.Split();
                 }
-               if (createDefaultAvatars())
+                if (createDefaultAvatars())
                 {
                     mprof = m_app.CommunicationsManager.UserService.GetUserProfile(nomens[0], nomens[1]);
                 }
             }
 
-           if (mprof == null)
+            if (mprof == null)
             {
                 m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Model avatar not found : <{1}>",
                     userid, model);
@@ -1261,6 +1251,12 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
         }
 
+        /// <summary>
+        /// This method is called by updateAvatarAppearance once any specified model has been
+        /// ratified, or an appropriate default value has been adopted. The intended prototype
+        /// is known to exist, as is the target avatar.
+        /// </summary>
+
         private AvatarAppearance establishAppearance(UUID dest, UUID srca)
         {
 
@@ -1268,7 +1264,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             AvatarAppearance ava = m_app.CommunicationsManager.AvatarService.GetUserAppearance(srca);
 
-           if (ava == null)
+            // If the model has no associated appearance we're done.
+
+            if (ava == null)
             {
                 return new AvatarAppearance();
             }
@@ -1280,20 +1278,26 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             try
             {
                 Dictionary<UUID,UUID> imap = new Dictionary<UUID,UUID>();
-                 iserv.RequestInventoryForUser(dest, dic.callback);
-                 iserv.RequestInventoryForUser(srca, sic.callback);
+
+                iserv.RequestInventoryForUser(dest, dic.callback);
+                iserv.RequestInventoryForUser(srca, sic.callback);
+
                 dic.GetInventory();
                 sic.GetInventory();
-               if (sic.OK && dic.OK) // did we get both?
+
+                if (sic.OK && dic.OK)
                 {
+
                     InventoryFolderImpl efolder;
                     InventoryFolderImpl srcf = sic.root.FindFolderForType(5);
                     InventoryFolderImpl dstf = dic.root.FindFolderForType(5);
+
                     if (srcf == null || dstf == null)
                         throw new Exception("Cannot locate clothing folder(s)");
-                   foreach (InventoryFolderImpl folder in sic.folders)
+
+                    foreach (InventoryFolderImpl folder in sic.folders)
                     {
-                       if (folder.ParentID == srcf.ID)
+                        if (folder.ParentID == srcf.ID)
                         {
                             efolder          = new InventoryFolderImpl();
                             efolder.ID       = UUID.Random();
@@ -1301,10 +1305,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                             efolder.Type     = folder.Type;
                             efolder.Version  = folder.Version;
                             efolder.Owner    = dest;
-                            dstf.AddChildFolder(efolder); // make connection
-                            iserv.AddFolder(efolder);        // store base record
+                            dstf.AddChildFolder(efolder);
+                            iserv.AddFolder(efolder);
                             m_log.DebugFormat("[RADMIN] Added outfile folder {0} to folder {1}", efolder.ID, srcf.ID);
-                           foreach (InventoryItemBase item in sic.items)
+                            foreach (InventoryItemBase item in sic.items)
                             {
                                if (item.Folder == folder.ID)
                                 {
@@ -1316,8 +1320,13 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                     dsti.AssetType = item.AssetType;
                                     dsti.Flags = item.Flags;
                                     dsti.AssetID = item.AssetID;
-                                    dsti.Folder = efolder.ID; // Parent folder
-                                    dsti.Owner = dest; // Agent ID
+                                    dsti.Folder = efolder.ID;
+                                    dsti.Owner = dest;
+                                    dsti.BasePermissions = item.BasePermissions;
+                                    dsti.NextPermissions = item.NextPermissions;
+                                    dsti.CurrentPermissions = item.CurrentPermissions;
+                                    dsti.GroupPermissions = item.GroupPermissions;
+                                    dsti.EveryOnePermissions = item.EveryOnePermissions;
                                     iserv.AddItem(dsti);
                                     imap.Add(item.ID, dsti.ID);
                                     m_log.DebugFormat("[RADMIN] Added item {0} to folder {1}", dsti.ID, efolder.ID);
@@ -1325,9 +1334,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                             }
                         }
                     }
+
                     // Update appearance tables
                     AvatarWearable[] wearables = ava.Wearables;
-                   for (int i=0; i<wearables.Length; i++)
+                    for (int i=0; i<wearables.Length; i++)
                     {
                         if (imap.ContainsKey(wearables[i].ItemID))
                         {
@@ -1337,6 +1347,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                             ava.SetWearable(i, dw);
                         }
                     }
+
                 }
                 else
                 {
@@ -1356,15 +1367,13 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         }
 
         ///<summary>
-        /// This method is called if a given model avatar name can not be found. If it has already
-        /// been loaded, then control returns immediately.
-        /// If not, then it looks for a default appearance file.
-        /// This file contains XML definitions of zero or more named
+        /// This method is called if a given model avatar name can not be found. If the external
+        /// file has already been loaded once, then control returns immediately. If not, then it 
+        /// looks for a default appearance file. This file contains XML definitions of zero or more named
         /// avatars, each avatar can specify zero or more "outfits". Each outfit is a collection 
         /// of items that together, define a particular ensemble for the avatar. Each avatar should
         /// indicate which outfit is the default, and this outfit will be automatically worn. The
-        /// other outfits are provided to allow "real" avatars to easily change their outfits.
-        /// This method should eventually be moved somewhere else, perhaps the avatar factory?
+        /// other outfits are provided to allow "real" avatars a way to easily change their outfits.
         /// </summary>
 
         private bool createDefaultAvatars()
@@ -1374,7 +1383,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             // Only load once
 
-           if (daload)
+            if (daload)
             {
                 return false;
             }
@@ -1388,7 +1397,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                 string dafn = m_config.GetString("default_appearance", "default_appearance.xml");
 
-            if (File.Exists(dafn))
+                if (File.Exists(dafn))
                 {
 
                     XmlDocument doc = new XmlDocument();
@@ -1401,14 +1410,32 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     UUID ID = UUID.Zero;
                     AvatarAppearance mava;
                     XmlNodeList avatars;
-                    XmlNode perms;
+                    XmlNodeList assets;
+                    XmlNode perms = null;
                     bool include = false;
                     bool select  = false;
 
                     UICallback uic;
                     IInventoryServices iserv = m_app.CommunicationsManager.InventoryService;
+                    IAssetCache        aserv = m_app.CommunicationsManager.AssetCache;
 
                     doc.LoadXml(File.ReadAllText(dafn));
+
+                    // Load up any included assets. Duplicates will be ignored
+                    assets = doc.GetElementsByTagName("RequiredAsset");
+                    foreach(XmlNode asset in assets)
+                    {
+                        AssetBase rass   = new AssetBase();
+                        rass.FullID      = UUID.Random();
+                        rass.Name        = GetStringAttribute(asset,"name","");
+                        rass.Description = GetStringAttribute(asset,"desc","");
+                        rass.Type        = SByte.Parse(GetStringAttribute(asset,"type",""));
+                        rass.Local       = Boolean.Parse(GetStringAttribute(asset,"local",""));
+                        rass.Temporary   = Boolean.Parse(GetStringAttribute(asset,"temporary",""));
+                        rass.Data        = Convert.FromBase64String(asset.InnerText);
+                        aserv.AddAsset(rass);
+                    }
+
                     avatars = doc.GetElementsByTagName("Avatar");
 
                     // The document may contain multiple avatars
@@ -1562,6 +1589,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                             switch (child.Name)
                                             {
                                                 case "Permissions" :
+                                                    m_log.DebugFormat("[RADMIN] Permissions specified");
                                                     perms = child;
                                                     break;
                                                 case "Asset" :
@@ -1584,6 +1612,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                             iitem.AssetID = assetid; // associated asset
                                             iitem.Folder = efolder.ID; // Parent folder
                                             iitem.Owner = ID; // Agent ID
+                                            iitem.BasePermissions = GetUnsignedAttribute(perms,"base",0x7fffffff);
+                                            iitem.NextPermissions = GetUnsignedAttribute(perms,"next",0x7fffffff);
+                                            iitem.CurrentPermissions = GetUnsignedAttribute(perms,"current",0x7fffffff);
+                                            iitem.GroupPermissions = GetUnsignedAttribute(perms,"group",0x7fffffff);
+                                            iitem.EveryOnePermissions = GetUnsignedAttribute(perms,"everyone",0x7fffffff);
                                             m_log.DebugFormat("[RADMIN] Adding item {0} to folder {1}", iitem.ID, efolder.ID);
                                             iserv.AddItem(iitem);
                                         }
