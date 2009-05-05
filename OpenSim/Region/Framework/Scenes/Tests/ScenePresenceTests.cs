@@ -40,7 +40,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Interfaces;
-using OpenSim.Region.CoreModules.Communications.REST;
+using OpenSim.Region.CoreModules.ServiceConnectors.Interregion;
 using OpenSim.Region.CoreModules.World.Serialiser;
 using OpenSim.Tests.Common.Mock;
 using OpenSim.Tests.Common.Setup;
@@ -115,7 +115,8 @@ namespace OpenSim.Region.Framework.Scenes.Tests
             agent.startpos = Vector3.Zero;
             agent.CapsPath = GetRandomCapsObjectPath();
 
-            scene.NewUserConnection(agent);
+            string reason;
+            scene.NewUserConnection(agent, out reason);
             testclient = new TestClient(agent, scene);
             scene.AddNewClient(testclient);
 
@@ -146,7 +147,8 @@ namespace OpenSim.Region.Framework.Scenes.Tests
         {
             Console.WriteLine("Beginning test {0}", MethodBase.GetCurrentMethod());
 
-            scene.NewUserConnection(acd1);
+            string reason;
+            scene.NewUserConnection(acd1, out reason);
             scene.AddNewClient(testclient);
 
             ScenePresence presence = scene.GetScenePresence(agent1);
@@ -203,7 +205,8 @@ namespace OpenSim.Region.Framework.Scenes.Tests
             Console.WriteLine("Beginning test {0}", MethodBase.GetCurrentMethod());
 
             // Adding child agent to region 1001
-            scene2.NewUserConnection(acd1);
+            string reason;
+            scene2.NewUserConnection(acd1, out reason);
             scene2.AddNewClient(testclient);
 
             ScenePresence presence = scene.GetScenePresence(agent1);

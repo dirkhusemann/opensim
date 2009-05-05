@@ -26,6 +26,7 @@
  */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Reflection;
@@ -43,6 +44,7 @@ using OpenSim.Framework.Statistics;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using Timer=System.Timers.Timer;
+using Nini.Config;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {
@@ -67,6 +69,16 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         private readonly IAssetCache m_assetCache;
         private int m_cachedTextureSerial;
         private Timer m_clientPingTimer;
+
+        private Timer m_avatarTerseUpdateTimer;
+        private Dictionary<uint, ImprovedTerseObjectUpdatePacket.ObjectDataBlock> m_avatarTerseUpdates = new Dictionary<uint, ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
+        private ushort m_terseTimeDilationLast = 0;
+
+        private Timer m_primTerseUpdateTimer;
+        private List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock> m_primTerseUpdates = new List<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
+        private Timer m_primFullUpdateTimer;
+        private List<ObjectUpdatePacket.ObjectDataBlock> m_primFullUpdates =
+                new List<ObjectUpdatePacket.ObjectDataBlock>();
 
         private bool m_clientBlocked;
 
@@ -116,6 +128,19 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected string m_activeGroupName = String.Empty;
         protected ulong m_activeGroupPowers;
         protected Dictionary<UUID,ulong> m_groupPowers = new Dictionary<UUID, ulong>();
+        protected int m_avatarTerseUpdateRate = 50;
+        protected int m_avatarTerseUpdatesPerPacket = 5;
+
+        // LL uses these limits, apparently. Compressed terse would be
+        // 23, but we don't have that yet
+        //
+        protected int m_primTerseUpdatesPerPacket = 10;
+        protected int m_primFullUpdatesPerPacket = 14;
+
+        protected int m_primTerseUpdateRate = 10;
+        protected int m_primFullUpdateRate = 14;
+
+        protected int m_packetMTU = 1400;
 
         // LLClientView Only
         public delegate void BinaryGenericMessage(Object sender, string method, byte[][] args);
@@ -495,6 +520,29 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_PacketHandler.SynchronizeClient = SynchronizeClient;
             m_PacketHandler.OnPacketStats += PopulateStats;
 
+            if (scene.Config != null)
+            {
+                IConfig clientConfig = scene.Config.Configs["LLClient"];
+                if (clientConfig != null)
+                {
+                    m_PacketHandler.ReliableIsImportant =
+                        clientConfig.GetBoolean("ReliableIsImportant",
+                                                false);
+
+                    m_primTerseUpdatesPerPacket = clientConfig.GetInt("TerseUpdatesPerPacket",
+                                                                      m_primTerseUpdatesPerPacket);
+                    m_primFullUpdatesPerPacket = clientConfig.GetInt("FullUpdatesPerPacket",
+                                                                     m_primFullUpdatesPerPacket);
+
+                    m_primTerseUpdateRate = clientConfig.GetInt("TerseUpdateRate",
+                                                                m_primTerseUpdateRate);
+                    m_primFullUpdateRate = clientConfig.GetInt("FullUpdateRate",
+                                                               m_primFullUpdateRate);
+
+                    m_packetMTU = clientConfig.GetInt("PacketMTU", 1400);
+                }
+            }
+
             RegisterLocalPacketHandlers();
             m_imageManager = new LLImageManager(this, m_assetCache,Scene.RequestModuleInterface<IJ2KDecoder>());
         }
@@ -521,7 +569,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             // Shut down timers
             m_clientPingTimer.Stop();
-
+            m_avatarTerseUpdateTimer.Stop();
+            m_primTerseUpdateTimer.Stop();
+            m_primFullUpdateTimer.Stop();
 
             // This is just to give the client a reasonable chance of
             // flushing out all it's packets.  There should probably
@@ -602,6 +652,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             // Shut down timers
             m_clientPingTimer.Stop();
+            m_avatarTerseUpdateTimer.Stop();
+            m_primTerseUpdateTimer.Stop();
+            m_primFullUpdateTimer.Stop();
         }
 
         public void Restart()
@@ -612,6 +665,18 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_clientPingTimer = new Timer(5000);
             m_clientPingTimer.Elapsed += CheckClientConnectivity;
             m_clientPingTimer.Enabled = true;
+
+            m_avatarTerseUpdateTimer = new Timer(m_avatarTerseUpdateRate);
+            m_avatarTerseUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessAvatarTerseUpdates);
+            m_avatarTerseUpdateTimer.AutoReset = false;
+
+            m_primTerseUpdateTimer = new Timer(m_primTerseUpdateRate);
+            m_primTerseUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimTerseUpdates);
+            m_primTerseUpdateTimer.AutoReset = false;
+
+            m_primFullUpdateTimer = new Timer(m_primFullUpdateRate);
+            m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
+            m_primFullUpdateTimer.AutoReset = false;
         }
 
         public void Terminate()
@@ -833,6 +898,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_clientPingTimer.Elapsed += CheckClientConnectivity;
             m_clientPingTimer.Enabled = true;
 
+            m_avatarTerseUpdateTimer = new Timer(m_avatarTerseUpdateRate);
+            m_avatarTerseUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessAvatarTerseUpdates);
+            m_avatarTerseUpdateTimer.AutoReset = false;
+
+            m_primTerseUpdateTimer = new Timer(m_primTerseUpdateRate);
+            m_primTerseUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimTerseUpdates);
+            m_primTerseUpdateTimer.AutoReset = false;
+
+            m_primFullUpdateTimer = new Timer(m_primFullUpdateRate);
+            m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
+            m_primFullUpdateTimer.AutoReset = false;
             m_scene.AddNewClient(this);
 
             RefreshGroupMembership();
@@ -886,6 +962,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                     LLQueItem item = new LLQueItem();
                     item.Packet = packet;
+                    item.Sequence = packet.Header.Sequence;
 
                     m_PacketHandler.ProcessOutPacket(item);
 
@@ -2696,8 +2773,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// Send a terse positional/rotation/velocity update about an avatar to the client.  This avatar can be that of
         /// the client itself.
         /// </summary>
-        public void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position,
-                                          Vector3 velocity, Quaternion rotation)
+        public virtual void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position,
+                                          Vector3 velocity, Quaternion rotation, UUID agentid)
         {
             if (rotation.X == rotation.Y && rotation.Y == rotation.Z && rotation.Z == rotation.W && rotation.W == 0)
                 rotation = Quaternion.Identity;
@@ -2706,17 +2783,50 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             ImprovedTerseObjectUpdatePacket.ObjectDataBlock terseBlock =
                 CreateAvatarImprovedBlock(localID, position, velocity, rotation);
-            ImprovedTerseObjectUpdatePacket terse = (ImprovedTerseObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ImprovedTerseObjectUpdate);
-            // TODO: don't create new blocks if recycling an old packet
-            terse.RegionData.RegionHandle = regionHandle;
-            terse.RegionData.TimeDilation = timeDilation;
-            terse.ObjectData = new ImprovedTerseObjectUpdatePacket.ObjectDataBlock[1];
-            terse.ObjectData[0] = terseBlock;
+                
+            bool sendpacketnow = false;
+            lock (m_avatarTerseUpdates)
+            {
+                // Only one update per avatar per packet. No need to send old ones so just overwrite them.
+                m_avatarTerseUpdates[localID] = terseBlock;
+                m_terseTimeDilationLast = timeDilation;
 
-            terse.Header.Reliable = false;
-            terse.Header.Zerocoded = true;
+                // If packet is full or own movement packet, send it.
+                if (agentid == m_agentId || m_avatarTerseUpdates.Count >= m_avatarTerseUpdatesPerPacket)
+                {
+                    m_avatarTerseUpdateTimer.Stop();
+                    sendpacketnow = true;
+                }
+                else if (m_avatarTerseUpdates.Count == 1)
+                    m_avatarTerseUpdateTimer.Start();                
+            }
+            // Call ProcessAvatarTerseUpdates outside the lock
+            if (sendpacketnow)
+                ProcessAvatarTerseUpdates(this, null);
+        }
 
-            OutPacket(terse, ThrottleOutPacketType.Task);
+        private void ProcessAvatarTerseUpdates(object sender, ElapsedEventArgs e)
+        {
+            lock (m_avatarTerseUpdates)
+            {
+                ImprovedTerseObjectUpdatePacket terse = (ImprovedTerseObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ImprovedTerseObjectUpdate);
+                terse.RegionData.RegionHandle = Scene.RegionInfo.RegionHandle;
+                terse.ObjectData = new ImprovedTerseObjectUpdatePacket.ObjectDataBlock[m_avatarTerseUpdates.Count];
+
+                int i = 0;
+                foreach (KeyValuePair<uint, ImprovedTerseObjectUpdatePacket.ObjectDataBlock> dbe in m_avatarTerseUpdates)
+                {
+                    terse.ObjectData[i] = dbe.Value;
+                    i++;
+                }
+                terse.RegionData.TimeDilation = m_terseTimeDilationLast;
+
+                terse.Header.Reliable = false;
+                terse.Header.Zerocoded = true;
+                OutPacket(terse, ThrottleOutPacketType.Task);
+
+                m_avatarTerseUpdates.Clear();
+            }
         }
 
         public void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations)
@@ -2810,81 +2920,137 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             if (rotation.X == rotation.Y && rotation.Y == rotation.Z && rotation.Z == rotation.W && rotation.W == 0)
                 rotation = Quaternion.Identity;
 
-            ObjectUpdatePacket outPacket = (ObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ObjectUpdate);
+            ObjectUpdatePacket.ObjectDataBlock objectData = CreatePrimUpdateBlock(primShape, flags);
 
+            objectData.ID = localID;
+            objectData.FullID = objectID;
+            objectData.OwnerID = ownerID;
 
-
-            // TODO: don't create new blocks if recycling an old packet
-            outPacket.RegionData.RegionHandle = regionHandle;
-            outPacket.RegionData.TimeDilation = timeDilation;
-            outPacket.ObjectData = new ObjectUpdatePacket.ObjectDataBlock[1];
-
-            outPacket.ObjectData[0] = CreatePrimUpdateBlock(primShape, flags);
-
-            outPacket.ObjectData[0].ID = localID;
-            outPacket.ObjectData[0].FullID = objectID;
-            outPacket.ObjectData[0].OwnerID = ownerID;
-
-            outPacket.ObjectData[0].Text = LLUtil.StringToPacketBytes(text);
-            outPacket.ObjectData[0].TextColor[0] = color[0];
-            outPacket.ObjectData[0].TextColor[1] = color[1];
-            outPacket.ObjectData[0].TextColor[2] = color[2];
-            outPacket.ObjectData[0].TextColor[3] = color[3];
-            outPacket.ObjectData[0].ParentID = parentID;
-            outPacket.ObjectData[0].PSBlock = particleSystem;
-            outPacket.ObjectData[0].ClickAction = clickAction;
-            outPacket.ObjectData[0].Material = material;
-            outPacket.ObjectData[0].Flags = 0;
+            objectData.Text = LLUtil.StringToPacketBytes(text);
+            objectData.TextColor[0] = color[0];
+            objectData.TextColor[1] = color[1];
+            objectData.TextColor[2] = color[2];
+            objectData.TextColor[3] = color[3];
+            objectData.ParentID = parentID;
+            objectData.PSBlock = particleSystem;
+            objectData.ClickAction = clickAction;
+            objectData.Material = material;
+            objectData.Flags = 0;
 
             if (attachment)
             {
                 // Necessary???
-                outPacket.ObjectData[0].JointAxisOrAnchor = new Vector3(0, 0, 2);
-                outPacket.ObjectData[0].JointPivot = new Vector3(0, 0, 0);
+                objectData.JointAxisOrAnchor = new Vector3(0, 0, 2);
+                objectData.JointPivot = new Vector3(0, 0, 0);
 
                 // Item from inventory???
-                outPacket.ObjectData[0].NameValue =
+                objectData.NameValue =
                     Utils.StringToBytes("AttachItemID STRING RW SV " + AssetId.Guid);
-                outPacket.ObjectData[0].State = (byte)((AttachPoint % 16) * 16 + (AttachPoint / 16));
+                objectData.State = (byte)((AttachPoint % 16) * 16 + (AttachPoint / 16));
             }
 
             // Xantor 20080528: Send sound info as well
             // Xantor 20080530: Zero out everything if there's no SoundId, so zerocompression will work again
-            outPacket.ObjectData[0].Sound = SoundId;
+            objectData.Sound = SoundId;
             if (SoundId == UUID.Zero)
             {
-                outPacket.ObjectData[0].OwnerID = UUID.Zero;
-                outPacket.ObjectData[0].Gain = 0.0f;
-                outPacket.ObjectData[0].Radius = 0.0f;
-                outPacket.ObjectData[0].Flags = 0;
+                objectData.OwnerID = UUID.Zero;
+                objectData.Gain = 0.0f;
+                objectData.Radius = 0.0f;
+                objectData.Flags = 0;
             }
             else
             {
-                outPacket.ObjectData[0].OwnerID = ownerID;
-                outPacket.ObjectData[0].Gain = (float)SoundGain;
-                outPacket.ObjectData[0].Radius = (float)SoundRadius;
-                outPacket.ObjectData[0].Flags = SoundFlags;
+                objectData.OwnerID = ownerID;
+                objectData.Gain = (float)SoundGain;
+                objectData.Radius = (float)SoundRadius;
+                objectData.Flags = SoundFlags;
             }
 
             byte[] pb = pos.GetBytes();
-            Array.Copy(pb, 0, outPacket.ObjectData[0].ObjectData, 0, pb.Length);
+            Array.Copy(pb, 0, objectData.ObjectData, 0, pb.Length);
 
             byte[] vel = velocity.GetBytes();
-            Array.Copy(vel, 0, outPacket.ObjectData[0].ObjectData, pb.Length, vel.Length);
+            Array.Copy(vel, 0, objectData.ObjectData, pb.Length, vel.Length);
 
             byte[] rot = rotation.GetBytes();
-            Array.Copy(rot, 0, outPacket.ObjectData[0].ObjectData, 36, rot.Length);
+            Array.Copy(rot, 0, objectData.ObjectData, 36, rot.Length);
 
             byte[] rvel = rotational_velocity.GetBytes();
-            Array.Copy(rvel, 0, outPacket.ObjectData[0].ObjectData, 36 + rot.Length, rvel.Length);
+            Array.Copy(rvel, 0, objectData.ObjectData, 36 + rot.Length, rvel.Length);
 
             if (textureanim.Length > 0)
             {
-                outPacket.ObjectData[0].TextureAnim = textureanim;
+                objectData.TextureAnim = textureanim;
             }
-            outPacket.Header.Zerocoded = true;
 
-            OutPacket(outPacket, ThrottleOutPacketType.Task | ThrottleOutPacketType.LowPriority);
+            lock (m_primFullUpdates)
+            {
+                if (m_primFullUpdates.Count == 0)
+                    m_primFullUpdateTimer.Start();
+
+                m_primFullUpdates.Add(objectData);
+
+                if (m_primFullUpdates.Count >= m_primFullUpdatesPerPacket)
+                    ProcessPrimFullUpdates(this, null);
+            }
+        }
+
+        void ProcessPrimFullUpdates(object sender, ElapsedEventArgs e)
+        {
+            lock (m_primFullUpdates)
+            {
+                if (m_primFullUpdates.Count == 0)
+                {
+                    m_primFullUpdateTimer.Stop();
+
+                    return;
+                }
+
+                ObjectUpdatePacket outPacket =
+                        (ObjectUpdatePacket)PacketPool.Instance.GetPacket(
+                        PacketType.ObjectUpdate);
+
+                outPacket.RegionData.RegionHandle =
+                        Scene.RegionInfo.RegionHandle;
+                outPacket.RegionData.TimeDilation =
+                        (ushort)(Scene.TimeDilation * ushort.MaxValue);
+
+                int max = m_primFullUpdates.Count;
+                if (max > m_primFullUpdatesPerPacket)
+                    max = m_primFullUpdatesPerPacket;
+
+                int count = 0;
+                int size = 0;
+
+                byte[] zerobuffer = new byte[1024];
+                byte[] blockbuffer = new byte[1024];
+
+                for (count = 0 ; count < max ; count++)
+                {
+                    int length = 0;
+                    m_primFullUpdates[count].ToBytes(blockbuffer, ref length);
+                    length = Helpers.ZeroEncode(blockbuffer, length, zerobuffer);
+                    if (size + length > m_packetMTU)
+                        break;
+                    size += length;
+                }
+
+                outPacket.ObjectData =
+                        new ObjectUpdatePacket.ObjectDataBlock[count];
+
+                for (int index = 0 ; index < count ; index++)
+                {
+                    outPacket.ObjectData[index] = m_primFullUpdates[0];
+                    m_primFullUpdates.RemoveAt(0);
+                }
+
+                outPacket.Header.Zerocoded = true;
+                OutPacket(outPacket, ThrottleOutPacketType.Task | ThrottleOutPacketType.LowPriority);
+
+                if (m_primFullUpdates.Count == 0)
+                    m_primFullUpdateTimer.Stop();
+            }
         }
 
         /// <summary>
@@ -2898,15 +3064,93 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             if (rotation.X == rotation.Y && rotation.Y == rotation.Z && rotation.Z == rotation.W && rotation.W == 0)
                 rotation = Quaternion.Identity;
-            ImprovedTerseObjectUpdatePacket terse = (ImprovedTerseObjectUpdatePacket)PacketPool.Instance.GetPacket(PacketType.ImprovedTerseObjectUpdate);
-            // TODO: don't create new blocks if recycling an old packet
-            terse.RegionData.RegionHandle = regionHandle;
-            terse.RegionData.TimeDilation = timeDilation;
-            terse.ObjectData = new ImprovedTerseObjectUpdatePacket.ObjectDataBlock[1];
-            terse.ObjectData[0] = CreatePrimImprovedBlock(localID, position, rotation, velocity, rotationalvelocity, state); // AssetID should fall into here probably somehow...
-            terse.Header.Reliable = false;
-            terse.Header.Zerocoded = true;
-            OutPacket(terse, ThrottleOutPacketType.Task | ThrottleOutPacketType.LowPriority);
+
+            ImprovedTerseObjectUpdatePacket.ObjectDataBlock objectData =
+                    CreatePrimImprovedBlock(localID, position, rotation,
+                    velocity, rotationalvelocity, state);
+
+            lock (m_primTerseUpdates)
+            {
+                if (m_primTerseUpdates.Count == 0)
+                    m_primTerseUpdateTimer.Start();
+
+                m_primTerseUpdates.Add(objectData);
+
+                if (m_primTerseUpdates.Count >= m_primTerseUpdatesPerPacket)
+                    ProcessPrimTerseUpdates(this, null);
+            }
+        }
+
+        void ProcessPrimTerseUpdates(object sender, ElapsedEventArgs e)
+        {
+            lock (m_primTerseUpdates)
+            {
+                if (m_primTerseUpdates.Count == 0)
+                {
+                    m_primTerseUpdateTimer.Stop();
+
+                    return;
+                }
+
+                ImprovedTerseObjectUpdatePacket outPacket =
+                        (ImprovedTerseObjectUpdatePacket)
+                        PacketPool.Instance.GetPacket(
+                        PacketType.ImprovedTerseObjectUpdate);
+
+                outPacket.RegionData.RegionHandle =
+                        Scene.RegionInfo.RegionHandle;
+                outPacket.RegionData.TimeDilation =
+                        (ushort)(Scene.TimeDilation * ushort.MaxValue);
+
+                int max = m_primTerseUpdates.Count;
+                if (max > m_primTerseUpdatesPerPacket)
+                    max = m_primTerseUpdatesPerPacket;
+
+                int count = 0;
+                int size = 0;
+
+                byte[] zerobuffer = new byte[1024];
+                byte[] blockbuffer = new byte[1024];
+
+                for (count = 0 ; count < max ; count++)
+                {
+                    int length = 0;
+                    m_primTerseUpdates[count].ToBytes(blockbuffer, ref length);
+                    length = Helpers.ZeroEncode(blockbuffer, length, zerobuffer);
+                    if (size + length > m_packetMTU)
+                        break;
+                    size += length;
+                }
+
+                outPacket.ObjectData =
+                        new ImprovedTerseObjectUpdatePacket.
+                        ObjectDataBlock[count];
+
+                for (int index = 0 ; index < count ; index++)
+                {
+                    outPacket.ObjectData[index] = m_primTerseUpdates[0];
+                    m_primTerseUpdates.RemoveAt(0);
+                }
+
+                outPacket.Header.Reliable = false;
+                outPacket.Header.Zerocoded = true;
+                OutPacket(outPacket, ThrottleOutPacketType.Task | ThrottleOutPacketType.LowPriority);
+
+                if (m_primTerseUpdates.Count == 0)
+                    m_primTerseUpdateTimer.Stop();
+            }
+        }
+
+        public void FlushPrimUpdates()
+        {
+            while (m_primFullUpdates.Count > 0)
+            {
+                ProcessPrimFullUpdates(this, null);
+            }
+            while (m_primTerseUpdates.Count > 0)
+            {
+                ProcessPrimTerseUpdates(this, null);
+            }
         }
 
         public void SendAssetUploadCompleteMessage(sbyte AssetType, bool Success, UUID AssetFullID)
@@ -3479,7 +3723,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             byte[] bytes = new byte[60];
             int i = 0;
-            ImprovedTerseObjectUpdatePacket.ObjectDataBlock dat = new ImprovedTerseObjectUpdatePacket.ObjectDataBlock();
+            ImprovedTerseObjectUpdatePacket.ObjectDataBlock dat = PacketPool.GetDataBlock<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
 
             dat.TextureEntry = new byte[0]; // AvatarTemplate.TextureEntry;
 
@@ -3574,7 +3818,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             byte[] bytes = new byte[60];
 
             int i = 0;
-            ImprovedTerseObjectUpdatePacket.ObjectDataBlock dat = new ImprovedTerseObjectUpdatePacket.ObjectDataBlock();
+            ImprovedTerseObjectUpdatePacket.ObjectDataBlock dat = PacketPool.GetDataBlock<ImprovedTerseObjectUpdatePacket.ObjectDataBlock>();
             dat.TextureEntry = new byte[0];
             bytes[i++] = (byte)(ID % 256);
             bytes[i++] = (byte)((ID >> 8) % 256);
@@ -3661,7 +3905,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <returns></returns>
         protected ObjectUpdatePacket.ObjectDataBlock CreatePrimUpdateBlock(PrimitiveBaseShape primShape, uint flags)
         {
-            ObjectUpdatePacket.ObjectDataBlock objupdate = new ObjectUpdatePacket.ObjectDataBlock();
+            ObjectUpdatePacket.ObjectDataBlock objupdate = PacketPool.GetDataBlock<ObjectUpdatePacket.ObjectDataBlock>();
             SetDefaultPrimPacketValues(objupdate);
             objupdate.UpdateFlags = flags;
             SetPrimPacketShapeData(objupdate, primShape);
@@ -3732,7 +3976,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <returns></returns>
         public ObjectUpdatePacket.ObjectDataBlock CreateDefaultAvatarPacket(byte[] textureEntry)
         {
-            ObjectUpdatePacket.ObjectDataBlock objdata = new ObjectUpdatePacket.ObjectDataBlock();
+            ObjectUpdatePacket.ObjectDataBlock objdata = PacketPool.GetDataBlock<ObjectUpdatePacket.ObjectDataBlock>();
             //  new OpenMetaverse.Packets.ObjectUpdatePacket.ObjectDataBlock(data1, ref i);
 
             SetDefaultAvatarPacketValues(ref objdata);

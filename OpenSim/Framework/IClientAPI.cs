@@ -871,7 +871,7 @@ namespace OpenSim.Framework
                             Vector3 Pos, byte[] textureEntry, uint parentID, Quaternion rotation);
 
         void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position,
-                                   Vector3 velocity, Quaternion rotation);
+                                   Vector3 velocity, Quaternion rotation, UUID agentid);
 
         void SendCoarseLocationUpdate(List<UUID> users, List<Vector3> CoarseLocations);
 
@@ -901,6 +901,8 @@ namespace OpenSim.Framework
         void SendInventoryFolderDetails(UUID ownerID, UUID folderID, List<InventoryItemBase> items,
                                         List<InventoryFolderBase> folders, bool fetchFolders,
                                         bool fetchItems);
+
+        void FlushPrimUpdates();
 
         void SendInventoryItemDetails(UUID ownerID, InventoryItemBase item);
 

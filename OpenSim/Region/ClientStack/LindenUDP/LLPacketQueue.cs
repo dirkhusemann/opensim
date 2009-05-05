@@ -83,6 +83,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         internal LLPacketThrottle TextureThrottle;
         internal LLPacketThrottle TotalThrottle;
         
+        private List<uint> contents = new List<uint>();
+
         /// <summary>
         /// The number of packets in the OutgoingPacketQueue
         /// 
@@ -186,6 +188,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 return;
             }
 
+            if (item.Sequence != 0)
+                contents.Add(item.Sequence);
+
             lock (this)
             {
                 switch (item.throttleType & ThrottleOutPacketType.TypeMask)
@@ -226,7 +231,30 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         public LLQueItem Dequeue()
         {
-            return SendQueue.Dequeue();
+            while (true)
+            {
+                LLQueItem item = SendQueue.Dequeue();
+                if (item == null)
+                    return null;
+                if (item.Incoming)
+                    return item;
+                item.TickCount = System.Environment.TickCount;
+                if (item.Sequence == 0)
+                    return item;
+                if (contents.Remove(item.Sequence))
+                    return item;
+            }
+        }
+
+        public void Cancel(uint sequence)
+        {
+            while (contents.Remove(sequence))
+                ;
+        }
+
+        public bool Contains(uint sequence)
+        {
+            return contents.Contains(sequence);
         }
 
         public void Flush()
@@ -286,6 +314,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 TextureOutgoingPacketQueue.Clear();
                 AssetOutgoingPacketQueue.Clear();
                 SendQueue.Clear();
+                contents.Clear();
             }
         }
 

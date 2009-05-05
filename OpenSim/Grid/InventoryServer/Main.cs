@@ -36,6 +36,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications.Services;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 
 namespace OpenSim.Grid.InventoryServer
 {
@@ -60,7 +61,7 @@ namespace OpenSim.Grid.InventoryServer
 
         public OpenInventory_Main()
         {
-            m_console = new ConsoleBase("Inventory");
+            m_console = new LocalConsole("Inventory");
             MainConsole.Instance = m_console;
         }
 

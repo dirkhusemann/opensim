@@ -31,6 +31,7 @@ using System.Reflection;
 using System.Threading;
 using OpenMetaverse;
 using log4net;
+using Nini.Config;
 using OpenSim.Framework;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Communications.Cache;
@@ -50,6 +51,16 @@ namespace OpenSim.Region.Framework.Scenes
 
         #region Fields
         
+        public IConfigSource Config
+        {
+            get { return GetConfig(); }
+        }
+
+        protected virtual IConfigSource GetConfig()
+        {
+            return null;
+        }
+
         /// <value>
         /// All the region modules attached to this scene.
         /// </value>
@@ -97,11 +108,16 @@ namespace OpenSim.Region.Framework.Scenes
             get { return m_clientManager; }
         }
 
+        public float TimeDilation
+        {
+            get { return m_timedilation; }
+        }
+        protected float m_timedilation = 1.0f;
+
         protected ulong m_regionHandle;
         protected string m_regionName;
         protected RegionInfo m_regInfo;
 
-        //public TerrainEngine Terrain;
         public ITerrainChannel Heightmap;
 
         /// <value>

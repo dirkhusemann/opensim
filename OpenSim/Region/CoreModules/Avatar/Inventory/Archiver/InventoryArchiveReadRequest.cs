@@ -35,10 +35,11 @@ using System.Xml;
 using log4net;
 using OpenMetaverse;
 using OpenSim.Framework;
-using OpenSim.Framework.Serialization;
-using OpenSim.Framework.Serialization.External;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
+using OpenSim.Framework.Communications.Osp;
+using OpenSim.Framework.Serialization;
+using OpenSim.Framework.Serialization.External;
 using OpenSim.Region.CoreModules.World.Archiver;
 
 namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
@@ -156,7 +157,7 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver
                         // Don't use the item ID that's in the file
                         item.ID = UUID.Random();
 
-                        string ospResolvedId = OspResolver.Resolve(item.CreatorId, m_commsManager); 
+                        string ospResolvedId = OspResolver.ResolveOspa(item.CreatorId, m_commsManager); 
                         if (null != ospResolvedId)
                             item.CreatorId = ospResolvedId;
                         

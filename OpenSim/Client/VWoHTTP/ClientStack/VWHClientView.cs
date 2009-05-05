@@ -37,6 +37,7 @@ using OpenMetaverse.Imaging;
 using OpenMetaverse.Packets;
 using OpenSim.Framework;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Scenes;
 
 namespace OpenSim.Client.VWoHTTP.ClientStack
@@ -558,7 +559,7 @@ namespace OpenSim.Client.VWoHTTP.ClientStack
             throw new System.NotImplementedException();
         }
 
-        public void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position, Vector3 velocity, Quaternion rotation)
+        public void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position, Vector3 velocity, Quaternion rotation, UUID uuid)
         {
             throw new System.NotImplementedException();
         }
@@ -589,6 +590,11 @@ namespace OpenSim.Client.VWoHTTP.ClientStack
         }
 
         public void SendPrimTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position, Quaternion rotation, Vector3 velocity, Vector3 rotationalvelocity, byte state, UUID AssetId, UUID owner, int attachPoint)
+        {
+            throw new System.NotImplementedException();
+        }
+
+        public void FlushPrimUpdates()
         {
             throw new System.NotImplementedException();
         }

@@ -450,23 +450,37 @@ namespace OpenSim.Region.CoreModules.World.Permissions
                 return objectOwnerMask;
             }
 
-            // Users should be able to edit what is over their land.
-            ILandObject parcel = m_scene.LandChannel.GetLandObject(task.AbsolutePosition.X, task.AbsolutePosition.Y);
-            if (parcel != null && parcel.landData.OwnerID == user && m_ParcelOwnerIsGod)
-                return objectOwnerMask;
+            //// Users should be able to edit what is over their land.
+            //ILandObject parcel = m_scene.LandChannel.GetLandObject(task.AbsolutePosition.X, task.AbsolutePosition.Y);
+            //if (parcel != null && parcel.landData.OwnerID == user && m_ParcelOwnerIsGod)
+            //    return objectOwnerMask;
 
-            // Admin objects should not be editable by the above
-            if (IsAdministrator(objectOwner))
-                return objectEveryoneMask;
+            //// Admin objects should not be editable by the above
+            //if (IsAdministrator(objectOwner))
+            //    return objectEveryoneMask;
 
             // Estate users should be able to edit anything in the sim
-            if (IsEstateManager(user) && m_RegionOwnerIsGod)
+            if (IsEstateManager(user) && m_RegionOwnerIsGod && (!IsAdministrator(objectOwner)))
                 return objectOwnerMask;
 
             // Admin should be able to edit anything in the sim (including admin objects)
             if (IsAdministrator(user))
                 return objectOwnerMask;
 
+            // Users should be able to edit what is over their land.
+            ILandObject parcel = m_scene.LandChannel.GetLandObject(task.AbsolutePosition.X, task.AbsolutePosition.Y);
+            if (parcel != null && parcel.landData.OwnerID == user && m_ParcelOwnerIsGod)
+            {
+                uint responseMask = objectOwnerMask;
+
+                // Admin objects should not be editable by the above
+                if (IsAdministrator(objectOwner))
+                {
+                    responseMask = objectEveryoneMask;
+                }
+
+                return responseMask;
+            }
 
             return objectEveryoneMask;
         }

@@ -38,6 +38,7 @@ using log4net.Core;
 using log4net.Repository;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Framework.Statistics;
 using Timer=System.Timers.Timer;
 
@@ -60,8 +61,9 @@ namespace OpenSim.Framework.Servers
         /// </summary>
         private Timer m_periodicDiagnosticsTimer = new Timer(60 * 60 * 1000);
 
-        protected ConsoleBase m_console;
+        protected CommandConsole m_console;
         protected OpenSimAppender m_consoleAppender;
+        protected IAppender m_logFileAppender = null; 
 
         /// <summary>
         /// Time at which this server was started
@@ -79,6 +81,11 @@ namespace OpenSim.Framework.Servers
         protected string m_version;
 
         protected string m_pidFile = String.Empty;
+        
+        /// <summary>
+        /// Random uuid for private data 
+        /// </summary>
+        protected string m_osSecret = String.Empty;
 
         protected BaseHttpServer m_httpServer;
         public BaseHttpServer HttpServer
@@ -95,6 +102,9 @@ namespace OpenSim.Framework.Servers
         {
             m_startuptime = DateTime.Now;
             m_version = VersionInfo.Version;
+            
+            // Random uuid for private data
+            m_osSecret = UUID.Random().ToString();
 
             m_periodicDiagnosticsTimer.Elapsed += new ElapsedEventHandler(LogDiagnostics);
             m_periodicDiagnosticsTimer.Enabled = true;
@@ -102,6 +112,18 @@ namespace OpenSim.Framework.Servers
             // Add ourselves to thread monitoring.  This thread will go on to become the console listening thread
             Thread.CurrentThread.Name = "ConsoleThread";
             ThreadTracker.Add(Thread.CurrentThread);
+
+            ILoggerRepository repository = LogManager.GetRepository();
+            IAppender[] appenders = repository.GetAppenders();
+
+            foreach (IAppender appender in appenders)
+            {
+                if (appender.Name == "LogFileAppender")
+                {
+                    m_logFileAppender = appender;
+                }
+            }
+
         }
         
         /// <summary>
@@ -458,12 +480,18 @@ namespace OpenSim.Framework.Servers
             {
             }
         }
+        
+        public string osSecret {
+            // Secret uuid for the simulator
+            get { return m_osSecret; }
+            
+        }
 
         public string StatReport(OSHttpRequest httpRequest)
         {
             return m_stats.XReport((DateTime.Now - m_startuptime).ToString() , m_version );
         }
-            
+           
         protected void RemovePIDFile()
         {
             if (m_pidFile != String.Empty)

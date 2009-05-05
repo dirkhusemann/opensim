@@ -36,20 +36,13 @@ using System.Reflection;
 
 namespace OpenSim.Region.ClientStack.LindenUDP
 {
-    /*
-     * 
-     *          J2KImage
-     *          
-     *          We use this class to store image data and associated request data and attributes
-     *          
-     * 
-     * 
-     */
-
+    /// <summary>
+    /// We use this class to store image data and associated request data and attributes
+    /// </summary>
     public class J2KImage
     {
-
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+
         public double m_designatedPriorityKey;
         public double m_requestedPriority = 0.0d;
         public uint m_lastSequence = 0;
@@ -62,7 +55,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public AssetBase m_MissingSubstitute = null;
         public bool m_decoded = false;
         public bool m_completedSendAtCurrentDiscardLevel;
-                
+
         private sbyte m_discardLevel=-1;
         private uint m_packetNumber;
         private bool m_decoderequested = false;
@@ -103,7 +96,17 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             if (!m_decoded)
                 return 0;
-            return (ushort)(((m_asset.Data.Length - cFirstPacketSize + cImagePacketSize - 1) / cImagePacketSize) + 1);
+            try
+            {
+                return (ushort)(((m_asset.Data.Length - cFirstPacketSize + cImagePacketSize - 1) / cImagePacketSize) + 1);
+            }
+            catch (Exception)
+            {
+                // If the asset is missing/destroyed/truncated, we will land
+                // here
+                //
+                return 0;
+            }
         }
 
         public void J2KDecodedCallback(UUID AssetId, OpenJPEG.J2KLayerInfo[] layers)
@@ -132,6 +135,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         {
             return ((bytePosition - cFirstPacketSize + cImagePacketSize - 1) / cImagePacketSize) + 1;
         }
+
         public int LastPacketSize()
         {
             if (m_packetNumber == 1)
@@ -143,8 +147,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 lastsize = cImagePacketSize;
             }
             return lastsize;
-         }
-
+        }
  
         public int CurrentBytePosition()
         {
@@ -200,47 +203,51 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             bool complete = false;
             int imagePacketSize = ((int)m_packetNumber == (TexturePacketCount())) ? LastPacketSize() : cImagePacketSize;
 
-            if ((CurrentBytePosition() + cImagePacketSize) > m_asset.Data.Length)
+            try
             {
-                imagePacketSize = LastPacketSize();
-                complete=true;
-                if ((CurrentBytePosition() + imagePacketSize) > m_asset.Data.Length)
+                if ((CurrentBytePosition() + cImagePacketSize) > m_asset.Data.Length)
                 {
-                    imagePacketSize = m_asset.Data.Length - CurrentBytePosition();
-                    complete = true;
-                }
-            }
-            
-            //It's concievable that the client might request packet one
-            //from a one packet image, which is really packet 0,
-            //which would leave us with a negative imagePacketSize..
-            if (imagePacketSize > 0)
-            {
-                byte[] imageData = new byte[imagePacketSize];
-                try
-                {
-                    Buffer.BlockCopy(m_asset.Data, CurrentBytePosition(), imageData, 0, imagePacketSize);
-                }
-                catch (Exception e)
-                {
-                    m_log.Error("Error copying texture block. Out of memory? imagePacketSize was " + imagePacketSize.ToString() + " on packet " + m_packetNumber.ToString() + " out of " + m_stopPacket.ToString() + ". Exception: " + e.ToString());
-                    return false;
+                    imagePacketSize = LastPacketSize();
+                    complete=true;
+                    if ((CurrentBytePosition() + imagePacketSize) > m_asset.Data.Length)
+                    {
+                        imagePacketSize = m_asset.Data.Length - CurrentBytePosition();
+                        complete = true;
+                    }
                 }
 
-                //Send the packet
-                client.SendImageNextPart((ushort)(m_packetNumber-1), m_requestedUUID, imageData);
-                
+                // It's concievable that the client might request packet one
+                // from a one packet image, which is really packet 0,
+                // which would leave us with a negative imagePacketSize..
+                if (imagePacketSize > 0)
+                {
+                    byte[] imageData = new byte[imagePacketSize];
+                    try
+                    {
+                        Buffer.BlockCopy(m_asset.Data, CurrentBytePosition(), imageData, 0, imagePacketSize);
+                    }
+                    catch (Exception e)
+                    {
+                        m_log.Error("Error copying texture block. Out of memory? imagePacketSize was " + imagePacketSize.ToString() + " on packet " + m_packetNumber.ToString() + " out of " + m_stopPacket.ToString() + ". Exception: " + e.ToString());
+                        return false;
+                    }
+
+                    //Send the packet
+                    client.SendImageNextPart((ushort)(m_packetNumber-1), m_requestedUUID, imageData);
+                }
+                if (complete)
+                {
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
             }
-            if (complete)
+            catch (Exception)
             {
                 return false;
             }
-            else
-            {
-                return true;
-            }
-
-
         }
         public bool SendPackets(LLClientView client)
         {
@@ -249,7 +256,6 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 if (m_packetNumber <= m_stopPacket)
                 {
-
                     bool SendMore = true;
                     if (!m_sentinfo || (m_packetNumber == 0))
                     {
@@ -265,8 +271,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     {
                         m_packetNumber = 2;
                     }
-                    
-                    int count=0;  
+
+                    int count = 0;
                     while (SendMore && count < 5 && m_packetNumber <= m_stopPacket)
                     {
                         count++;
@@ -276,13 +282,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                     if (m_packetNumber > m_stopPacket)
                     {
-
                         return true;
-
                     }
-
                 }
-
             }
             return false;
         }
@@ -335,12 +337,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 }
                 else
                 {
-
-   
                     //discardLevel of -1 means just update the priority
                     if (m_requestedDiscardLevel != -1)
                     {
-
                         //Evaluate the discard level
                         //First, is it positive?
                         if (m_requestedDiscardLevel >= 0)
@@ -353,7 +352,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             {
                                 m_discardLevel = m_requestedDiscardLevel;
                             }
-                                
+
                             //Calculate the m_stopPacket
                             if (Layers.Length > 0)
                             {
@@ -374,18 +373,15 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             {
                                 m_packetNumber = m_requestedPacketNumber;
                             }
-                   
+
                             if (m_packetNumber <= m_stopPacket)
                             {
                                 m_completedSendAtCurrentDiscardLevel = false;
                             }
-
                         }
-
                     }
                 }
             }
         }
-
     }
 }

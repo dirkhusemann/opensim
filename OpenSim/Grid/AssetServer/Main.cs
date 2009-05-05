@@ -36,6 +36,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.AssetLoader.Filesystem;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Framework.Statistics;
 
 namespace OpenSim.Grid.AssetServer
@@ -76,7 +77,7 @@ namespace OpenSim.Grid.AssetServer
 
         public OpenAsset_Main()
         {
-            m_console = new ConsoleBase("Asset");
+            m_console = new LocalConsole("Asset");
 
             MainConsole.Instance = m_console;
         }

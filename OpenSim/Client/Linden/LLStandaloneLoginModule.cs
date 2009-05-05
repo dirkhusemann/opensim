@@ -38,7 +38,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Communications.Capabilities;
-using OpenSim.Framework.Servers.Interfaces;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Scenes;
 using OpenSim.Region.Framework.Interfaces;
 
@@ -154,13 +154,14 @@ namespace OpenSim.Client.Linden
             }
         }
 
-        public bool NewUserConnection(ulong regionHandle, AgentCircuitData agent)
+        public bool NewUserConnection(ulong regionHandle, AgentCircuitData agent, out string reason)
         {
             Scene scene;
             if (TryGetRegion(regionHandle, out scene))
             {
-                return scene.NewUserConnection(agent);
+                return scene.NewUserConnection(agent, out reason);
             }
+            reason = "Region not found.";
             return false;
         }
 

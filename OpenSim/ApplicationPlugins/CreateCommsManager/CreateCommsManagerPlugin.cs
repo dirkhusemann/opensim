@@ -26,6 +26,7 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using log4net;
 using OpenSim.Data;
@@ -33,7 +34,9 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Services;
 using OpenSim.Framework.Communications.Cache;
+using OpenSim.Framework.Communications.Osp;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Communications.Hypergrid;
 using OpenSim.Region.Communications.Local;
 using OpenSim.Region.Communications.OGS1;
@@ -164,8 +167,16 @@ namespace OpenSim.ApplicationPlugins.CreateCommsManager
         protected virtual void InitialiseStandaloneServices(LibraryRootFolder libraryRootFolder)
         {
             LocalInventoryService inventoryService = new LocalInventoryService();
-            inventoryService.AddPlugin(m_openSim.ConfigurationSettings.StandaloneInventoryPlugin,
-                                       m_openSim.ConfigurationSettings.StandaloneInventorySource);
+            List<IInventoryDataPlugin> plugins 
+                = DataPluginFactory.LoadDataPlugins<IInventoryDataPlugin>(
+                    m_openSim.ConfigurationSettings.StandaloneInventoryPlugin, 
+                    m_openSim.ConfigurationSettings.StandaloneInventorySource);
+
+            foreach (IInventoryDataPlugin plugin in plugins)
+            {
+                // Using the OSP wrapper plugin for database plugins should be made configurable at some point
+                inventoryService.AddPlugin(new OspInventoryWrapperPlugin(plugin));
+            }
 
             LocalBackEndServices backendService = new LocalBackEndServices();
 
@@ -186,6 +197,8 @@ namespace OpenSim.ApplicationPlugins.CreateCommsManager
 
             m_httpServer.AddStreamHandler(new OpenSim.SimStatusHandler());
             m_httpServer.AddStreamHandler(new OpenSim.XSimStatusHandler(m_openSim));
+            if (m_openSim.userStatsURI != String.Empty )
+                m_httpServer.AddStreamHandler(new OpenSim.UXSimStatusHandler(m_openSim));
         }
 
         protected virtual void InitialiseHGStandaloneServices(LibraryRootFolder libraryRootFolder)
@@ -194,9 +207,16 @@ namespace OpenSim.ApplicationPlugins.CreateCommsManager
 
             HGInventoryServiceClient inventoryService 
                 = new HGInventoryServiceClient(m_openSim.NetServersInfo.InventoryURL, null, false);
-            inventoryService.AddPlugin(
-                m_openSim.ConfigurationSettings.StandaloneInventoryPlugin, 
-                m_openSim.ConfigurationSettings.StandaloneInventorySource);         
+            List<IInventoryDataPlugin> plugins 
+                = DataPluginFactory.LoadDataPlugins<IInventoryDataPlugin>(
+                    m_openSim.ConfigurationSettings.StandaloneInventoryPlugin, 
+                    m_openSim.ConfigurationSettings.StandaloneInventorySource);
+
+            foreach (IInventoryDataPlugin plugin in plugins)
+            {
+                // Using the OSP wrapper plugin should be made configurable at some point
+                inventoryService.AddPlugin(new OspInventoryWrapperPlugin(plugin));
+            }        
 
             HGGridServicesStandalone gridService 
                 = new HGGridServicesStandalone(
@@ -225,6 +245,8 @@ namespace OpenSim.ApplicationPlugins.CreateCommsManager
 
             m_httpServer.AddStreamHandler(new OpenSim.SimStatusHandler());
             m_httpServer.AddStreamHandler(new OpenSim.XSimStatusHandler(m_openSim));
+            if (m_openSim.userStatsURI != String.Empty )
+                m_httpServer.AddStreamHandler(new OpenSim.UXSimStatusHandler(m_openSim));
         }
 
         private void CreateGridInfoService()

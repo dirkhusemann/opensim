@@ -44,6 +44,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Communications.Capabilities;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
 using Caps = OpenSim.Framework.Communications.Capabilities.Caps;
@@ -54,12 +55,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
 {
     public class FreeSwitchVoiceModule : IRegionModule
     {
+        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        // Infrastructure
-        private static readonly ILog m_log =
-            LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
-
-        private const bool UseProxy = false;
+        private bool UseProxy = false;
 
         // Capability string prefixes
         private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
@@ -597,8 +595,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
                 return response;
 
             string auth_token = (string)requestBody["auth_token"];
-            string[] auth_tokenvals = auth_token.Split(':');
-            string username = auth_tokenvals[0];
+            //string[] auth_tokenvals = auth_token.Split(':');
+            //string username = auth_tokenvals[0];
             int strcount = 0;
             
             string[] ids = new string[strcount];
@@ -646,9 +644,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
                                     <b2g_group_id></b2g_group_id>
                                 </level3>", ids[i],i,m_freeSwitchRealm,dt));
             }
-
-                                
-                                
+                                                                
             resp.Append("</buddies><groups></groups></body></level0></response>");
 
             response["str_response_string"] = resp.ToString();
@@ -667,7 +663,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
             
             Hashtable requestBody = parseRequestBody((string)request["body"]);
 
-            string pwd = (string) requestBody["pwd"];
+            //string pwd = (string) requestBody["pwd"];
             string userid = (string) requestBody["userid"];
 
             string avatarName = string.Empty;
@@ -718,7 +714,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.FreeSwitchVoice
              * <displayname>Teravus Ousley</displayname></body></level0>
             */
         }
-
 
         public Hashtable FreeSwitchConfigHTTPHandler(Hashtable request)
         {

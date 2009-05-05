@@ -33,112 +33,20 @@ namespace OpenSim.Framework
     /// <summary>
     /// Inventory Item - contains all the properties associated with an individual inventory piece.
     /// </summary>
-    public class InventoryItemBase : InventoryNodeBase
-    {
-        /// <summary>
-        /// The UUID of the associated asset on the asset server
-        /// </summary>
-        private UUID _assetID;
-
-        /// <summary>
-        /// This is an enumerated value determining the type of asset (eg Notecard, Sound, Object, etc)
-        /// </summary>
-        private int _assetType;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private uint _basePermissions;
-
-        /// <summary>
-        /// The creator of this item
-        /// </summary>
-        private string m_creatorId = String.Empty;
-        
-        /// <summary>
-        /// The creator of this item expressed as a UUID
-        /// </summary>
-        private UUID m_creatorIdAsUuid = UUID.Zero;
-
-        /// <summary>
-        ///
-        /// </summary>        
-        private uint _nextPermissions;
-
-        /// <summary>
-        /// A mask containing permissions for the current owner (cannot be enforced)
-        /// </summary>
-        private uint _currentPermissions;
-
-        /// <summary>
-        /// The description of the inventory item (must be less than 64 characters)
-        /// </summary>
-        private string _description = string.Empty;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private uint _everyOnePermissions;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private uint _groupPermissions;
-
-        /// <summary>
-        /// The folder this item is contained in
-        /// </summary>
-        private UUID _folder;
-
-        /// <summary>
+    public class InventoryItemBase : InventoryNodeBase, ICloneable
+    {       
+        /// <value>
         /// The inventory type of the item.  This is slightly different from the asset type in some situations.
-        /// </summary>
-        private int _invType;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private UUID _groupID;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private bool _groupOwned;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private int _salePrice;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private byte _saleType;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private uint _flags;
-
-        /// <summary>
-        ///
-        /// </summary>
-        private int _creationDate;
-
-        public int InvType
-        {
-            get { return _invType; }
-            set { _invType = value; }
-        }
-
-        public UUID Folder
-        {
-            get { return _folder; }
-            set { _folder = value; }
-        }
+        /// </value>        
+        public int InvType { get; set; }
 
         /// <value>
-        /// The creator ID
+        /// The folder this item is contained in
+        /// </value>        
+        public UUID Folder { get; set; }
+
+        /// <value>
+        /// The creator of this item
         /// </value>        
         public string CreatorId
         {
@@ -146,107 +54,112 @@ namespace OpenSim.Framework
             set 
             { 
                 m_creatorId = value;
-                
+                UUID creatorIdAsUuid;
+
                 // For now, all IDs are UUIDs
-                UUID.TryParse(m_creatorId, out m_creatorIdAsUuid);
+                UUID.TryParse(m_creatorId, out creatorIdAsUuid);
+                CreatorIdAsUuid = creatorIdAsUuid;
             }
         }
-        
+
+        private string m_creatorId = String.Empty;        
+
         /// <value>
-        /// The creator ID expressed as a UUID
+        /// The creator of this item expressed as a UUID
         /// </value>
         public UUID CreatorIdAsUuid
         {
-            get { return m_creatorIdAsUuid; }
-        }
+            get
+            {
+                return m_creatorIdAsUuid;
+            }
+            set
+            {
+                m_creatorIdAsUuid = value;
+            }
+        }       
 
-        public string Description
-        {
-            get { return _description; }
-            set { _description = value; }
-        }
+        private UUID m_creatorIdAsUuid = UUID.Zero;
 
-        public uint NextPermissions
-        {
-            get { return _nextPermissions; }
-            set { _nextPermissions = value; }
-        }
+        /// <value>
+        /// The description of the inventory item (must be less than 64 characters)
+        /// </value>
+        public string Description { get; set; }
 
-        public uint CurrentPermissions
-        {
-            get { return _currentPermissions; }
-            set { _currentPermissions = value; }
-        }
+        /// <value>
+        ///
+        /// </value>          
+        public uint NextPermissions { get; set; }
 
-        public uint BasePermissions
-        {
-            get { return _basePermissions; }
-            set { _basePermissions = value; }
-        }
+        /// <value>
+        /// A mask containing permissions for the current owner (cannot be enforced)
+        /// </value>        
+        public uint CurrentPermissions { get; set; }
 
-        public uint EveryOnePermissions
-        {
-            get { return _everyOnePermissions; }
-            set { _everyOnePermissions = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public uint BasePermissions { get; set; }
 
-        public uint GroupPermissions
-        {
-            get { return _groupPermissions; }
-            set { _groupPermissions = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public uint EveryOnePermissions { get; set; }
 
-        public int AssetType
-        {
-            get { return _assetType; }
-            set { _assetType = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public uint GroupPermissions { get; set; }
 
-        public UUID AssetID
-        {
-            get { return _assetID; }
-            set { _assetID = value; }
-        }
+        /// <value>
+        /// This is an enumerated value determining the type of asset (eg Notecard, Sound, Object, etc)
+        /// </value>        
+        public int AssetType { get; set; }
 
-        public UUID GroupID
-        {
-            get { return _groupID; }
-            set { _groupID = value; }
-        }
+        /// <value>
+        /// The UUID of the associated asset on the asset server
+        /// </value>        
+        public UUID AssetID { get; set; }
 
-        public bool GroupOwned
-        {
-            get { return _groupOwned; }
-            set { _groupOwned = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public UUID GroupID { get; set; }
 
-        public int SalePrice
-        {
-            get { return _salePrice; }
-            set { _salePrice = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public bool GroupOwned { get; set; }
 
-        public byte SaleType
-        {
-            get { return _saleType; }
-            set { _saleType = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public int SalePrice { get; set; }
 
-        public uint Flags
-        {
-            get { return _flags; }
-            set { _flags = value; }
-        }
+        /// <value>
+        ///
+        /// </value>        
+        public byte SaleType { get; set; }
 
-        public int CreationDate
-        {
-            get { return _creationDate; }
-            set { _creationDate = value; }
-        }
-        
+        /// <value>
+        ///
+        /// </value>        
+        public uint Flags { get; set; }
+
+        /// <value>
+        ///
+        /// </value>        
+        public int CreationDate { get; set; }
+
         public InventoryItemBase()
         {
-            _creationDate = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+            Description = String.Empty;
+            CreationDate = (int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds;
+        }
+        
+        public object Clone()
+        {
+            return MemberwiseClone();
         }
     }
 }

@@ -37,7 +37,7 @@ using Nwc.XmlRpc;
 using OpenMetaverse;
 using OpenSim.Framework;
 using OpenSim.Framework.Communications;
-using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Communications.Local;
 
 namespace OpenSim.Region.Communications.OGS1
@@ -103,7 +103,7 @@ namespace OpenSim.Region.Communications.OGS1
         {
             if (m_regionsOnInstance.Contains(regionInfo))
             {
-                m_log.Debug("[OGS1 GRID SERVICES] Foobar! Client is confused, region already registered " + regionInfo.RegionName);
+                m_log.Debug("[OGS1 GRID SERVICES] Foobar! Caller is confused, region already registered " + regionInfo.RegionName);
                 Exception e = new Exception(String.Format("Unable to register region"));
 
                 throw e;

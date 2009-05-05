@@ -26,12 +26,14 @@
  */
 
 using System;
+using System.Reflection;
 using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Threading;
 using System.Timers;
 using OpenMetaverse;
 using OpenMetaverse.Packets;
+using log4net;
 using OpenSim.Framework;
 using Timer=System.Timers.Timer;
 
@@ -39,8 +41,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 {
     public class LLPacketHandler : ILLPacketHandler
     {
-        //private static readonly ILog m_log 
-        //    = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
+        private static readonly ILog m_log 
+            = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
         //private int m_resentCount;
 
@@ -253,7 +255,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             item.TickCount = Environment.TickCount;
             item.Identifier = id;
             item.Resends = 0;
-            item.Length = packet.ToBytes().Length;
+            item.Length = packet.Length;
+            item.Sequence = packet.Header.Sequence;
 
             m_PacketQueue.Enqueue(item);
             m_PacketsSent++;
@@ -310,9 +313,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                     // Packets this old get resent
                     //
-                    if ((now - data.TickCount) > m_ResendTimeout)
+                    if ((now - data.TickCount) > m_ResendTimeout && data.Sequence != 0 && !m_PacketQueue.Contains(data.Sequence))
                     {
-                        if (resent < 20)
+                        if (resent < 20) // Was 20 (= Max 117kbit/sec resends)
                         {
                             m_NeedAck[packet.Header.Sequence].Resends++;
 
@@ -325,6 +328,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             {
                                 m_NeedAck.Remove(packet.Header.Sequence);
                                 TriggerOnPacketDrop(packet, data.Identifier);
+                                m_PacketQueue.Cancel(packet.Header.Sequence);
                                 PacketPool.Instance.ReturnPacket(packet);
                                 continue;
                             }
@@ -586,6 +590,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     return;
 
                 m_NeedAck.Remove(id);
+                m_PacketQueue.Cancel(data.Sequence);
                 PacketPool.Instance.ReturnPacket(data.Packet);
                 m_UnackedBytes -= data.Length;
             }
@@ -676,7 +681,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 item.TickCount = Environment.TickCount;
                 item.Identifier = 0;
                 item.Resends = 0;
-                item.Length = packet.ToBytes().Length;
+                item.Length = packet.Length;
+                item.Sequence = packet.Header.Sequence;
                 m_NeedAck.Add(key, item);
             }
 
@@ -715,6 +721,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 if (data.Identifier != null && data.Identifier == id)
                 {
                     m_NeedAck.Remove(data.Packet.Header.Sequence);
+                    m_PacketQueue.Cancel(data.Sequence);
                     PacketPool.Instance.ReturnPacket(data.Packet);
                     return;
                 }
@@ -740,10 +747,12 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             // Assign sequence number here to prevent out of order packets
             if (packet.Header.Sequence == 0)
             {
-                packet.Header.Sequence = NextPacketSequenceNumber();
-
                 lock (m_NeedAck)
                 {
+                    packet.Header.Sequence = NextPacketSequenceNumber();
+                    item.Sequence = packet.Header.Sequence;
+                    item.TickCount = Environment.TickCount;
+
                     // We want to see that packet arrive if it's reliable
                     if (packet.Header.Reliable)
                     {
@@ -761,35 +770,48 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             if (packet is KillPacket)
                 Abort();
 
-            // Actually make the byte array and send it
-            byte[] sendbuffer = item.Packet.ToBytes();
-
-            //m_log.DebugFormat(
-            //    "[CLIENT]: In {0} sending packet {1}",
-            //    m_Client.Scene.RegionInfo.ExternalEndPoint.Port, packet.Header.Sequence);
-
-            if (packet.Header.Zerocoded)
+            try
             {
-                int packetsize = Helpers.ZeroEncode(sendbuffer,
-                        sendbuffer.Length, m_ZeroOutBuffer);
-                m_PacketServer.SendPacketTo(m_ZeroOutBuffer, packetsize,
-                        SocketFlags.None, m_Client.CircuitCode);
+                // If this packet has been reused/returned, the ToBytes
+                // will blow up in our face.
+                // Fail gracefully.
+                //
+
+                // Actually make the byte array and send it
+                byte[] sendbuffer = item.Packet.ToBytes();
+
+                if (packet.Header.Zerocoded)
+                {
+                    int packetsize = Helpers.ZeroEncode(sendbuffer,
+                            sendbuffer.Length, m_ZeroOutBuffer);
+                    m_PacketServer.SendPacketTo(m_ZeroOutBuffer, packetsize,
+                            SocketFlags.None, m_Client.CircuitCode);
+                }
+                else
+                {
+                    // Need some extra space in case we need to add proxy
+                    // information to the message later
+                    Buffer.BlockCopy(sendbuffer, 0, m_ZeroOutBuffer, 0,
+                            sendbuffer.Length);
+                    m_PacketServer.SendPacketTo(m_ZeroOutBuffer,
+                            sendbuffer.Length, SocketFlags.None, m_Client.CircuitCode);
+                }
             }
-            else
+            catch (NullReferenceException)
             {
-                // Need some extra space in case we need to add proxy
-                // information to the message later
-                Buffer.BlockCopy(sendbuffer, 0, m_ZeroOutBuffer, 0,
-                        sendbuffer.Length);
-                m_PacketServer.SendPacketTo(m_ZeroOutBuffer,
-                        sendbuffer.Length, SocketFlags.None, m_Client.CircuitCode);
+                m_log.Debug("[PACKET] Detected reuse of a returned packet");
+                m_PacketQueue.Cancel(item.Sequence);
+                return;
             }
 
             // If this is a reliable packet, we are still holding a ref
             // Dont't return in that case
             //
             if (!packet.Header.Reliable)
+            {
+                m_PacketQueue.Cancel(item.Sequence);
                 PacketPool.Instance.ReturnPacket(packet);
+            }
         }
 
         private void Abort()

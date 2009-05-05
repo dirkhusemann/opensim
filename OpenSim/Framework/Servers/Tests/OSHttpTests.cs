@@ -35,6 +35,7 @@ using HttpServer;
 using HttpServer.FormDecoders;
 using NUnit.Framework;
 using NUnit.Framework.SyntaxHelpers;
+using OpenSim.Framework.Servers.HttpServer;
 
 namespace OpenSim.Framework.Servers.Tests
 {

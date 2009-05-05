@@ -28,6 +28,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using System.Text;
 using System.Threading;
 using NUnit.Framework;
@@ -39,6 +40,7 @@ using OpenSim.Framework.Serialization;
 using OpenSim.Framework.Serialization.External;    
 using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
+using OpenSim.Framework.Communications.Osp;
 using OpenSim.Region.CoreModules.Avatar.Inventory.Archiver;
 using OpenSim.Region.CoreModules.World.Serialiser;
 using OpenSim.Region.Framework.Scenes;
@@ -193,21 +195,26 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver.Tests
         }
         
         /// <summary>
-        /// Test loading a V0.1 OpenSim Inventory Archive (subject to change since there is no fixed format yet).
+        /// Test loading a V0.1 OpenSim Inventory Archive (subject to change since there is no fixed format yet) where
+        /// an account exists with the creator name.
         /// </summary>
         [Test]
-        public void TestLoadIarV0p1()
+        public void TestLoadIarV0p1ExistingUsers()
         {   
-            Console.WriteLine("Started TestLoadIarV0p1()");
+            Console.WriteLine("Started {0}", MethodBase.GetCurrentMethod());
             
-            log4net.Config.XmlConfigurator.Configure();
+            //log4net.Config.XmlConfigurator.Configure();
             
             string userFirstName = "Mr";
             string userLastName = "Tiddles";
             UUID userUuid = UUID.Parse("00000000-0000-0000-0000-000000000555");
+            string user2FirstName = "Lord";
+            string user2LastName = "Lucan";
+            UUID user2Uuid = UUID.Parse("00000000-0000-0000-0000-000000000666");
+            
             string itemName = "b.lsl";
             string archiveItemName
-                = string.Format("{0}{1}{2}", itemName, "_", UUID.Random());
+                = string.Format("{0}{1}{2}", itemName, "_", UUID.Random());            
 
             MemoryStream archiveWriteStream = new MemoryStream();
             TarArchiveWriter tar = new TarArchiveWriter(archiveWriteStream);
@@ -216,9 +223,10 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver.Tests
             item1.Name = itemName;
             item1.AssetID = UUID.Random();
             item1.GroupID = UUID.Random();
-            item1.CreatorId = userUuid.ToString();
+            item1.CreatorId = OspResolver.MakeOspa(user2FirstName, user2LastName);
+            //item1.CreatorId = userUuid.ToString();
             //item1.CreatorId = "00000000-0000-0000-0000-000000000444";
-            item1.Owner = UUID.Parse(item1.CreatorId);
+            item1.Owner = UUID.Zero;
             
             string item1FileName 
                 = string.Format("{0}{1}", ArchiveConstants.INVENTORY_PATH, archiveItemName);
@@ -231,21 +239,93 @@ namespace OpenSim.Region.CoreModules.Avatar.Inventory.Archiver.Tests
             
             // Annoyingly, we have to set up a scene even though inventory loading has nothing to do with a scene
             Scene scene = SceneSetupHelpers.SetupScene();
+            IUserAdminService userAdminService = scene.CommsManager.UserAdminService;
+            
             SceneSetupHelpers.SetupSceneModules(scene, serialiserModule, archiverModule);
-            scene.CommsManager.UserAdminService.AddUser(
+            userAdminService.AddUser(
                 userFirstName, userLastName, "meowfood", String.Empty, 1000, 1000, userUuid);
+            userAdminService.AddUser(
+                user2FirstName, user2LastName, "hampshire", String.Empty, 1000, 1000, user2Uuid);
+            
             archiverModule.DearchiveInventory(userFirstName, userLastName, "/", archiveReadStream);
 
             CachedUserInfo userInfo 
                 = scene.CommsManager.UserProfileCacheService.GetUserDetails(userFirstName, userLastName);            
             InventoryItemBase foundItem = userInfo.RootFolder.FindItemByPath(itemName);
             
-            // Currently, creator and ownership both revert to the loader
-            Assert.That(foundItem.CreatorId, Is.EqualTo(userUuid.ToString()));            
+            Assert.That(foundItem.CreatorId, Is.EqualTo(user2Uuid.ToString()));            
             Assert.That(foundItem.Owner, Is.EqualTo(userUuid));            
             
-            Console.WriteLine("Finished TestLoadIarV0p1()");
+            Console.WriteLine("Successfully completed {0}", MethodBase.GetCurrentMethod());
         }
+
+        /// <summary>
+        /// Test loading a V0.1 OpenSim Inventory Archive (subject to change since there is no fixed format yet) where
+        /// no account exists with the creator name 
+        /// </summary>
+        [Test]
+        public void TestLoadIarV0p1TempProfiles()
+        {   
+            Console.WriteLine("### Started {0} ###", MethodBase.GetCurrentMethod());
+            
+            log4net.Config.XmlConfigurator.Configure();
+            
+            string userFirstName = "Dennis";
+            string userLastName = "Menace";
+            UUID userUuid = UUID.Parse("00000000-0000-0000-0000-000000000aaa");
+            string user2FirstName = "Walter";
+            string user2LastName = "Mitty";
+            
+            string itemName = "b.lsl";
+            string archiveItemName
+                = string.Format("{0}{1}{2}", itemName, "_", UUID.Random());            
+
+            MemoryStream archiveWriteStream = new MemoryStream();
+            TarArchiveWriter tar = new TarArchiveWriter(archiveWriteStream);
+
+            InventoryItemBase item1 = new InventoryItemBase();
+            item1.Name = itemName;
+            item1.AssetID = UUID.Random();
+            item1.GroupID = UUID.Random();
+            item1.CreatorId = OspResolver.MakeOspa(user2FirstName, user2LastName);
+            item1.Owner = UUID.Zero;
+            
+            string item1FileName 
+                = string.Format("{0}{1}", ArchiveConstants.INVENTORY_PATH, archiveItemName);
+            tar.WriteFile(item1FileName, UserInventoryItemSerializer.Serialize(item1));
+            tar.Close();
+
+            MemoryStream archiveReadStream = new MemoryStream(archiveWriteStream.ToArray());            
+            SerialiserModule serialiserModule = new SerialiserModule();
+            InventoryArchiverModule archiverModule = new InventoryArchiverModule();
+            
+            // Annoyingly, we have to set up a scene even though inventory loading has nothing to do with a scene
+            Scene scene = SceneSetupHelpers.SetupScene();
+            IUserAdminService userAdminService = scene.CommsManager.UserAdminService;
+            
+            SceneSetupHelpers.SetupSceneModules(scene, serialiserModule, archiverModule);
+            userAdminService.AddUser(
+                userFirstName, userLastName, "meowfood", String.Empty, 1000, 1000, userUuid);
+            
+            archiverModule.DearchiveInventory(userFirstName, userLastName, "/", archiveReadStream);
+            
+            // Check that a suitable temporary user profile has been created.
+            UserProfileData user2Profile 
+                = scene.CommsManager.UserService.GetUserProfile(
+                    OspResolver.HashName(user2FirstName + " " + user2LastName));
+            Assert.That(user2Profile, Is.Not.Null);
+            Assert.That(user2Profile.FirstName == user2FirstName);
+            Assert.That(user2Profile.SurName == user2LastName);
+            
+            CachedUserInfo userInfo 
+                = scene.CommsManager.UserProfileCacheService.GetUserDetails(userFirstName, userLastName);            
+            InventoryItemBase foundItem = userInfo.RootFolder.FindItemByPath(itemName);
+            
+            Assert.That(foundItem.CreatorId, Is.EqualTo(user2Profile.ID.ToString()));            
+            Assert.That(foundItem.Owner, Is.EqualTo(userUuid));            
+            
+            Console.WriteLine("### Successfully completed {0} ###", MethodBase.GetCurrentMethod());
+        }        
         
         /// <summary>
         /// Test replication of an archive path to the user's inventory.

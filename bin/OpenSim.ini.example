@@ -78,6 +78,9 @@
     ; YOU HAVE BEEN WARNED!!!
     TrustBinaries = false
 
+    ; How many prims to send to each avatar in the scene on each Update()
+    ; MaxPrimsPerFrame = 200
+
     ; ##
     ; ## STORAGE
     ; ##
@@ -251,6 +254,10 @@
     ; supported.
 
     ; enableprejump = true
+
+    ; Simulator Stats URI
+    ; Enable JSON simulator data by setting a URI name (case sensitive)
+    ; Stats_URI = "jsonSimStats"
 
 
 [SMTP]
@@ -1276,14 +1283,15 @@
     Module  = Default
 
 	
-    ; The XmlRpcGroups implementation can be used against the publically available service
-    ; that I have made available for testing.  Your group data is not guarenteed safe
-    ; or available if you use this service, but it's available now and seems to work.  
-    ; The PHP code for the service is available for you to deploy to your own server.
+    ; The PHP code for the server is available from the Flotsam project for you to deploy 
+	; to your own server.  The Flotsam project is located at http://code.google.com/p/flotsam/
     ;
     ;Module  = XmlRpcGroups
 
-    ;XmlRpcServiceURL       = http://osflotsam.org/xmlrpc.php
+    ;XmlRpcServiceURL       = http://yourxmlrpcserver.com/xmlrpc.php
+	;XmlRpcServiceReadKey = 1234
+    ;XmlRpcServiceWriteKey = 1234
+	
     ;XmlRpcMessagingEnabled = true
     ;XmlRpcNoticesEnabled   = true
 	
@@ -1296,3 +1304,20 @@
     ; System.Net.WebException: The request was aborted: The request was canceled.
 	;
 	; XmlRpcDisableKeepAlive = false
+
+[PacketPool]
+    ; Enables the experimental packet pool. Yes, we've been here before.
+    ;RecyclePackets = true;
+    ;RecycleDataBlocks = true;
+
+[LLClient]
+    ; Resend packets markes as reliable until they are received
+    ;ReliableIsImportant = false
+	
+	; Configures how ObjectUpdates are compressed.
+	;TerseUpdatesPerPacket=10
+	;FullUpdatesPerPacket=14
+	;TerseUpdateRate=10
+	;FullUpdateRate=14
+
+    ;PacketMTU = 1400

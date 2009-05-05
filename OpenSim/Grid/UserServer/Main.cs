@@ -38,6 +38,7 @@ using OpenSim.Framework.Communications;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Framework.Statistics;
 using OpenSim.Grid.Communications.OGS1;
 using OpenSim.Grid.Framework;
@@ -84,7 +85,7 @@ namespace OpenSim.Grid.UserServer
 
         public OpenUser_Main()
         {
-            m_console = new ConsoleBase("User");
+            m_console = new LocalConsole("User");
             MainConsole.Instance = m_console;
         }
 
@@ -126,7 +127,7 @@ namespace OpenSim.Grid.UserServer
 
             m_httpServer = new BaseHttpServer(Cfg.HttpPort);
 
-            RegisterInterface<ConsoleBase>(m_console);
+            RegisterInterface<CommandConsole>(m_console);
             RegisterInterface<UserConfig>(Cfg);
 
             //Should be in modules?

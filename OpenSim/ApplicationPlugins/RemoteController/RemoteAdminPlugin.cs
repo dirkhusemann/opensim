@@ -41,6 +41,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Framework.Console;
 using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.CoreModules.World.Terrain;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
@@ -412,9 +413,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private bool getBoolean(Hashtable requestData, string tag, bool defv)
         {
             // If an access value has been provided, apply it.
-            if(requestData.Contains(tag))
+            if (requestData.Contains(tag))
             {
-                switch(((string)requestData[tag]).ToLower())
+                switch (((string)requestData[tag]).ToLower())
                 {
                     case "true" :
                     case "t" :
@@ -668,7 +669,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     {
                         List<ILandObject> parcels = ((Scene)newscene).LandChannel.AllParcels();
 
-                        foreach(ILandObject parcel in parcels)
+                        foreach (ILandObject parcel in parcels)
                         {
                             parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
                             parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
@@ -824,7 +825,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         bool enableVoice = getBoolean(requestData, "enable_voice", true);
                         List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
 
-                        foreach(ILandObject parcel in parcels)
+                        foreach (ILandObject parcel in parcels)
                         {
                             if (enableVoice)
                             {

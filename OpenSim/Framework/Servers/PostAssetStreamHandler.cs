@@ -32,7 +32,7 @@ using log4net;
 using OpenMetaverse;
 using OpenSim.Data;
 using OpenSim.Framework;
-using OpenSim.Framework.Servers;
+using OpenSim.Framework.Servers.HttpServer;
 
 namespace OpenSim.Framework.Servers
 {

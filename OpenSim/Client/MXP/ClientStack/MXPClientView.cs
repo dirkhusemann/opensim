@@ -1001,7 +1001,7 @@ namespace OpenSim.Client.MXP.ClientStack
             MXPSendAvatarData(firstName + " " + lastName, ownerID, UUID.Zero, avatarID, avatarLocalID, position, rotation);
         }
 
-        public void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position, Vector3 velocity, Quaternion rotation)
+        public void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID, Vector3 position, Vector3 velocity, Quaternion rotation, UUID uuid)
         {
             MovementEventMessage me = new MovementEventMessage();
             me.ObjectIndex = localID;
@@ -1043,6 +1043,10 @@ namespace OpenSim.Client.MXP.ClientStack
             me.Location = ToOmVector(position);
             me.Orientation = ToOmQuaternion(rotation);
             Session.Send(me);
+        }
+
+        public void FlushPrimUpdates()
+        {
         }
 
         public void SendInventoryFolderDetails(UUID ownerID, UUID folderID, List<InventoryItemBase> items, List<InventoryFolderBase> folders, bool fetchFolders, bool fetchItems)

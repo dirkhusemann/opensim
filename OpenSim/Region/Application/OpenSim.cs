@@ -74,6 +74,16 @@ namespace OpenSim
                 m_gui = startupConfig.GetBoolean("gui", false);
 
                 m_timedScript = startupConfig.GetString("timer_Script", "disabled");
+                if (m_logFileAppender != null)
+                {
+                    if (m_logFileAppender is log4net.Appender.FileAppender)
+                    {
+                        log4net.Appender.FileAppender appender =
+                                (log4net.Appender.FileAppender)m_logFileAppender;
+                        appender.File = startupConfig.GetString("LogFile", "OpenSim.log");
+                        m_log.InfoFormat("[LOGGING] Logging started to file {0}", appender.File);
+                    }
+                }
             }
         }
 
@@ -92,8 +102,10 @@ namespace OpenSim
             //GCSettings.LatencyMode = GCLatencyMode.Batch;
             //m_log.InfoFormat("[OPENSIM MAIN]: GC Latency Mode: {0}", GCSettings.LatencyMode.ToString());
 
-            m_console = new ConsoleBase("Region");
-            m_console.SetGuiMode(m_gui);
+            if (m_gui) // Driven by external GUI
+                m_console = new CommandConsole("Region");
+            else
+                m_console = new LocalConsole("Region");
             MainConsole.Instance = m_console;
 
             RegisterConsoleCommands();

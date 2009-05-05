@@ -40,10 +40,10 @@ using OpenSim.Framework.Communications.Services;
 using Caps = OpenSim.Framework.Communications.Capabilities.Caps;
 using LLSDHelpers = OpenSim.Framework.Communications.Capabilities.LLSDHelpers;
 using OpenSim.Framework.Servers;
-using OpenSim.Framework.Servers.Interfaces;
+using OpenSim.Framework.Servers.HttpServer;
 using OpenSim.Region.Framework.Interfaces;
 using OpenSim.Region.Framework.Scenes;
-using OpenSim.Region.CoreModules.Communications.REST;
+using OpenSim.Region.CoreModules.ServiceConnectors.Interregion;
 
 using OpenMetaverse.StructuredData;
 

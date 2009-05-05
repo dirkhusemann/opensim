@@ -592,7 +592,7 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         }
 
         public virtual void SendAvatarTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID,
-                                                  Vector3 position, Vector3 velocity, Quaternion rotation)
+                                                  Vector3 position, Vector3 velocity, Quaternion rotation, UUID agentId)
         {
         }
 
@@ -628,6 +628,10 @@ namespace OpenSim.Region.OptionalModules.World.NPC
         public virtual void SendPrimTerseUpdate(ulong regionHandle, ushort timeDilation, uint localID,
                                                 Vector3 position, Quaternion rotation, Vector3 velocity,
                                                 Vector3 rotationalvelocity, byte state, UUID AssetId, UUID ownerID, int attachPoint)
+        {
+        }
+
+        public void FlushPrimUpdates()
         {
         }
 
