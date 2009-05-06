@@ -33,6 +33,7 @@ using System.Xml;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading;
 using OpenMetaverse;
 using log4net;
 using Nini.Config;
@@ -55,12 +56,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static readonly Object vlock  = new Object();
-        private static readonly bool DUMP     = false;
+        private static readonly bool DUMP     = true;
 
         // Capability strings
-        private static readonly string m_parcelVoiceInfoRequestPath = "0007/";
-        private static readonly string m_provisionVoiceAccountRequestPath = "0008/";
-        private static readonly string m_chatSessionRequestPath = "0009/";
+        private static readonly string m_parcelVoiceInfoRequestPath = "0107/";
+        private static readonly string m_provisionVoiceAccountRequestPath = "0108/";
+        private static readonly string m_chatSessionRequestPath = "0109/";
 
         // Control info, e.g. vivox server, admin user, admin password
         private static bool   m_WOF            = true;
@@ -289,11 +290,24 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         public string ProvisionVoiceAccountRequest(Scene scene, string request, string path, string param,
                                                    UUID agentID, Caps caps)
         {
-            ScenePresence avatar = scene.GetScenePresence(agentID);
-            string        avatarName = avatar.Name;
-
             try
             {
+
+				ScenePresence avatar = null;
+				string        avatarName = null;
+
+                if(scene == null) throw new Exception("[VivoxVoice][PROVISIONVOICE] Invalid scene");
+
+                avatar = scene.GetScenePresence(agentID);
+                while(avatar == null)
+                {
+                    Thread.Sleep(100);
+                    avatar = scene.GetScenePresence(agentID);
+                }
+
+                avatarName = avatar.Name;
+
+                m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: scene = {0}, agentID = {1}", scene, agentID);
                 m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: request: {0}, path: {1}, param: {2}",
                                   request, path, param);
 
@@ -407,10 +421,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             }
             catch (Exception e)
             {
-                m_log.ErrorFormat("[VivoxVoice][PROVISIONVOICE]: avatar \"{0}\": {1}, retry later", avatarName, e.Message);
-                m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: avatar \"{0}\": {1} failed", avatarName, e.ToString());
-
-                return "<llsd>undef</llsd>";
+                m_log.ErrorFormat("[VivoxVoice][PROVISIONVOICE]: : {0}, retry later", e.Message);
+                m_log.DebugFormat("[VivoxVoice][PROVISIONVOICE]: : {0} failed", e.ToString());
+                return "<llsd><undef /></llsd>";
             }
         }
 
@@ -456,13 +469,12 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 //                   avatarName, avatar.AbsolutePosition.X, avatar.AbsolutePosition.Y, avatar.AbsolutePosition.Z);
 
                 // TODO: EstateSettings don't seem to get propagated...
-                // if (!scene.RegionInfo.EstateSettings.AllowVoice)
-                // {
-                //     m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": voice not enabled in estate settings",
-                //                       scene.RegionInfo.RegionName);
-                //     channel_uri = String.Empty;
-                // }
-                // else
+                if (!scene.RegionInfo.EstateSettings.AllowVoice)
+                {
+                    m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": voice not enabled in estate settings",
+                                      scene.RegionInfo.RegionName);
+                    channel_uri = String.Empty;
+                }
 
                 if ((land.Flags & (uint)Parcel.ParcelFlags.AllowVoiceChat) == 0)
                 {
@@ -493,13 +505,13 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 m_log.DebugFormat("[VivoxVoice][PARCELVOICE]: region \"{0}\": avatar \"{1}\": {2} failed", 
                                   scene.RegionInfo.RegionName, avatarName, e.ToString());
 
-                return "<llsd>undef</llsd>";
+                return "<llsd><undef /></llsd>";
             }
         }
 
 
         /// <summary>
-        /// Callback for a client request for ParcelVoiceInfo
+        /// Callback for a client request for a private chat channel
         /// </summary>
         /// <param name="scene">current scene object of the client</param>
         /// <param name="request"></param>
@@ -666,6 +678,9 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
             }
             
+            // Force a normal mode
+            requrl = String.Format("{0}&chan_mode=open", requrl);
+
             XmlElement resp = VivoxCall(requrl, true);
             if (XmlFind(resp, "response.level0.body.chan_uri", out channelUri))
                 return true;
@@ -900,27 +915,37 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
         private XmlElement VivoxCall(string requrl, bool admin)
         {
+
+            XmlDocument doc = null;
+
             // If this is an admin call, and admin is not connected,
             // and the admin id cannot be connected, then fail.
             if (admin && !m_adminConnected && !DoAdminLogin())
                 return null;
 
-            // Otherwise prepare the request
-            m_log.DebugFormat("[VivoxVoice] Sending request <{0}>", requrl);
+            try
+            {
+				// Otherwise prepare the request
+				m_log.DebugFormat("[VivoxVoice] Sending request <{0}>", requrl);
 
-            HttpWebRequest  req = (HttpWebRequest)WebRequest.Create(requrl);            
-            HttpWebResponse rsp = null;
+				HttpWebRequest  req = (HttpWebRequest)WebRequest.Create(requrl);            
+				HttpWebResponse rsp = null;
 
-            // We are sending just parameters, no content
-            req.ContentLength = 0;
+				// We are sending just parameters, no content
+				req.ContentLength = 0;
 
-            // Send request and retrieve the response
-            rsp = (HttpWebResponse)req.GetResponse();
+				// Send request and retrieve the response
+				rsp = (HttpWebResponse)req.GetResponse();
 
-            XmlTextReader rdr = new XmlTextReader(rsp.GetResponseStream());
-            XmlDocument   doc = new XmlDocument();
-            doc.Load(rdr);
-            rdr.Close();
+				XmlTextReader rdr = new XmlTextReader(rsp.GetResponseStream());
+				doc = new XmlDocument();
+				doc.Load(rdr);
+				rdr.Close();
+            }
+            catch(Exception e)
+            {
+                m_log.ErrorFormat("[VivoxVoice] Error in admin call : {0}", e.Message);
+            }
 
             // If we're debugging server responses, dump the whole
             // load now
