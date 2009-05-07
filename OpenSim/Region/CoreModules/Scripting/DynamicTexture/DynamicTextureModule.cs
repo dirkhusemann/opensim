@@ -247,76 +247,75 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
             public void DataReceived(byte[] data, Scene scene)
             {
 
-    			SceneObjectPart part = scene.GetSceneObjectPart(PrimID);
+                SceneObjectPart part = scene.GetSceneObjectPart(PrimID);
 
-                if(data == null)
+                if (data == null)
                 {
                     string msg = 
-                       String.Format("DynamicTextureModule: Error preparing image using URL {0}",
-                           Url);
+                        String.Format("DynamicTextureModule: Error preparing image using URL {0}", Url);
                     scene.SimChat(Utils.StringToBytes(msg), ChatTypeEnum.Say,
-                       0, part.ParentGroup.RootPart.AbsolutePosition, part.Name, part.UUID, false);
+                                  0, part.ParentGroup.RootPart.AbsolutePosition, part.Name, part.UUID, false);
+                    return;
+                }
+
+                byte[] assetData;
+                AssetBase oldAsset = null;
+                
+                if (BlendWithOldTexture)
+                {
+                    UUID lastTextureID = part.Shape.Textures.DefaultTexture.TextureID;
+                    oldAsset = scene.CommsManager.AssetCache.GetAsset(lastTextureID, true);
+                    if (oldAsset != null)
+                    {
+                        assetData = BlendTextures(data, oldAsset.Data, SetNewFrontAlpha, FrontAlpha);
+                    }
+                    else
+                    {
+                        assetData = new byte[data.Length];
+                        Array.Copy(data, assetData, data.Length);
+                    }
                 }
                 else
                 {
-					byte[] assetData;
-					AssetBase oldAsset = null;
-
-					if (BlendWithOldTexture)
-					{
-						UUID lastTextureID = part.Shape.Textures.DefaultTexture.TextureID;
-						oldAsset = scene.CommsManager.AssetCache.GetAsset(lastTextureID, true);
-						if (oldAsset != null)
-						{
-							assetData = BlendTextures(data, oldAsset.Data, SetNewFrontAlpha, FrontAlpha);
-						}
-						else
-						{
-							assetData = new byte[data.Length];
-							Array.Copy(data, assetData, data.Length);
-						}
-					}
-					else
-					{
-						assetData = new byte[data.Length];
-						Array.Copy(data, assetData, data.Length);
-					}
-
-					// Create a new asset for user
-					AssetBase asset = new AssetBase();
-					asset.FullID = UUID.Random();
-					asset.Data = assetData;
-					asset.Name = "DynamicImage" + Util.RandomClass.Next(1, 10000);
-					asset.Type = 0;
-					asset.Description = "dynamic image";
-					asset.Local = false;
-					asset.Temporary = true;
-					scene.CommsManager.AssetCache.AddAsset(asset);
-
-					LastAssetID = asset.FullID;
-
-					IJ2KDecoder cacheLayerDecode = scene.RequestModuleInterface<IJ2KDecoder>();
-					if (cacheLayerDecode != null)
-					{
-						cacheLayerDecode.syncdecode(asset.FullID, asset.Data);
-					}
-					cacheLayerDecode = null;
-
-					// mostly keep the values from before
-					Primitive.TextureEntry tmptex = part.Shape.Textures;
-
-					// remove the old asset from the cache
-					UUID oldID = tmptex.DefaultTexture.TextureID;
-
-					tmptex.DefaultTexture.TextureID = asset.FullID;
-					// I'm pretty sure we always want to force this to true
-					tmptex.DefaultTexture.Fullbright = true;
-
-					part.Shape.Textures = tmptex;
-					part.ScheduleFullUpdate();
-
-					scene.CommsManager.AssetCache.ExpireAsset(oldID);
+                    assetData = new byte[data.Length];
+                    Array.Copy(data, assetData, data.Length);
                 }
+
+                // Create a new asset for user
+                AssetBase asset = new AssetBase();
+                asset.FullID = UUID.Random();
+                asset.Data = assetData;
+                asset.Name = "DynamicImage" + Util.RandomClass.Next(1, 10000);
+                asset.Type = 0;
+                asset.Description = "dynamic image";
+                asset.Local = false;
+                asset.Temporary = true;
+                scene.CommsManager.AssetCache.AddAsset(asset);
+
+                LastAssetID = asset.FullID;
+
+                IJ2KDecoder cacheLayerDecode = scene.RequestModuleInterface<IJ2KDecoder>();
+                if (cacheLayerDecode != null)
+                {
+                    cacheLayerDecode.syncdecode(asset.FullID, asset.Data);
+                }
+                cacheLayerDecode = null;
+
+                // mostly keep the values from before
+                Primitive.TextureEntry tmptex = part.Shape.Textures;
+
+                // remove the old asset from the cache
+                UUID oldID = tmptex.DefaultTexture.TextureID;
+                
+                tmptex.DefaultTexture.TextureID = asset.FullID;
+                // I'm pretty sure we always want to force this to true
+                // I'm pretty sure noone whats to set fullbright true if it wasn't true before.
+                // tmptex.DefaultTexture.Fullbright = true;
+
+                part.Shape.Textures = tmptex;
+                part.ScheduleFullUpdate();
+
+                scene.CommsManager.AssetCache.ExpireAsset(oldID);
             }
 
             private byte[] BlendTextures(byte[] frontImage, byte[] backImage, bool setNewAlpha, byte newAlpha)
