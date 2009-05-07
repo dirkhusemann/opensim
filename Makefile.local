@@ -1,7 +1,7 @@
 # local OpenSim Makefile extensions
 GITBRANCH = lotus3d
 SRC	  = $(shell pwd)
-DST	  = ${HOME}/Projects/lotus3d-releases/opensim
+DST	  = ${HOME}/Projects/st3d-releases/opensim
 CLEAN	  = $(shell git status > /dev/null 2>&1 || echo "clean")
 TMP	  := $(shell mktemp /tmp/opensim-deploy-XXXXXXXXXX)
 
