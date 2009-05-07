@@ -388,51 +388,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             m_app.Shutdown();
         }
 
-        private static void checkStringParameters(XmlRpcRequest request, string[] param)
-        {
-            Hashtable requestData = (Hashtable) request.Params[0];
-            foreach (string p in param)
-            {
-                if (!requestData.Contains(p))
-                    throw new Exception(String.Format("missing string parameter {0}", p));
-                if (String.IsNullOrEmpty((string) requestData[p]))
-                    throw new Exception(String.Format("parameter {0} is empty", p));
-            }
-        }
-
-        private static void checkIntegerParams(XmlRpcRequest request, string[] param)
-        {
-            Hashtable requestData = (Hashtable) request.Params[0];
-            foreach (string p in param)
-            {
-                if (!requestData.Contains(p))
-                    throw new Exception(String.Format("missing integer parameter {0}", p));
-            }
-        }
-
-        private bool getBoolean(Hashtable requestData, string tag, bool defv)
-        {
-            // If an access value has been provided, apply it.
-            if (requestData.Contains(tag))
-            {
-                switch (((string)requestData[tag]).ToLower())
-                {
-                    case "true" :
-                    case "t" :
-                    case "1" :
-                        return true;
-                    case "false" :
-                    case "f" :
-                    case "0" :
-                        return false;
-                    default :
-                        return defv;
-                }
-            }
-            else
-                return defv;
-        }
-
         /// <summary>
         /// Create a new region.
         /// <summary>
@@ -2458,6 +2413,50 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             return response;
         }
 
+        private static void checkStringParameters(XmlRpcRequest request, string[] param)
+        {
+            Hashtable requestData = (Hashtable) request.Params[0];
+            foreach (string p in param)
+            {
+                if (!requestData.Contains(p))
+                    throw new Exception(String.Format("missing string parameter {0}", p));
+                if (String.IsNullOrEmpty((string) requestData[p]))
+                    throw new Exception(String.Format("parameter {0} is empty", p));
+            }
+        }
+
+        private static void checkIntegerParams(XmlRpcRequest request, string[] param)
+        {
+            Hashtable requestData = (Hashtable) request.Params[0];
+            foreach (string p in param)
+            {
+                if (!requestData.Contains(p))
+                    throw new Exception(String.Format("missing integer parameter {0}", p));
+            }
+        }
+
+        private bool getBoolean(Hashtable requestData, string tag, bool defv)
+        {
+            // If an access value has been provided, apply it.
+            if (requestData.Contains(tag))
+            {
+                switch (((string)requestData[tag]).ToLower())
+                {
+                    case "true" :
+                    case "t" :
+                    case "1" :
+                        return true;
+                    case "false" :
+                    case "f" :
+                    case "0" :
+                        return false;
+                    default :
+                        return defv;
+                }
+            }
+            else
+                return defv;
+        }
 
         private int GetIntegerAttribute(XmlNode node, string attr, int dv)
         {
