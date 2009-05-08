@@ -2464,9 +2464,10 @@ namespace OpenSim.Region.Framework.Scenes
             reason = String.Empty;
 
             if (!m_strictAccessControl) return true;
+            if (Permissions.IsGod(agent.AgentID)) return true;
+            
 
-            if (m_regInfo.EstateSettings.IsBanned(agent.AgentID) && 
-                (!Permissions.IsGod(agent.AgentID)))
+            if (m_regInfo.EstateSettings.IsBanned(agent.AgentID))
             {
                 m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user is on the banlist",
                                 agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
@@ -2476,8 +2477,7 @@ namespace OpenSim.Region.Framework.Scenes
             }
 
             if (!m_regInfo.EstateSettings.PublicAccess && 
-                !m_regInfo.EstateSettings.HasAccess(agent.AgentID) && 
-                !Permissions.IsGod(agent.AgentID))
+                !m_regInfo.EstateSettings.HasAccess(agent.AgentID))
             {
                 m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the estate",
                                  agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
