@@ -2472,7 +2472,7 @@ namespace OpenSim.Region.Framework.Scenes
                 !m_regInfo.EstateSettings.HasAccess(agent.AgentID) && 
                 !Permissions.IsGod(agent.AgentID))
             {
-                m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access",
+                m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the estate",
                                  agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
                 reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
                                        RegionInfo.RegionName);
@@ -2496,7 +2496,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                     if (land.isRestrictedFromLand(agent.AgentID))
                     {
-                        m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access",
+                        m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the region",
                                          agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
                         reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
                                                RegionInfo.RegionName);
