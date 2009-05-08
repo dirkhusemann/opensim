@@ -2486,31 +2486,33 @@ namespace OpenSim.Region.Framework.Scenes
                 return false;
             }
 
-            if (null != LandChannel)
-            {
-                // region seems to have local Id of 1
-                ILandObject land = LandChannel.GetLandObject(1);
-                if (null != land)
-                {
-                    if (land.isBannedFromLand(agent.AgentID))
-                    {
-                        m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user has been banned from land",
-                                         agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
-                        reason = String.Format("Denied access to private region {0}: You are banned from that region.", 
-                                               RegionInfo.RegionName);
-                        return false;
-                    }
+            // TODO: estate/region settings are not properly hooked up
+            // to ILandObject.isRestrictedFromLand()
+            // if (null != LandChannel)
+            // {
+            //     // region seems to have local Id of 1
+            //     ILandObject land = LandChannel.GetLandObject(1);
+            //     if (null != land)
+            //     {
+            //         if (land.isBannedFromLand(agent.AgentID))
+            //         {
+            //             m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user has been banned from land",
+            //                              agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
+            //             reason = String.Format("Denied access to private region {0}: You are banned from that region.", 
+            //                                    RegionInfo.RegionName);
+            //             return false;
+            //         }
 
-                    if (land.isRestrictedFromLand(agent.AgentID))
-                    {
-                        m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the region",
-                                         agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
-                        reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
-                                               RegionInfo.RegionName);
-                        return false;
-                    }
-                }
-            }
+            //         if (land.isRestrictedFromLand(agent.AgentID))
+            //         {
+            //             m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the region",
+            //                              agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
+            //             reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
+            //                                    RegionInfo.RegionName);
+            //             return false;
+            //         }
+            //     }
+            // }
 
             return true;
         }
