@@ -68,6 +68,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static bool   m_pluginEnabled  = false;
         private static bool   m_adminConnected = false;
         private static string m_vivoxServer;
+        private static string m_vivoxSipUri;
         private static string m_vivoxVoiceAccountApi;
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
@@ -102,6 +103,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 {
                     // retrieve configuration variables
                     m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
+                    m_vivoxSipUri = m_config.GetString("vivox_sip_uri", String.Empty);
                     m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                     m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
                     m_vivoxChannelType = m_config.GetString("vivox_channel_type", "positional");
@@ -110,6 +112,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
 
                     if (String.IsNullOrEmpty(m_vivoxServer) ||
+                        String.IsNullOrEmpty(m_vivoxSipUri) ||
                         String.IsNullOrEmpty(m_vivoxAdminUser) ||
                         String.IsNullOrEmpty(m_vivoxAdminPassword))
                     {
@@ -411,7 +414,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 VivoxPassword(agentname, password);
 
                 LLSDVoiceAccountResponse voiceAccountResponse =
-                    new LLSDVoiceAccountResponse(agentname, password, m_vivoxServer, m_vivoxVoiceAccountApi);
+                    new LLSDVoiceAccountResponse(agentname, password, m_vivoxSipUri, m_vivoxVoiceAccountApi);
 
                 string r = LLSDHelpers.SerialiseLLSDReply(voiceAccountResponse);
 

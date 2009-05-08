@@ -739,7 +739,10 @@
     enabled = false
 
     ; vivox voice server
-    vivox_server = foobar.vivox.com
+    vivox_server = www.foobar.vivox.com
+
+    ; vivox SIP URI
+    vivox_sip_uri = foobar.vivox.com
 
     ; vivox admin user name
     vivox_admin_user = DeepThroat
