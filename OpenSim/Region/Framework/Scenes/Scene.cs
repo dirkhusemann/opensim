@@ -97,6 +97,9 @@ namespace OpenSim.Region.Framework.Scenes
         public bool m_useFlySlow = false;
         public bool m_usePreJump = false;
         public bool m_seeIntoRegionFromNeighbor;
+        // TODO: need to figure out how allow client agents but deny
+        // root agents when ACL denies access to root agent
+        public bool m_strictAccessControl = true;
         public int MaxUndoCount = 5;
         private int m_RestartTimerCounter;
         private readonly Timer m_restartTimer = new Timer(15000); // Wait before firing
@@ -385,6 +388,8 @@ namespace OpenSim.Region.Framework.Scenes
                     PacketPool.Instance.RecyclePackets = packetConfig.GetBoolean("RecyclePackets", true);
                     PacketPool.Instance.RecycleDataBlocks = packetConfig.GetBoolean("RecycleDataBlocks", true);
                 }
+
+                m_strictAccessControl = startupConfig.GetBoolean("StrictAccessControl", m_strictAccessControl);
             }
             catch
             {
@@ -2457,6 +2462,8 @@ namespace OpenSim.Region.Framework.Scenes
         protected virtual bool AuthorizeUser(AgentCircuitData agent, out string reason)
         {
             reason = String.Empty;
+
+            if (!m_strictAccessControl) return true;
 
             if (m_regInfo.EstateSettings.IsBanned(agent.AgentID) && 
                 (!Permissions.IsGod(agent.AgentID)))
