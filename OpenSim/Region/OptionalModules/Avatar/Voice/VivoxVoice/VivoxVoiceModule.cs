@@ -56,7 +56,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly ILog m_log =
             LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         private static readonly Object vlock  = new Object();
-        private static readonly bool DUMP     = true;
 
         // Capability strings
         private static readonly string m_parcelVoiceInfoRequestPath = "0107/";
@@ -72,10 +71,10 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static string m_vivoxVoiceAccountApi;
         private static string m_vivoxAdminUser;
         private static string m_vivoxAdminPassword;
-        private static bool   m_vivoxChannelEncrypt;
         private static string m_vivoxChannelType;
         private static string m_authToken = String.Empty;
         private static Dictionary<string,string> m_parents = new Dictionary<string,string>();
+        private static bool m_dumpXml;
         
         private IConfig m_config;
 
@@ -107,7 +106,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                     m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
                     m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
                     m_vivoxChannelType = m_config.GetString("vivox_channel_type", "positional");
-                    m_vivoxChannelEncrypt = m_config.GetBoolean("vivox_encrypt_channel", false);
+                    m_dumpXml = m_config.GetBoolean("dump_xml", false);
 
                     m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
 
@@ -672,10 +671,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             {
                 requrl = String.Format("{0}&chan_desc={1}", requrl, description);
             }
-            if (m_vivoxChannelEncrypt)
-            {
-                requrl = String.Format("{0}&chan_encrypt_audio=1", requrl);
-            }
             if (m_vivoxChannelType != String.Empty)
             {
                 requrl = String.Format("{0}&chan_type={1}", requrl, m_vivoxChannelType);
@@ -952,7 +947,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 
             // If we're debugging server responses, dump the whole
             // load now
-            if (DUMP) XmlScanl(doc.DocumentElement,0);
+            if (m_dumpXml) XmlScanl(doc.DocumentElement,0);
 
             return doc.DocumentElement;
         }
@@ -993,7 +988,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                             m_log.Info("[VivoxVoice] Admin connection established");
                             if (XmlFind(resp, "response.level0.body.auth_token", out m_authToken))
                             {
-                                if (DUMP) m_log.DebugFormat("[VivoxVoice] Auth Token <{0}>", 
+                                if (m_dumpXml) m_log.DebugFormat("[VivoxVoice] Auth Token <{0}>", 
                                                             m_authToken);
                                 m_adminConnected = true;
                             }
@@ -1015,7 +1010,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         /// reverse engineering of incompletely 
         /// documented packets returned by the Vivox
         /// voice server. It is only called if the 
-        /// DUMP switch is set.
+        /// m_dumpXml switch is set.
         /// </summary>
         private void XmlScanl(XmlElement e, int index)
         {
