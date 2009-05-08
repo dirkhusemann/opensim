@@ -2391,6 +2391,11 @@ namespace OpenSim.Region.Framework.Scenes
             if (!AuthorizeUser(agent, out reason))
                 return false;
 
+            m_log.InfoFormat(
+                "[CONNECTION BEGIN]: Region {0} authenticated and authorized incoming {1} agent {2} {3} {4} (circuit code {5})",
+                RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname, 
+                agent.AgentID, agent.circuitcode);
+
             CapsModule.NewUserConnection(agent);
 
             ScenePresence sp = m_sceneGraph.GetScenePresence(agent.AgentID);
