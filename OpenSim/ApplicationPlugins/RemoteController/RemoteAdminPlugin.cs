@@ -904,8 +904,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                                           firstname, lastname));
 
                     // Establish the avatar's initial appearance
-
-                    updateUserAppearance(responseData, requestData, userID);
+                    // TODO: need to add code to do this only when requested
+                    // updateUserAppearance(responseData, requestData, userID);
 
                     responseData["success"] = true;
                     responseData["avatar_uuid"] = userID.ToString();
@@ -1135,7 +1135,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // establish "Default Female". Specifying a specific model can
                     // establish a specific appearance without regard for gender.
 
-                    updateUserAppearance(responseData, requestData, userProfile.ID);
+                    // TODO: need to add code to do this only when requested
+                    // updateUserAppearance(responseData, requestData, userProfile.ID);
 
                     if (!m_app.CommunicationsManager.UserService.UpdateUserProfile(userProfile))
                         throw new Exception("did not manage to update user profile");
