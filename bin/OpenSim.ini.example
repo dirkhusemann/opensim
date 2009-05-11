@@ -1324,3 +1324,37 @@
 	;FullUpdateRate=14
 
     ;PacketMTU = 1400
+
+    ; The following is the configuration section for the new style gtid servers
+    ; If you don't know what this is, don't enable it. It will eat your data,
+    ; format your hard drive and make all meat in your fridge spoil.
+    ; You have been warned.
+    ; Some of this may actually work!
+[Modules]
+    ; Choose one
+    ;AssetServices = "LocalAssetServicesConnector"
+    ;AssetServices = "RemoteAssetServicesConnector"
+    ;AssetServices = "HGAssetBroker"
+
+    ;AssetCaching = "CoreAssetCache"
+
+[AssetService]
+    ; Parameters for local assets
+    ;LocalServiceModule = "OpenSim.Services.AssetService.dll:AssetService"
+    ;StorageProvider = "OpenSim.Data.MySQL.dll"
+    ;ConnectionString = "Data Source=localhost;Database=opensim;User ID=opensim;Password=opensim;"
+    ;DefaultAssetLoader = "OpenSim.Framework.AssetLoader.Filesystem.dll"
+    ;AssetLoaderArgs = "assets/AssetSets.xml"
+
+    ; Parameters for remote assets
+    ;AssetServerURI = "http://localhost:8003/"
+
+    ; Paremeters for the Hypergrid connector
+    
+    ; Parameters for the HG Broker
+    ;LocalModule = "OpenSim.Services.AssetService.dll:AssetService"
+    ;HypergridModule = "OpenSim.Services.AssetService.dll:HGAssetService"
+
+[AssetCache]
+    ; Number of buckets for assets
+    ;CacheBuckets = 32768

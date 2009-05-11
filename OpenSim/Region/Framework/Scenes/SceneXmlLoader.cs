@@ -33,6 +33,7 @@ using System.Xml;
 using OpenMetaverse;
 using log4net;
 using OpenSim.Framework;
+using OpenSim.Region.Framework.Scenes.Serialization;
 using OpenSim.Region.Physics.Manager;
 
 namespace OpenSim.Region.Framework.Scenes
@@ -58,7 +59,7 @@ namespace OpenSim.Region.Framework.Scenes
                 rootNode = doc.FirstChild;
                 foreach (XmlNode aPrimNode in rootNode.ChildNodes)
                 {
-                    SceneObjectGroup obj = new SceneObjectGroup(aPrimNode.OuterXml, true);
+                    SceneObjectGroup obj = SceneObjectSerializer.FromOriginalXmlFormat(aPrimNode.OuterXml);
 
                     if (newIDS)
                     {
@@ -89,7 +90,7 @@ namespace OpenSim.Region.Framework.Scenes
             {
                 if (ent is SceneObjectGroup)
                 {
-                    stream.WriteLine(((SceneObjectGroup) ent).ToXmlString());
+                    stream.WriteLine(SceneObjectSerializer.ToOriginalXmlFormat((SceneObjectGroup)ent));
                     primCount++;
                 }
             }
@@ -124,14 +125,14 @@ namespace OpenSim.Region.Framework.Scenes
                 foreach (XmlNode aPrimNode in rootNode.ChildNodes)
                 {
                     // There is only ever one prim.  This oddity should be removeable post 0.5.9
-                    return new SceneObjectGroup(aPrimNode.OuterXml);
+                    return SceneObjectSerializer.FromXml2Format(aPrimNode.OuterXml);
                 }
 
                 return null;
             }
             else
             {
-                return new SceneObjectGroup(rootNode.OuterXml);
+                return SceneObjectSerializer.FromXml2Format(rootNode.OuterXml);
             }
         }
 
@@ -192,7 +193,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>The scene object created.  null if the scene object already existed</returns>
         protected static SceneObjectGroup CreatePrimFromXml2(Scene scene, string xmlData)
         {
-            SceneObjectGroup obj = new SceneObjectGroup(xmlData);
+            SceneObjectGroup obj = SceneObjectSerializer.FromXml2Format(xmlData);
 
             if (scene.AddRestoredSceneObject(obj, true, false))
                 return obj;

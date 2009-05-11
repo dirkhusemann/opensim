@@ -37,6 +37,7 @@ using OpenSim.Framework;
 using OpenSim.Framework.Communications.Cache;
 using OpenSim.Region.Framework;
 using OpenSim.Region.Framework.Interfaces;
+using OpenSim.Region.Framework.Scenes.Serialization;
 
 namespace OpenSim.Region.Framework.Scenes
 {
@@ -489,7 +490,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                         if (Permissions.PropagatePermissions())
                         {
-                            if (item.InvType == 6)
+                            if (item.InvType == (int)InventoryType.Object)
                             {
                                 itemCopy.BasePermissions &= ~(uint)(PermissionMask.Copy | PermissionMask.Modify | PermissionMask.Transfer);
                                 itemCopy.BasePermissions |= (item.CurrentPermissions & 7) << 13;
@@ -898,7 +899,7 @@ namespace OpenSim.Region.Framework.Scenes
                     TryGetAvatar(remoteClient.AgentId, out presence);
                     byte[] data = null;
 
-                    if (invType == 3 && presence != null) // OpenMetaverse.asset.assettype.landmark = 3 - needs to be turned into an enum
+                    if (invType == (sbyte)InventoryType.Landmark && presence != null)
                     {
                         Vector3 pos = presence.AbsolutePosition;
                         string strdata = String.Format(
@@ -1097,7 +1098,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             if ((part.OwnerID != destAgent) && Permissions.PropagatePermissions())
             {
-                if (taskItem.InvType == 6)
+                if (taskItem.InvType == (int)InventoryType.Object)
                     agentItem.BasePermissions = taskItem.BasePermissions & ((taskItem.CurrentPermissions & 7) << 13);
                 else
                     agentItem.BasePermissions = taskItem.BasePermissions;
@@ -1815,7 +1816,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             UUID assetID = UUID.Zero;
 
-            string sceneObjectXml = objectGroup.ToXmlString();
+            string sceneObjectXml = SceneObjectSerializer.ToOriginalXmlFormat(objectGroup);
 
             // Get the user info of the item destination
             //
@@ -2039,7 +2040,7 @@ namespace OpenSim.Region.Framework.Scenes
                     "[ATTACHMENT]: Updating asset for attachment {0}, attachpoint {1}",
                     grp.UUID, grp.GetAttachmentPoint());
 
-                string sceneObjectXml = objectGroup.ToXmlString();
+                string sceneObjectXml = SceneObjectSerializer.ToOriginalXmlFormat(objectGroup);
 
                 CachedUserInfo userInfo =
                     CommsManager.UserProfileCacheService.GetUserDetails(agentID);
@@ -2110,7 +2111,7 @@ namespace OpenSim.Region.Framework.Scenes
             itemID = UUID.Zero;
             if (grp != null)
             {
-                string sceneObjectXml = grp.ToXmlString();
+                string sceneObjectXml = SceneObjectSerializer.ToOriginalXmlFormat(grp);
 
                 CachedUserInfo userInfo =
                     CommsManager.UserProfileCacheService.GetUserDetails(AgentId);
@@ -2263,7 +2264,8 @@ namespace OpenSim.Region.Framework.Scenes
                             }
 
                             string xmlData = Utils.BytesToString(rezAsset.Data);
-                            SceneObjectGroup group = new SceneObjectGroup(itemId, xmlData, true);
+                            SceneObjectGroup group 
+                                = SceneObjectSerializer.FromOriginalXmlFormat(itemId, xmlData);
 
                             if (!Permissions.CanRezObject(
                                 group.Children.Count, remoteClient.AgentId, pos)
@@ -2419,7 +2421,7 @@ namespace OpenSim.Region.Framework.Scenes
                 if (rezAsset != null)
                 {
                     string xmlData = Utils.BytesToString(rezAsset.Data);
-                    SceneObjectGroup group = new SceneObjectGroup(xmlData, true);
+                    SceneObjectGroup group = SceneObjectSerializer.FromOriginalXmlFormat(xmlData);
 
                     if (!Permissions.CanRezObject(group.Children.Count, ownerID, pos))
                     {

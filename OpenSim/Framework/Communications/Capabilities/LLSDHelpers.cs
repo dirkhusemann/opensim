@@ -66,28 +66,37 @@ namespace OpenSim.Framework.Communications.Capabilities
                         FieldInfo[] fields = myType.GetFields();
                         for (int i = 0; i < fields.Length; i++)
                         {
-                            object fieldValue = fields[i].GetValue(obj);
-                            LLSDType[] fieldAttributes =
-                                (LLSDType[]) fieldValue.GetType().GetCustomAttributes(typeof (LLSDType), false);
-                            if (fieldAttributes.Length > 0)
+                            if (fields[i] != null && fields[i].GetValue(obj) != null)
                             {
-                                writer.WriteStartElement(String.Empty, "key", String.Empty);
-                                string fieldName = fields[i].Name;
-                                fieldName = fieldName.Replace("___", "-");
-                                writer.WriteString(fieldName);
-                                writer.WriteEndElement();
-                                SerializeOSDType(writer, fieldValue);
+                                object fieldValue = fields[i].GetValue(obj);
+                                LLSDType[] fieldAttributes =
+                                    (LLSDType[]) fieldValue.GetType().GetCustomAttributes(typeof (LLSDType), false);
+                                if (fieldAttributes.Length > 0)
+                                {
+                                    writer.WriteStartElement(String.Empty, "key", String.Empty);
+                                    string fieldName = fields[i].Name;
+                                    fieldName = fieldName.Replace("___", "-");
+                                    writer.WriteString(fieldName);
+                                    writer.WriteEndElement();
+                                    SerializeOSDType(writer, fieldValue);
+                                }
+                                else
+                                {
+                                    writer.WriteStartElement(String.Empty, "key", String.Empty);
+                                    string fieldName = fields[i].Name;
+                                    fieldName = fieldName.Replace("___", "-");
+                                    writer.WriteString(fieldName);
+                                    writer.WriteEndElement();
+                                    LLSD.LLSDWriteOne(writer, fieldValue);
+                                    // OpenMetaverse.StructuredData.LLSDParser.SerializeXmlElement(
+                                    //    writer, OpenMetaverse.StructuredData.OSD.FromObject(fieldValue));
+                                }
                             }
                             else
                             {
-                                writer.WriteStartElement(String.Empty, "key", String.Empty);
-                                string fieldName = fields[i].Name;
-                                fieldName = fieldName.Replace("___", "-");
-                                writer.WriteString(fieldName);
-                                writer.WriteEndElement();
-                                LLSD.LLSDWriteOne(writer, fieldValue);
-                                // OpenMetaverse.StructuredData.LLSDParser.SerializeXmlElement(
-                                //    writer, OpenMetaverse.StructuredData.OSD.FromObject(fieldValue));
+                                // TODO from ADAM: There is a nullref being caused by fields[i] being null
+                                // on some computers. Unsure what is causing this, but would appreciate
+                                // if sdague could take a look at this.
                             }
                         }
                         writer.WriteEndElement();

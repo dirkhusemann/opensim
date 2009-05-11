@@ -30,18 +30,19 @@ using System.Reflection;
 using Nini.Config;
 using OpenSim.Data;
 using OpenSim.Services.Interfaces;
+using OpenSim.Services.Base;
 
 namespace OpenSim.Services.UserService
 {
-    public class UserServiceBase
+    public class UserServiceBase: ServiceBase
     {
         protected IUserDataPlugin m_Database = null;
 
-        public UserServiceBase(IConfigSource config)
+        public UserServiceBase(IConfigSource config) : base(config)
         {
             IConfig userConfig = config.Configs["UserService"];
             if (userConfig == null)
-                throw new Exception("No userService configuration");
+                throw new Exception("No UserService configuration");
 
             string dllName = userConfig.GetString("StorageProvider",
                     String.Empty);
@@ -52,34 +53,12 @@ namespace OpenSim.Services.UserService
             string connString = userConfig.GetString("ConnectionString",
                     String.Empty);
 
-            try
-            {
-                Assembly pluginAssembly = Assembly.LoadFrom(dllName);
+            m_Database = LoadPlugin<IUserDataPlugin>(dllName);
 
-                foreach (Type pluginType in pluginAssembly.GetTypes())
-                {
-                    if (pluginType.IsPublic)
-                    {
-                        Type typeInterface =
-                                pluginType.GetInterface("IUserDataPlugin", true);
-                        if (typeInterface != null)
-                        {
-                            IUserDataPlugin plug =
-                                    (IUserDataPlugin)Activator.CreateInstance(pluginAssembly.GetType(pluginType.ToString()));
-                            plug.Initialise(connString);
+            if (m_Database == null)
+                throw new Exception("Could not find a storage interface in the given module");
 
-                            m_Database = plug;
-                        }
-                    }
-                }
-
-                if (m_Database == null)
-                    throw new Exception("Could not find a storage interface in the given module");
-            }
-            catch (Exception e)
-            {
-                throw new Exception("Can't open database module: "+e.Message);
-            }
+            m_Database.Initialise(connString);
         }
     }
 }
