@@ -1066,6 +1066,7 @@ namespace OpenSim.Region.CoreModules.World.Land
                     else
                         land.landData.OwnerID = m_scene.RegionInfo.MasterAvatarAssignedUUID;
                     land.landData.ClaimDate = Util.UnixTimeSinceEpoch();
+                    land.landData.IsGroupOwned = false;
                     m_scene.Broadcast(SendParcelOverlay);
                     land.sendLandUpdateToClient(remote_client);
                 }
@@ -1132,12 +1133,14 @@ namespace OpenSim.Region.CoreModules.World.Land
 
         void handleParcelDeedToGroup(int parcelLocalID, UUID groupID, IClientAPI remote_client)
         {
-            // TODO: May want to validate that the group id is valid and that the remote client has the right to deed
             ILandObject land;
             lock (m_landList)
             {
                 m_landList.TryGetValue(parcelLocalID, out land);
             }
+
+            if (!m_scene.Permissions.CanDeedParcel(remote_client.AgentId, land))
+                return;
 
             if (land != null)
             {
