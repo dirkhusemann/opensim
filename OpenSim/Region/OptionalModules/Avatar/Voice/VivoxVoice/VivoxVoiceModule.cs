@@ -921,6 +921,8 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
             if (admin && !m_adminConnected && !DoAdminLogin())
                 return null;
 
+            doc = new XmlDocument();
+
             try
             {
 				// Otherwise prepare the request
@@ -936,7 +938,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 				rsp = (HttpWebResponse)req.GetResponse();
 
 				XmlTextReader rdr = new XmlTextReader(rsp.GetResponseStream());
-				doc = new XmlDocument();
 				doc.Load(rdr);
 				rdr.Close();
             }
