@@ -1223,8 +1223,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             string[] nomens = model.Split();
             if (nomens.Length != 2)
             {
-                m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Invalid model name : <{1}>",
-                    userid, model);
+                m_log.WarnFormat("[RADMIN] User appearance not set for {0}. Invalid model name : <{1}>", userid, model);
+                // nomens = dmodel.Split();
                 return;
             }
 
@@ -1246,10 +1246,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             establishAppearance(userid, mprof.ID);
 
             m_log.DebugFormat("[RADMIN] Finished setting appearance for avatar {0}, using model {1}",
-                userid, model);
-
+                              userid, model);
         }
-
+        
         /// <summary>
         /// This method is called by updateAvatarAppearance once any specified model has been
         /// ratified, or an appropriate default value has been adopted. The intended prototype
@@ -1265,10 +1264,13 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             // If the model has no associated appearance we're done.
 
-            if (ava == null)
-            {
+            // if (ava == null) 
+            // {
+            //     return new AvatarAppearance();
+            // }
+
+            if (ava == null) 
                 return;
-            }
 
             UICallback sic  = new UICallback();
             UICallback dic  = new UICallback();
@@ -1360,9 +1362,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             catch (Exception e)
             {
                 m_log.WarnFormat("[RADMIN] Error transferring inventory for {0} : {1}",
-                    dest, e.Message);
+                                 dest, e.Message);
+                return;
             }
-
+            
             return;
 
         }
