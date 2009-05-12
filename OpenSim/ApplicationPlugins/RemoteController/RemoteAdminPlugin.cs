@@ -162,6 +162,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
         public void PostInitialise()
         {
+            if (!createDefaultAvatars())
+            {
+                m_log.Info("[RADMIN]: Default avatars not loaded");
+            }
         }
 
         public XmlRpcResponse XmlRpcRestartMethod(XmlRpcRequest request)
@@ -904,8 +908,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                                           firstname, lastname));
 
                     // Establish the avatar's initial appearance
-                    // TODO: need to add code to do this only when requested
-                    // updateUserAppearance(responseData, requestData, userID);
+
+                    updateUserAppearance(responseData, requestData, userID);
 
                     responseData["success"] = true;
                     responseData["avatar_uuid"] = userID.ToString();
@@ -1131,12 +1135,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     if (String.Empty != aboutAvatar) userProfile.AboutText = aboutAvatar;
 
                     // User has been created. Now establish gender and appearance.
-                    // Default appearance is 'Default Male'. Specifying gender can
-                    // establish "Default Female". Specifying a specific model can
-                    // establish a specific appearance without regard for gender.
 
-                    // TODO: need to add code to do this only when requested
-                    // updateUserAppearance(responseData, requestData, userProfile.ID);
+                    updateUserAppearance(responseData, requestData, userProfile.ID);
 
                     if (!m_app.CommunicationsManager.UserService.UpdateUserProfile(userProfile))
                         throw new Exception("did not manage to update user profile");
@@ -1163,6 +1163,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             m_log.Info("[RADMIN]: UpdateUserAccount: request complete");
             return response;
+
         }
 
         /// <summary>
@@ -1181,7 +1182,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             string dmale   = m_config.GetString("default_male", "Default Male");
             string dfemale = m_config.GetString("default_female", "Default Female");
             string dneut   = m_config.GetString("default_female", "Default Default");
-            string dmodel  = dneut;
             string model   = String.Empty;
 
             // Has a gender preference been supplied?
@@ -1214,6 +1214,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             if(model == String.Empty)
             {
+                m_log.DebugFormat("[RADMIN] Appearance update not requested");
                 return;
             }
 
@@ -1238,11 +1239,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                 return;
             }
 
-	    // Set current user's appearance. This bit is easy. The appearance structure is populated with 
-	    // actual asset ids, however to complete the magic we need to populate the inventory with the
-	    // assets in question.
+            // Set current user's appearance. This bit is easy. The appearance structure is populated with 
+            // actual asset ids, however to complete the magic we need to populate the inventory with the
+            // assets in question.
 
-	    establishAppearance(userid, mprof.ID);
+            establishAppearance(userid, mprof.ID);
 
             m_log.DebugFormat("[RADMIN] Finished setting appearance for avatar {0}, using model {1}",
                 userid, model);
@@ -1379,14 +1380,14 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private bool createDefaultAvatars()
         {
 
-            m_log.DebugFormat("[RADMIN] Creating default avatar entries");
-
             // Only load once
 
             if (daload)
             {
                 return false;
             }
+
+            m_log.DebugFormat("[RADMIN] Creating default avatar entries");
 
             daload = true;
 
