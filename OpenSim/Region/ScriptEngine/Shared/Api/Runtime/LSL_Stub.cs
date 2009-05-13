@@ -459,6 +459,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             return m_LSL_Functions.llGetFreeMemory();
         }
 
+        public LSL_Integer llGetFreeURLs()
+        {
+            return m_LSL_Functions.llGetFreeURLs();
+        }
+
         public LSL_Vector llGetGeometricCenter()
         {
             return m_LSL_Functions.llGetGeometricCenter();
@@ -467,6 +472,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
         public LSL_Float llGetGMTclock()
         {
             return m_LSL_Functions.llGetGMTclock();
+        }
+
+        public LSL_String llGetHTTPHeader(LSL_Key request_id, string header)
+        {
+            return m_LSL_Functions.llGetHTTPHeader(request_id, header);
         }
 
         public LSL_Key llGetInventoryCreator(string item)
@@ -854,6 +864,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             return m_LSL_Functions.llHTTPRequest(url, parameters, body);
         }
 
+        public void llHTTPResponse(string url, int status, string body)
+        {
+            m_LSL_Functions.llHTTPResponse(url, status, body);
+        }
+
         public LSL_String llInsertString(string dst, int position, string src)
         {
             return m_LSL_Functions.llInsertString(dst, position, src);
@@ -1159,6 +1174,11 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             m_LSL_Functions.llReleaseCamera(avatar);
         }
 
+        public void llReleaseURL(string url)
+        {
+            m_LSL_Functions.llReleaseURL(url);
+        }
+
         public void llReleaseControls()
         {
             m_LSL_Functions.llReleaseControls();
@@ -1219,9 +1239,18 @@ namespace OpenSim.Region.ScriptEngine.Shared.ScriptBase
             m_LSL_Functions.llRequestPermissions(agent, perm);
         }
 
+        public LSL_String llRequestSecureURL()
+        {
+            return m_LSL_Functions.llRequestSecureURL();
+        }
+
         public LSL_Key llRequestSimulatorData(string simulator, int data)
         {
             return m_LSL_Functions.llRequestSimulatorData(simulator, data);
+        }
+        public LSL_Key llRequestURL()
+        {
+            return m_LSL_Functions.llRequestURL();
         }
 
         public void llResetLandBanList()

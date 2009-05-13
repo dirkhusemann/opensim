@@ -368,19 +368,24 @@ namespace OpenSim.Region.Framework.Scenes
         /// <param name="mod"></param>
         public void RegisterModuleInterface<M>(M mod)
         {
-            if (!ModuleInterfaces.ContainsKey(typeof(M)))
+            List<Object> l = null;
+            if (!ModuleInterfaces.TryGetValue(typeof(M), out l))
             {
-                List<Object> l = new List<Object>();
-                l.Add(mod);
+                l = new List<Object>();
                 ModuleInterfaces.Add(typeof(M), l);
+            }
 
-                if (mod is IEntityCreator)
+            if (l.Count > 0)
+                return;
+
+            l.Add(mod);
+
+            if (mod is IEntityCreator)
+            {
+                IEntityCreator entityCreator = (IEntityCreator)mod;
+                foreach (PCode pcode in entityCreator.CreationCapabilities)
                 {
-                    IEntityCreator entityCreator = (IEntityCreator)mod;
-                    foreach (PCode pcode in entityCreator.CreationCapabilities)
-                    {
-                        m_entityCreators[pcode] = entityCreator;
-                    }
+                    m_entityCreators[pcode] = entityCreator;
                 }
             }
         }
@@ -435,14 +440,11 @@ namespace OpenSim.Region.Framework.Scenes
         /// <returns>null if there is no registered module implementing that interface</returns>
         public T RequestModuleInterface<T>()
         {
-            if (ModuleInterfaces.ContainsKey(typeof(T)))
-            {
+            if (ModuleInterfaces.ContainsKey(typeof(T)) &&
+                    (ModuleInterfaces[typeof(T)].Count > 0))
                 return (T)ModuleInterfaces[typeof(T)][0];
-            }
             else
-            {
                 return default(T);
-            }
         }
 
         /// <summary>

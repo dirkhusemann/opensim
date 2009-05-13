@@ -82,6 +82,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         private bool m_automaticLinkPermission=false;
         private IMessageTransferModule m_TransferModule = null;
         private int m_notecardLineReadCharsMax = 255;
+        private IUrlModule m_UrlModule = null;
 
         //private static readonly ILog m_log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
 
@@ -107,6 +108,13 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 
             m_TransferModule =
                     m_ScriptEngine.World.RequestModuleInterface<IMessageTransferModule>();
+            m_UrlModule = m_ScriptEngine.World.RequestModuleInterface<IUrlModule>();
+            if (m_UrlModule != null)
+            {
+                m_ScriptEngine.OnScriptRemoved += m_UrlModule.ScriptRemoved;
+                m_ScriptEngine.OnObjectRemoved += m_UrlModule.ObjectRemoved;
+            }
+
             AsyncCommands = new AsyncCommandManager(ScriptEngine);
         }
 
@@ -2697,16 +2705,75 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             }
         }
 
+        public void llReleaseURL(string url)
+        {
+            m_host.AddScriptLPS(1);
+            if (m_UrlModule != null)
+                m_UrlModule.ReleaseURL(url);
+        }
+
         public void llAttachToAvatar(int attachment)
         {
             m_host.AddScriptLPS(1);
-            NotImplemented("llAttachToAvatar");
+
+            if (m_host.ParentGroup.RootPart.AttachmentPoint == 0)
+                return;
+
+            TaskInventoryItem item;
+
+            lock (m_host.TaskInventory)
+            {
+                if (!m_host.TaskInventory.ContainsKey(InventorySelf()))
+                    return;
+                else
+                    item = m_host.TaskInventory[InventorySelf()];
+            }
+            
+            if (item.PermsGranter != m_host.OwnerID)
+                return;
+
+            if ((item.PermsMask & ScriptBaseClass.PERMISSION_ATTACH) != 0)
+            {
+                SceneObjectGroup grp = m_host.ParentGroup;
+
+                ScenePresence presence = World.GetScenePresence(m_host.OwnerID);
+
+                m_ScriptEngine.World.AttachObject(presence.ControllingClient,
+                        grp.LocalId, (uint)attachment, Quaternion.Identity,
+                        Vector3.Zero, false);
+            }
         }
 
         public void llDetachFromAvatar()
         {
             m_host.AddScriptLPS(1);
-            NotImplemented("llDetachFromAvatar");
+
+            if (m_host.ParentGroup.RootPart.AttachmentPoint == 0)
+                return;
+
+            TaskInventoryItem item;
+
+            lock (m_host.TaskInventory)
+            {
+                if (!m_host.TaskInventory.ContainsKey(InventorySelf()))
+                    return;
+                else
+                    item = m_host.TaskInventory[InventorySelf()];
+            }
+            
+            if (item.PermsGranter != m_host.OwnerID)
+                return;
+
+            if ((item.PermsMask & ScriptBaseClass.PERMISSION_ATTACH) != 0)
+            {
+                SceneObjectGroup grp = m_host.ParentGroup;
+                UUID itemID = grp.GetFromAssetID();
+
+                ScenePresence presence = World.GetScenePresence(m_host.OwnerID);
+
+                m_ScriptEngine.World.DetachSingleAttachmentToInv(itemID,
+                        presence.ControllingClient);
+            }
         }
 
         public void llTakeCamera(string avatar)
@@ -5551,6 +5618,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             return 16384;
         }
 
+        public LSL_Integer llGetFreeURLs()
+        {
+            m_host.AddScriptLPS(1);
+            if (m_UrlModule != null)
+                return new LSL_Integer(m_UrlModule.GetFreeUrls());
+            return new LSL_Integer(0);
+        }
+
+
         public LSL_String llGetRegionName()
         {
             m_host.AddScriptLPS(1);
@@ -7632,6 +7708,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             return DateTime.UtcNow.TimeOfDay.TotalSeconds;
         }
 
+        public LSL_String llGetHTTPHeader(LSL_Key request_id, string header)
+        {
+            m_host.AddScriptLPS(1);
+            NotImplemented("llGetHTTPHeader");
+            return String.Empty;
+        }
+
+
         public LSL_String llGetSimulatorHostname()
         {
             m_host.AddScriptLPS(1);
@@ -7953,6 +8037,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
 //            wComm.DeliverMessage(ChatTypeEnum.Owner, 0, m_host.Name, m_host.UUID, msg);
         }
 
+        public LSL_String llRequestSecureURL()
+        {
+            m_host.AddScriptLPS(1);
+            if (m_UrlModule != null)
+                return m_UrlModule.RequestSecureURL(m_ScriptEngine.ScriptModule, m_host, m_itemID).ToString();
+            return UUID.Zero.ToString();
+        }
+
         public LSL_String llRequestSimulatorData(string simulator, int data)
         {
             IOSSL_Api ossl = (IOSSL_Api)m_ScriptEngine.GetApi(m_itemID, "OSSL");
@@ -8025,6 +8117,14 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 m_log.Error("[LSL_API]: llRequestSimulatorData" + e.ToString());
                 return UUID.Zero.ToString();
             }
+        }
+        public LSL_String llRequestURL()
+        {
+            m_host.AddScriptLPS(1);
+
+            if (m_UrlModule != null)
+                return m_UrlModule.RequestURL(m_ScriptEngine.ScriptModule, m_host, m_itemID).ToString();
+            return UUID.Zero.ToString();
         }
 
         public void llForceMouselook(int mouselook)
@@ -8878,6 +8978,16 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 return null;
         }
 
+
+        public void llHTTPResponse(string url, int status, string body)
+        {
+            // Partial implementation: support for parameter flags needed
+            //   see http://wiki.secondlife.com/wiki/llHTTPResponse
+
+            m_host.AddScriptLPS(1);
+            NotImplemented("llHTTPResponse");
+        }
+        
         public void llResetLandBanList()
         {
             m_host.AddScriptLPS(1);

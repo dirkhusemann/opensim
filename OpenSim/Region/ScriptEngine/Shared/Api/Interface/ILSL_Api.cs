@@ -120,8 +120,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
          LSL_Float llGetEnergy();
         LSL_Vector llGetForce();
        LSL_Integer llGetFreeMemory();
+       LSL_Integer llGetFreeURLs();
         LSL_Vector llGetGeometricCenter();
          LSL_Float llGetGMTclock();
+        LSL_String llGetHTTPHeader(LSL_Key request_id, string header);
            LSL_Key llGetInventoryCreator(string item);
            LSL_Key llGetInventoryKey(string name);
         LSL_String llGetInventoryName(int type, int number);
@@ -199,6 +201,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
               void llGroundRepel(double height, int water, double tau);
         LSL_Vector llGroundSlope(LSL_Vector offset);
         LSL_String llHTTPRequest(string url, LSL_List parameters, string body);
+              void llHTTPResponse(string url, int status, string body);
         LSL_String llInsertString(string dst, int position, string src);
               void llInstantMessage(string user, string message);
         LSL_String llIntegerToBase64(int number);
@@ -261,6 +264,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
               void llRegionSay(int channelID, string text);
               void llReleaseCamera(string avatar);
               void llReleaseControls();
+              void llReleaseURL(string url);
               void llRemoteDataReply(string channel, string message_id, string sdata, int idata);
               void llRemoteDataSetRegion();
               void llRemoteLoadScript(string target, string name, int running, int start_param);
@@ -272,7 +276,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api.Interfaces
            LSL_Key llRequestAgentData(string id, int data);
            LSL_Key llRequestInventoryData(string name);
               void llRequestPermissions(string agent, int perm);
+        LSL_String llRequestSecureURL();
            LSL_Key llRequestSimulatorData(string simulator, int data);
+           LSL_Key llRequestURL();
               void llResetLandBanList();
               void llResetLandPassList();
               void llResetOtherScript(string name);

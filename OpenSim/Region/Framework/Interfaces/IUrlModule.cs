@@ -9,7 +9,7 @@
  *     * Redistributions in binary form must reproduce the above copyright
  *       notice, this list of conditions and the following disclaimer in the
  *       documentation and/or other materials provided with the distribution.
- *     * Neither the name of the OpenSimulator Project nor the
+ *     * Neither the name of the OpenSim Project nor the
  *       names of its contributors may be used to endorse or promote products
  *       derived from this software without specific prior written permission.
  *
@@ -25,43 +25,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-using System;
+using System.Collections.Generic;
 using OpenMetaverse;
+using OpenSim.Framework;
 using OpenSim.Region.Framework.Scenes;
 
-namespace OpenSim.Region.OptionalModules.Scripting.Minimodule
+namespace OpenSim.Region.Framework.Interfaces
 {
-    class SPAvatar : System.MarshalByRefObject, IAvatar
+    public interface IUrlModule
     {
-        private readonly Scene m_rootScene;
-        private readonly UUID m_ID;
+        UUID RequestURL(IScriptModule engine, SceneObjectPart host, UUID itemID);
+        UUID RequestSecureURL(IScriptModule engine, SceneObjectPart host, UUID itemID);
+        void ReleaseURL(string url);
+        void HttpResponse(UUID request, int status, string body);
+        string GetHttpHeader(UUID request, string header);
+        int GetFreeUrls();
 
-        public SPAvatar(Scene scene, UUID ID)
-        {
-            m_rootScene = scene;
-            m_ID = ID;
-        }
-
-        private ScenePresence GetSP()
-        {
-            return m_rootScene.GetScenePresence(m_ID);
-        }
-
-        public string Name
-        {
-            get { return GetSP().Name; }
-            set { throw new InvalidOperationException("Avatar Names are a read-only property."); }
-        }
-
-        public UUID GlobalID
-        {
-            get { return m_ID; }
-        }
-
-        public Vector3 WorldPosition
-        {
-            get { return GetSP().AbsolutePosition; }
-            set { GetSP().TeleportWithMomentum(value); }
-        }
+        void ScriptRemoved(UUID itemID);
+        void ObjectRemoved(UUID objectID);
     }
 }

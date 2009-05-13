@@ -16,6 +16,8 @@
         <RegionModule id="LocalAssetServicesConnector" type="OpenSim.Region.CoreModules.ServiceConnectors.Asset.LocalAssetServicesConnector" />
         <RegionModule id="RemoteAssetServicesConnector" type="OpenSim.Region.CoreModules.ServiceConnectors.Asset.RemoteAssetServicesConnector" />
         <RegionModule id="HGAssetBroker" type="OpenSim.Region.CoreModules.ServiceConnectors.Asset.HGAssetBroker" />
+        <RegionModule id="CoreAssetCache" type="OpenSim.Region.CoreModules.Asset.CoreAssetCache" />
+        <RegionModule id="UrlModule" type="OpenSim.Region.CoreModules.Scripting.LSLHttp.UrlModule" />
     </Extension>
 
     <Extension path = "/OpenSim/WindModule">
