@@ -89,7 +89,6 @@ namespace OpenSim.ApplicationPlugins.Rest.Regions
             rxw.WriteStartElement(String.Empty, "region", String.Empty);
             rxw.WriteStartElement(String.Empty, key, String.Empty);
             rxw.WriteString(value);
-            rxw.WriteEndDocument();
 
             return rxw.ToString();
         }
@@ -202,8 +201,6 @@ namespace OpenSim.ApplicationPlugins.Rest.Regions
             rxw.WriteStartElement(String.Empty, "objects", String.Empty);
             rxw.WriteString(objects.ToString());
             rxw.WriteEndElement();
-
-            rxw.WriteEndDocument();
 
             return rxw.ToString();
         }
