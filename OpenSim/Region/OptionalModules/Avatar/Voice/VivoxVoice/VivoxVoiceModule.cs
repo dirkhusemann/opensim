@@ -49,7 +49,7 @@ using Caps = OpenSim.Framework.Communications.Capabilities.Caps;
 
 namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
 {
-    public class VivoxVoiceModule : IRegionModule
+    public class VivoxVoiceModule : ISharedRegionModule
     {
 
         // Infrastructure
@@ -63,7 +63,6 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         private static readonly string m_chatSessionRequestPath = "0109/";
 
         // Control info, e.g. vivox server, admin user, admin password
-        private static bool   m_WOF            = true;
         private static bool   m_pluginEnabled  = false;
         private static bool   m_adminConnected = false;
         private static string m_vivoxServer;
@@ -78,7 +77,7 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
         
         private IConfig m_config;
 
-        public void Initialise(Scene scene, IConfigSource config)
+        public void Initialise(IConfigSource config)
         {
 
             m_config = config.Configs["VivoxVoice"];
@@ -95,123 +94,199 @@ namespace OpenSim.Region.OptionalModules.Avatar.Voice.VivoxVoice
                 return;
             }
 
-            // This is only done the FIRST time this method is invoked.
-            if (m_WOF)
-            {
-                try
-                {
-                    // retrieve configuration variables
-                    m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
-                    m_vivoxSipUri = m_config.GetString("vivox_sip_uri", String.Empty);
-                    m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
-                    m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
-                    m_vivoxChannelType = m_config.GetString("vivox_channel_type", "positional");
-                    m_dumpXml = m_config.GetBoolean("dump_xml", false);
+			try
+			{
+				// retrieve configuration variables
+				m_vivoxServer = m_config.GetString("vivox_server", String.Empty);
+				m_vivoxSipUri = m_config.GetString("vivox_sip_uri", String.Empty);
+				m_vivoxAdminUser = m_config.GetString("vivox_admin_user", String.Empty);
+				m_vivoxAdminPassword = m_config.GetString("vivox_admin_password", String.Empty);
+				m_vivoxChannelType = m_config.GetString("vivox_channel_type", "positional");
+				m_dumpXml = m_config.GetBoolean("dump_xml", false);
 
-                    m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
+				m_vivoxVoiceAccountApi = String.Format("http://{0}/api2", m_vivoxServer);
 
-                    if (String.IsNullOrEmpty(m_vivoxServer) ||
-                        String.IsNullOrEmpty(m_vivoxSipUri) ||
-                        String.IsNullOrEmpty(m_vivoxAdminUser) ||
-                        String.IsNullOrEmpty(m_vivoxAdminPassword))
-                    {
-                        m_log.Error("[VivoxVoice] plugin mis-configured");
-                        m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
-                        return;
-                    }
+				if (String.IsNullOrEmpty(m_vivoxServer) ||
+					String.IsNullOrEmpty(m_vivoxSipUri) ||
+					String.IsNullOrEmpty(m_vivoxAdminUser) ||
+					String.IsNullOrEmpty(m_vivoxAdminPassword))
+				{
+					m_log.Error("[VivoxVoice] plugin mis-configured");
+					m_log.Info("[VivoxVoice] plugin disabled: incomplete configuration");
+					return;
+				}
 
-                    m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
+				m_log.InfoFormat("[VivoxVoice] using vivox server {0}", m_vivoxServer);
 
-                    // Get admin rights and cleanup any residual channel definition
+				// Get admin rights and cleanup any residual channel definition
 
-                    DoAdminLogin();
+				DoAdminLogin();
 
-                    m_pluginEnabled = true;
-                    m_WOF = false;
+				m_pluginEnabled = true;
 
-                    m_log.Info("[VivoxVoice] plugin enabled");
+				m_log.Info("[VivoxVoice] plugin enabled");
 
-                }
-                catch (Exception e)
-                {
-                    m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
-                    m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
-                    return;
-                }
-            }
-
-            // Everything that follows is done for every region
-
-            lock (vlock)
-            {
-                
-                string channelId;
-
-                string sceneUUID = scene.RegionInfo.RegionID.ToString();
-                string sceneName  = scene.RegionInfo.RegionName;
-                
-                // Make sure that all local channels are deleted.
-                // So we have to search for the children, and then do an
-                // iteration over the set of chidren identified.
-                // This assumes that there is just one directory per
-                // region.
-                
-                if (VivoxTryGetDirectory(sceneUUID + "D", out channelId))
-                {
-                    m_log.DebugFormat("[VivoxVoice]: region {0}: uuid {1}: located directory id {2}",
-                                      sceneName, sceneUUID, channelId);
-
-                    XmlElement children = VivoxListChildren(channelId);
-                    string count;
-
-                    if (XmlFind(children, "response.level0.channel-search.count", out count))
-                    {
-                        int cnum = Convert.ToInt32(count);
-                        for (int i = 0; i < cnum; i++)
-                        {
-                            string id;
-                            if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
-                            {
-                                if (!IsOK(VivoxDeleteChannel(channelId, id)))
-                                    m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, channelId, id);
-                            } 
-                        }
-                    }
-                }
-                else
-                {
-                    if (!VivoxTryCreateDirectory(sceneUUID + "D", sceneName, out channelId))
-                    {
-                        m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
-                                         "*", sceneUUID, sceneName);
-                        channelId = String.Empty;
-                    }
-                }
+			}
+			catch (Exception e)
+			{
+				m_log.ErrorFormat("[VivoxVoice] plugin initialization failed: {0}", e.Message);
+				m_log.DebugFormat("[VivoxVoice] plugin initialization failed: {0}", e.ToString());
+				return;
+			}
+        }   
 
 
-                // Create a dictionary entry unconditionally. This eliminates the
-                // need to check for a parent in the core code. The end result is
-                // the same, if the parent table entry is an empty string, then
-                // region channels will be created as first-level channels.
-
-               lock (m_parents) m_parents.Add(sceneUUID, channelId);
-
-            }
+        // Called to indicate that the module has been added to the region
+		public void AddRegion(Scene scene)
+        {
 
             if (m_pluginEnabled) 
             {
+				lock (vlock)
+				{
+					
+					string channelId;
+
+					string sceneUUID  = scene.RegionInfo.RegionID.ToString();
+					string sceneName  = scene.RegionInfo.RegionName;
+					
+					// Make sure that all local channels are deleted.
+					// So we have to search for the children, and then do an
+					// iteration over the set of chidren identified.
+					// This assumes that there is just one directory per
+					// region.
+					
+					if (VivoxTryGetDirectory(sceneUUID + "D", out channelId))
+					{
+						m_log.DebugFormat("[VivoxVoice]: region {0}: uuid {1}: located directory id {2}",
+										  sceneName, sceneUUID, channelId);
+
+						XmlElement children = VivoxListChildren(channelId);
+						string count;
+
+						if (XmlFind(children, "response.level0.channel-search.count", out count))
+						{
+							int cnum = Convert.ToInt32(count);
+							for (int i = 0; i < cnum; i++)
+							{
+								string id;
+								if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+								{
+									if (!IsOK(VivoxDeleteChannel(channelId, id)))
+										m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, channelId, id);
+								} 
+							}
+						}
+					}
+					else
+					{
+						if (!VivoxTryCreateDirectory(sceneUUID + "D", sceneName, out channelId))
+						{
+							m_log.WarnFormat("[VivoxVoice] Create failed <{0}:{1}:{2}>",
+											 "*", sceneUUID, sceneName);
+							channelId = String.Empty;
+						}
+					}
+
+
+					// Create a dictionary entry unconditionally. This eliminates the
+					// need to check for a parent in the core code. The end result is
+					// the same, if the parent table entry is an empty string, then
+					// region channels will be created as first-level channels.
+
+				   lock (m_parents)
+                   if(m_parents.ContainsKey(sceneUUID))
+                   {
+                       RemoveRegion(scene);
+                       m_parents.Add(sceneUUID, channelId);
+                   }
+                   else
+                   {
+                       m_parents.Add(sceneUUID, channelId);
+                   }
+
+				}
+
                 // we need to capture scene in an anonymous method
                 // here as we need it later in the callbacks
                 scene.EventManager.OnRegisterCaps += delegate(UUID agentID, Caps caps)
                     {
                         OnRegisterCaps(scene, agentID, caps);
                     };
+
             }
 
         }
         
+        // Called to indicate that all loadable modules have now been added
+        public void RegionLoaded(Scene scene)
+        {
+            // Do nothing.
+        }
+
+        // Called to indicate that the region is going away.
+        public void RemoveRegion(Scene scene)
+        {
+
+            if (m_pluginEnabled) 
+            {
+				lock (vlock)
+				{
+					
+					string channelId;
+
+					string sceneUUID  = scene.RegionInfo.RegionID.ToString();
+					string sceneName  = scene.RegionInfo.RegionName;
+					
+					// Make sure that all local channels are deleted.
+					// So we have to search for the children, and then do an
+					// iteration over the set of chidren identified.
+					// This assumes that there is just one directory per
+					// region.
+					
+					if (VivoxTryGetDirectory(sceneUUID + "D", out channelId))
+					{
+
+						m_log.DebugFormat("[VivoxVoice]: region {0}: uuid {1}: located directory id {2}",
+										  sceneName, sceneUUID, channelId);
+
+						XmlElement children = VivoxListChildren(channelId);
+						string count;
+
+						if (XmlFind(children, "response.level0.channel-search.count", out count))
+						{
+							int cnum = Convert.ToInt32(count);
+							for (int i = 0; i < cnum; i++)
+							{
+								string id;
+								if (XmlFind(children, "response.level0.channel-search.channels.channels.level4.id", i, out id))
+								{
+									if (!IsOK(VivoxDeleteChannel(channelId, id)))
+										m_log.WarnFormat("[VivoxVoice] Channel delete failed {0}:{1}:{2}", i, channelId, id);
+								} 
+							}
+						}
+					}
+
+					if (!IsOK(VivoxDeleteChannel(null, channelId)))
+						m_log.WarnFormat("[VivoxVoice] Parent channel delete failed {0}:{1}:{2}", sceneName, sceneUUID, channelId);
+
+					// Remove the channel umbrella entry
+
+					lock (m_parents) 
+					{
+						if(m_parents.ContainsKey(sceneUUID))
+						{
+							m_parents.Remove(sceneUUID);
+						}
+					}
+                }
+            }
+        }
+
         public void PostInitialise()
         {
+            // Do nothing.
         }
 
         public void Close()
