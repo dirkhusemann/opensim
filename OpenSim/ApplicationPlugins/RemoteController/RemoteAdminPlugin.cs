@@ -67,6 +67,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
         private string m_name = "RemoteAdminPlugin";
         private string m_version = "0.0";
+        private string m_modelAvatar = String.Empty;
 
         public string Version
         {
@@ -99,6 +100,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     m_config = m_configSource.Configs["RemoteAdmin"];
                     m_log.Info("[RADMIN]: Remote Admin Plugin Enabled");
                     m_requiredPassword = m_config.GetString("access_password", String.Empty);
+                    m_modelAvatar = m_config.GetString("model_avatar", m_modelAvatar);
 
                     m_app = openSim;
                     m_httpd = openSim.HttpServer;
@@ -911,6 +913,11 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                     // Establish the avatar's initial appearance
 
+                    if(!(requestData.Contains("gender")||requestData.Contains("model")) && m_modelAvatar != String.Empty)
+                    {
+                        requestData["model"] = m_modelAvatar;
+                    }
+
                     updateUserAppearance(responseData, requestData, userID);
 
                     responseData["success"] = true;
@@ -1432,7 +1439,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     foreach(XmlNode asset in assets)
                     {
                         AssetBase rass   = new AssetBase();
-                        rass.FullID      = UUID.Random();
+                        rass.FullID      = new UUID(GetStringAttribute(asset,"id",UUID.Random().ToString()));
                         rass.Name        = GetStringAttribute(asset,"name","");
                         rass.Description = GetStringAttribute(asset,"desc","");
                         rass.Type        = SByte.Parse(GetStringAttribute(asset,"type",""));
@@ -1595,7 +1602,6 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                             switch (child.Name)
                                             {
                                                 case "Permissions" :
-                                                    m_log.DebugFormat("[RADMIN] Permissions specified");
                                                     perms = child;
                                                     break;
                                                 case "Asset" :
