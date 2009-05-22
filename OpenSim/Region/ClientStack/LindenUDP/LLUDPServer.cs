@@ -402,11 +402,16 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="epProxy"></param>
         protected virtual void AddNewClient(UseCircuitCodePacket useCircuit, EndPoint epSender, EndPoint epProxy)
         {            
+            m_log.DebugFormat("[CLIENT]: AddNewClient running on behalf of region \"{0}\" UUID {1} using AgentCircuitManager {2}",
+                              m_localScene.RegionInfo.RegionName, m_localScene.RegionInfo.RegionID,
+                              m_circuitManager.Tag);
+
             //Slave regions don't accept new clients
             if (m_localScene.RegionStatus != RegionStatus.SlaveScene)
             {                
                 AuthenticateResponse sessionInfo;
                 bool isNewCircuit = false;
+
                 
                 if (!m_packetServer.IsClientAuthorized(useCircuit, m_circuitManager, out sessionInfo))
                 {

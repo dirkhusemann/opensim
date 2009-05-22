@@ -2415,9 +2415,9 @@ namespace OpenSim.Region.Framework.Scenes
                 return false;
 
             m_log.InfoFormat(
-                "[CONNECTION BEGIN]: Region {0} authenticated and authorized incoming {1} agent {2} {3} {4} (circuit code {5})",
+                "[CONNECTION BEGIN]: Region {0} UUID {6} authenticated and authorized incoming {1} agent {2} {3} {4} (circuit code {5})",
                 RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname, 
-                agent.AgentID, agent.circuitcode);
+                agent.AgentID, agent.circuitcode, RegionInfo.RegionID);
 
             CapsModule.NewUserConnection(agent);
 
@@ -2447,7 +2447,8 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
-            
+
+            m_log.DebugFormat("[CONNECTION BEGIN]: region {0} using AgentCircuitManager {1}", RegionInfo.RegionName, m_authenticateHandler.Tag);
             m_authenticateHandler.AddNewCircuit(agent.circuitcode, agent);
             
             // rewrite session_id

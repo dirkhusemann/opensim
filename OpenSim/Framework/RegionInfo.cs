@@ -186,6 +186,7 @@ namespace OpenSim.Framework
         {
             return m_internalEndPoint.Port;
         }
+
     }
 
     public class RegionInfo : SimpleRegionInfo
@@ -682,6 +683,7 @@ namespace OpenSim.Framework
             if (args["proxy_url"] != null)
                 proxyUrl = args["proxy_url"].AsString();
         }
+
 
         public static RegionInfo Create(UUID regionID, string regionName, uint regX, uint regY, string externalHostName, uint httpPort, uint simPort, uint remotingPort, string serverURI)
         {
