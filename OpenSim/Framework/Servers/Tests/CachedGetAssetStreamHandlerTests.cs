@@ -21,7 +21,8 @@ namespace OpenSim.Framework.Servers.Tests
         {
             TestHelper.InMethod();
 
-            CachedGetAssetStreamHandler handler = new CachedGetAssetStreamHandler(null);
+            // CachedGetAssetStreamHandler handler = 
+            new CachedGetAssetStreamHandler(null);
         }
 
         [Test]

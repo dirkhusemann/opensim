@@ -22,7 +22,8 @@ namespace OpenSim.Framework.Servers.Tests
         {
             TestHelper.InMethod();
 
-            GetAssetStreamHandler handler = new GetAssetStreamHandler( null );
+            // GetAssetStreamHandler handler = 
+            new GetAssetStreamHandler( null );
         }
 
         [Test]
