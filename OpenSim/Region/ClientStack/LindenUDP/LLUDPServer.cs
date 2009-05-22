@@ -321,7 +321,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                 catch (ObjectDisposedException)
                 {
                     m_log.Info(
-                        "[UDPSERVER]: UDP Object disposed.   No need to worry about this if you're restarting the simulator.");
+                        "[UDPSERVER]: UDP Object disposed. No need to worry about this if you're removing or restarting the region.");
 
                     done = true;
                 }
