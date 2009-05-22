@@ -37,8 +37,6 @@ namespace OpenSim.Framework
     {
         public Dictionary<uint, AgentCircuitData> AgentCircuits = new Dictionary<uint, AgentCircuitData>();
 
-        public UUID Tag = UUID.Random();
-
         public virtual AuthenticateResponse AuthenticateSession(UUID sessionID, UUID agentID, uint circuitcode)
         {
             AgentCircuitData validcircuit = null;
