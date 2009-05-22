@@ -107,12 +107,16 @@ namespace OpenSim
 
         protected OpenSimConfigSource m_config;
 
-        public List<IClientNetworkServer> ClientServers
+        public Dictionary<Scene, IClientNetworkServer> ClientServers
         {
             get { return m_clientServers; }
         }
 
-        protected List<IClientNetworkServer> m_clientServers = new List<IClientNetworkServer>();
+        protected Dictionary<Scene, IClientNetworkServer> m_clientServers = 
+            new Dictionary<Scene, IClientNetworkServer>();
+
+        protected Dictionary<ulong, Scene> m_regionHandle2Scene = 
+            new Dictionary<ulong, Scene>();
        
         public uint HttpServerPort
         {
@@ -579,10 +583,12 @@ namespace OpenSim
             scene.EventManager.TriggerParcelPrimCountUpdate();
 
             m_sceneManager.Add(scene);
+            m_regionHandle2Scene[regionInfo.RegionHandle] = scene;
 
             if (m_autoCreateClientStack)
             {
-                m_clientServers.Add(clientServer);
+                // m_clientServers.Add(clientServer);
+                m_clientServers[scene] = clientServer;
                 clientServer.Start();
             }
 
@@ -607,6 +613,7 @@ namespace OpenSim
             {
                 controller.RemoveRegionFromModules(scene);
             }
+
         }
 
         public void RemoveRegion(Scene scene, bool cleanup)
@@ -621,6 +628,19 @@ namespace OpenSim
 
             scene.DeleteAllSceneObjects();
             m_sceneManager.CloseScene(scene);
+
+            try 
+            {
+                IClientNetworkServer cs = m_clientServers[scene];
+                cs.Stop();
+                m_clientServers.Remove(scene);
+                m_regionHandle2Scene.Remove(scene.RegionInfo.RegionHandle);
+            }
+            catch(KeyNotFoundException) 
+            {
+                m_log.DebugFormat("[OPENSIM]: RemoveRegion couldn't find scene for region \"{0}\"", 
+                                  scene.RegionInfo.RegionName);
+            }
 
             if (!cleanup)
                 return;
@@ -674,6 +694,8 @@ namespace OpenSim
                     = m_clientStackManager.CreateServer(
                         listenIP, ref port, proxyOffset, regionInfo.m_allow_alternate_ports, configSource,
                         m_assetCache, circuitManager);
+                m_log.DebugFormat("[OPENSIM]: created client server for \"{0}\"", regionInfo.RegionName);
+
             }
             else
             {
@@ -766,23 +788,21 @@ namespace OpenSim
             // Shutting down the client server
             bool foundClientServer = false;
             int clientServerElement = 0;
-            Location location = new Location(whichRegion.RegionHandle);
 
-            for (int i = 0; i < m_clientServers.Count; i++)
+            try 
             {
-                if (m_clientServers[i].HandlesRegion(location))
-                {
-                    clientServerElement = i;
-                    foundClientServer = true;
-                    break;
-                }
+                Scene s = m_regionHandle2Scene[whichRegion.RegionHandle];
+                IClientNetworkServer cs = m_clientServers[s];
+                cs.Stop();
+                m_clientServers.Remove(s);
+                m_regionHandle2Scene.Remove(whichRegion.RegionHandle);
+            }
+            catch(KeyNotFoundException)
+            {
+                m_log.DebugFormat("[OPENSIM]: handleRestartRegion couldn't find scene or RegionHandle for region \"{0}\"", 
+                                  whichRegion.RegionName);
             }
 
-            if (foundClientServer)
-            {
-                m_clientServers[clientServerElement].Server.Close();
-                m_clientServers.RemoveAt(clientServerElement);
-            }
             IScene scene;
             CreateRegion(whichRegion, true, out scene);
         }
