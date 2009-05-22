@@ -266,7 +266,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                 //m_ScriptSponsor = scriptSponsor;
 
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 // m_log.ErrorFormat("[Script] Error loading assembly {0}\n"+e.ToString(), assembly);
             }
@@ -283,7 +283,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                 part.SetScriptEvents(m_ItemID,
                                      (int)m_Script.GetStateEventFlags(State));
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 // m_log.Error("[Script] Error loading script instance\n"+e.ToString());
                 return;
@@ -350,7 +350,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                         // m_log.Error("[Script] Unable to load script state: Memory limit exceeded");
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
                     // m_log.ErrorFormat("[Script] Unable to load script state from xml: {0}\n"+e.ToString(), xml);
                 }
@@ -455,10 +455,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
         public void VarDump(Dictionary<string, object> vars)
         {
             // m_log.Info("Variable dump for script "+ m_ItemID.ToString());
-            // foreach (KeyValuePair<string, object> v in vars)
-            // {
+            foreach (KeyValuePair<string, object> v in vars)
+            {
                 // m_log.Info("Variable: "+v.Key+" = "+v.Value.ToString());
-            // }
+            }
         }
 
         public void Start()
@@ -727,18 +727,15 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                                                            part.AbsolutePosition,
                                                            part.Name, part.UUID, false);
                                 }
-                                catch (Exception)
+                                catch (Exception e2) // LEGIT: User Scripting
                                 {
-                                }
-                                // catch (Exception e2) // LEGIT: User Scripting
-                                // {
                                     // m_log.Error("[SCRIPT]: "+
                                       //           "Error displaying error in-world: " +
                                         //         e2.ToString());
                                  //    m_log.Error("[SCRIPT]: " +
                                    //              "Errormessage: Error compiling script:\r\n" +
                                      //            e.ToString());
-                                // }
+                                }
                             }
                             else if ((e is TargetInvocationException) && (e.InnerException is SelfDeleteException))
                             {
@@ -893,7 +890,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Instance
                     fs.Write(buf, 0, buf.Length);
                     fs.Close();
                 }
-                catch(Exception)
+                catch(Exception e)
                 {
                     // m_log.Error("Unable to save xml\n"+e.ToString());
                 }

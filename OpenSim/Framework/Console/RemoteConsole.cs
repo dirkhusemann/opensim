@@ -43,8 +43,8 @@ namespace OpenSim.Framework.Console
     {
 //        private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
 
-        // private IHttpServer m_Server = null;
-        // private IConfigSource m_Config = null;
+        private IHttpServer m_Server = null;
+        private IConfigSource m_Config = null;
 
         public RemoteConsole(string defaultPrompt) : base(defaultPrompt)
         {
@@ -52,12 +52,12 @@ namespace OpenSim.Framework.Console
 
         public void ReadConfig(IConfigSource config)
         {
-            // m_Config = config;
+            m_Config = config;
         }
 
         public void SetServer(IHttpServer server)
         {
-            // m_Server = server;
+            m_Server = server;
         }
 
         public override void Output(string text)
