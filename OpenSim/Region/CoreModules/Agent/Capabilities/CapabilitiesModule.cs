@@ -38,7 +38,7 @@ using Caps=OpenSim.Framework.Communications.Capabilities.Caps;
 
 namespace OpenSim.Region.CoreModules.Agent.Capabilities
 {
-    public class CapabilitiesModule : IRegionModule, ICapabilitiesModule
+    public class CapabilitiesModule : INonSharedRegionModule, ICapabilitiesModule
     { 
         private static readonly ILog m_log = LogManager.GetLogger(MethodBase.GetCurrentMethod().DeclaringType);
         
@@ -53,16 +53,33 @@ namespace OpenSim.Region.CoreModules.Agent.Capabilities
         protected Dictionary<UUID, Dictionary<ulong, string>> childrenSeeds 
             = new Dictionary<UUID, Dictionary<ulong, string>>();        
         
-        public void Initialise(Scene scene, IConfigSource source)
+        public void Initialise(IConfigSource source)
+        {
+        }
+
+        public void AddRegion(Scene scene)
         {
             m_scene = scene;
             m_scene.RegisterModuleInterface<ICapabilitiesModule>(this);
         }
+
+        public void RegionLoaded(Scene scene)
+        {
+        }
+
+        public void RemoveRegion(Scene scene)
+        {
+            m_scene.UnregisterModuleInterface<ICapabilitiesModule>(this);
+        }
         
         public void PostInitialise() {}
+
         public void Close() {}
-        public string Name { get { return "Capabilities Module"; } }
-        public bool IsSharedModule { get { return false; } }
+
+        public string Name 
+        { 
+            get { return "Capabilities Module"; } 
+        }
 
         public void AddCapsHandler(UUID agentId)
         {
@@ -84,11 +101,12 @@ namespace OpenSim.Region.CoreModules.Agent.Capabilities
                 //return;
             }
 
-            Caps caps
-                = new Caps(
-                    m_scene.CommsManager.AssetCache, m_scene.CommsManager.HttpServer, m_scene.RegionInfo.ExternalHostName, 
-                    m_scene.CommsManager.HttpServer.Port,
-                    capsObjectPath, agentId, m_scene.DumpAssetsToFile, m_scene.RegionInfo.RegionName);
+            Caps caps = new Caps(m_scene.CommsManager.AssetCache, 
+                                 m_scene.CommsManager.HttpServer, 
+                                 m_scene.RegionInfo.ExternalHostName, 
+                                 m_scene.CommsManager.HttpServer.Port,
+                                 capsObjectPath, agentId, 
+                                 m_scene.DumpAssetsToFile, m_scene.RegionInfo.RegionName);
             
             caps.RegisterHandlers();
 
