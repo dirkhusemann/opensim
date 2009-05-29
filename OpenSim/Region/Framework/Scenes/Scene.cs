@@ -153,7 +153,7 @@ namespace OpenSim.Region.Framework.Scenes
         {
             get { return m_capsModule; }
         }
-        
+
         protected override IConfigSource GetConfig()
         {
             return m_config;
@@ -897,17 +897,17 @@ namespace OpenSim.Region.Framework.Scenes
                         if (m_updateEntitiesThread == null)
                         {
                             m_updateEntitiesThread = new Thread(m_sceneGraph.UpdateEntities);
-                            
+
                             ThreadTracker.Add(m_updateEntitiesThread);
                         }
 
                         if (m_updateEntitiesThread.ThreadState == ThreadState.Stopped)
                             m_updateEntitiesThread.Start();
                         */
-                        
+
                         m_sceneGraph.UpdateEntities();
                     }
-                        
+
 
                     // run through entities that have scheduled themselves for
                     // updates looking for updates(faster)
@@ -935,7 +935,7 @@ namespace OpenSim.Region.Framework.Scenes
 
                         if (m_frame % m_update_land == 0)
                             UpdateLand();
-                        
+
                         otherMS = Environment.TickCount - otherMS;
                         // if (m_frame%m_update_avatars == 0)
                         //   UpdateInWorldTime();
@@ -1207,8 +1207,8 @@ namespace OpenSim.Region.Framework.Scenes
             if (data != null)
             {
                 IWorldMapModule mapModule = RequestModuleInterface<IWorldMapModule>();
-                                
-                if (mapModule != null)    
+
+                if (mapModule != null)
                     mapModule.LazySaveGeneratedMaptile(data, temporary);
             }
         }
@@ -1389,7 +1389,7 @@ namespace OpenSim.Region.Framework.Scenes
         /// <summary>
         /// Add an object into the scene that has come from storage
         /// </summary>
-        /// 
+        ///
         /// <param name="sceneObject"></param>
         /// <param name="attachToBackup">
         /// If true, changes to the object will be reflected in its persisted data
@@ -1778,7 +1778,7 @@ namespace OpenSim.Region.Framework.Scenes
                 uint attPt = (uint)sp.Appearance.GetAttachpoint(itemID);
                 m_sceneGraph.RezSingleAttachment(sp.ControllingClient, itemID, attPt);
             }
-            
+
             return false;
         }
 
@@ -1851,7 +1851,7 @@ namespace OpenSim.Region.Framework.Scenes
                         RootPrim.RemFlag(PrimFlags.TemporaryOnRez);
                         RootPrim.AddFlag(PrimFlags.TemporaryOnRez);
                     }
-                    
+
                 }
                 else
                 {
@@ -1885,10 +1885,10 @@ namespace OpenSim.Region.Framework.Scenes
             if (m_restorePresences.ContainsKey(client.AgentId))
             {
                 m_log.DebugFormat("[SCENE]: Restoring agent {0} {1} in {2}", client.Name, client.AgentId, RegionInfo.RegionName);
-                
+
                 presence = m_restorePresences[client.AgentId];
                 m_restorePresences.Remove(client.AgentId);
-                
+
                 // This is one of two paths to create avatars that are
                 // used.  This tends to get called more in standalone
                 // than grid, not really sure why, but as such needs
@@ -1896,11 +1896,11 @@ namespace OpenSim.Region.Framework.Scenes
                 AvatarAppearance appearance = null;
                 GetAvatarAppearance(client, out appearance);
                 presence.Appearance = appearance;
-                
+
                 presence.initializeScenePresence(client, RegionInfo, this);
-                
+
                 m_sceneGraph.AddScenePresence(presence);
-                
+
                 lock (m_restorePresences)
                 {
                     Monitor.PulseAll(m_restorePresences);
@@ -1911,9 +1911,9 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.DebugFormat(
                     "[SCENE]: Adding new child agent for {0} in {1}",
                     client.Name, RegionInfo.RegionName);
-                
+
                 CommsManager.UserProfileCacheService.AddNewUser(client.AgentId);
-                
+
                 CreateAndAddScenePresence(client);
             }
 
@@ -1960,7 +1960,7 @@ namespace OpenSim.Region.Framework.Scenes
             client.OnObjectDuplicate += m_sceneGraph.DuplicateObject;
             client.OnObjectDuplicateOnRay += doObjectDuplicateOnRay;
             client.OnUpdatePrimFlags += m_sceneGraph.UpdatePrimFlags;
-            client.OnRequestObjectPropertiesFamily += m_sceneGraph.RequestObjectPropertiesFamily;           
+            client.OnRequestObjectPropertiesFamily += m_sceneGraph.RequestObjectPropertiesFamily;
             client.OnObjectPermissions += HandleObjectPermissionsUpdate;
             client.OnCreateNewInventoryItem += CreateNewInventoryItem;
             client.OnCreateNewInventoryFolder += HandleCreateInventoryFolder;
@@ -1999,9 +1999,9 @@ namespace OpenSim.Region.Framework.Scenes
             client.OnUnackedTerrain += TerrainUnAcked;
             client.OnObjectOwner += ObjectOwner;
 
-            IGodsModule godsModule = RequestModuleInterface<IGodsModule>();            
+            IGodsModule godsModule = RequestModuleInterface<IGodsModule>();
             client.OnGodKickUser += godsModule.KickUser;
-            client.OnRequestGodlikePowers += godsModule.RequestGodlikePowers; 
+            client.OnRequestGodlikePowers += godsModule.RequestGodlikePowers;
 
             client.OnNetworkStatsUpdate += StatsReporter.AddPacketsStats;
 
@@ -2175,7 +2175,7 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.DebugFormat("[APPEARANCE]: Appearance not found in {0}, returning default", RegionInfo.RegionName);
                 appearance = new AvatarAppearance(client.AgentId);
             }
-        
+
         }
 
         /// <summary>
@@ -2189,96 +2189,96 @@ namespace OpenSim.Region.Framework.Scenes
             if (avatar != null)
             {
                 childagentYN = avatar.IsChildAgent;
-            }
 
-            if (avatar.ParentID != 0)
-            {
-                avatar.StandUp();
-            }
-
-            try
-            {
-                m_log.DebugFormat(
-                    "[SCENE]: Removing {0} agent {1} from region {2}",
-                    (childagentYN ? "child" : "root"), agentID, RegionInfo.RegionName);
-
-                m_sceneGraph.removeUserCount(!childagentYN);
-                CapsModule.RemoveCapsHandler(agentID);
-
-                if (avatar.Scene.NeedSceneCacheClear(avatar.UUID))
+                if (avatar.ParentID != 0)
                 {
-                    CommsManager.UserProfileCacheService.RemoveUser(agentID);
+                    avatar.StandUp();
                 }
 
-                if (!avatar.IsChildAgent)
+                try
                 {
-                    m_sceneGridService.LogOffUser(agentID, RegionInfo.RegionID, RegionInfo.RegionHandle, avatar.AbsolutePosition, avatar.Lookat);
-                    //List<ulong> childknownRegions = new List<ulong>();
-                    //List<ulong> ckn = avatar.KnownChildRegionHandles;
-                    //for (int i = 0; i < ckn.Count; i++)
-                    //{
-                    //    childknownRegions.Add(ckn[i]);
-                    //}
-                    List<ulong> regions = new List<ulong>(avatar.KnownChildRegionHandles);
-                    regions.Remove(RegionInfo.RegionHandle);
-                    m_sceneGridService.SendCloseChildAgentConnections(agentID, regions);
+                    m_log.DebugFormat(
+                        "[SCENE]: Removing {0} agent {1} from region {2}",
+                        (childagentYN ? "child" : "root"), agentID, RegionInfo.RegionName);
 
+                    m_sceneGraph.removeUserCount(!childagentYN);
+                    CapsModule.RemoveCapsHandler(agentID);
+
+                    if (avatar.Scene.NeedSceneCacheClear(avatar.UUID))
+                    {
+                        CommsManager.UserProfileCacheService.RemoveUser(agentID);
+                    }
+
+                    if (!avatar.IsChildAgent)
+                    {
+                        m_sceneGridService.LogOffUser(agentID, RegionInfo.RegionID, RegionInfo.RegionHandle, avatar.AbsolutePosition, avatar.Lookat);
+                        //List<ulong> childknownRegions = new List<ulong>();
+                        //List<ulong> ckn = avatar.KnownChildRegionHandles;
+                        //for (int i = 0; i < ckn.Count; i++)
+                        //{
+                        //    childknownRegions.Add(ckn[i]);
+                        //}
+                        List<ulong> regions = new List<ulong>(avatar.KnownChildRegionHandles);
+                        regions.Remove(RegionInfo.RegionHandle);
+                        m_sceneGridService.SendCloseChildAgentConnections(agentID, regions);
+
+                    }
+                    m_eventManager.TriggerClientClosed(agentID);
                 }
-                m_eventManager.TriggerClientClosed(agentID);
-            }
-            catch (NullReferenceException)
-            {
-                // We don't know which count to remove it from
-                // Avatar is already disposed :/
-            }
+                catch (NullReferenceException)
+                {
+                    // We don't know which count to remove it from
+                    // Avatar is already disposed :/
+                }
 
-            m_eventManager.TriggerOnRemovePresence(agentID);
-            Broadcast(delegate(IClientAPI client)
-                      {
-                          try
+                m_eventManager.TriggerOnRemovePresence(agentID);
+                Broadcast(delegate(IClientAPI client)
                           {
-                              client.SendKillObject(avatar.RegionHandle, avatar.LocalId);
-                          }
-                          catch (NullReferenceException)
-                          {
-                              //We can safely ignore null reference exceptions.  It means the avatar are dead and cleaned up anyway.
-                          }
-                      });
+                              try
+                              {
+                                  client.SendKillObject(avatar.RegionHandle, avatar.LocalId);
+                              }
+                              catch (NullReferenceException)
+                              {
+                                  //We can safely ignore null reference exceptions.  It means the avatar are dead and cleaned up anyway.
+                              }
+                          });
 
-            ForEachScenePresence(
-                delegate(ScenePresence presence) { presence.CoarseLocationChange(); });
+                ForEachScenePresence(
+                    delegate(ScenePresence presence) { presence.CoarseLocationChange(); });
 
-            IAgentAssetTransactions agentTransactions = this.RequestModuleInterface<IAgentAssetTransactions>();
-            if (agentTransactions != null)
-            {
-                agentTransactions.RemoveAgentAssetTransactions(agentID);
+                IAgentAssetTransactions agentTransactions = this.RequestModuleInterface<IAgentAssetTransactions>();
+                if (agentTransactions != null)
+                {
+                    agentTransactions.RemoveAgentAssetTransactions(agentID);
+                }
+
+                m_sceneGraph.RemoveScenePresence(agentID);
+
+                try
+                {
+                    avatar.Close();
+                }
+                catch (NullReferenceException)
+                {
+                    //We can safely ignore null reference exceptions.  It means the avatar are dead and cleaned up anyway.
+                }
+                catch (Exception e)
+                {
+                    m_log.Error("[SCENE] Scene.cs:RemoveClient exception: " + e.ToString());
+                }
+
+                // Remove client agent from profile, so new logins will work
+                if (!childagentYN)
+                {
+                    m_sceneGridService.ClearUserAgent(agentID);
+                }
+
+                m_authenticateHandler.RemoveCircuit(avatar.ControllingClient.CircuitCode);
+
+                //m_log.InfoFormat("[SCENE] Memory pre  GC {0}", System.GC.GetTotalMemory(false));
+                //m_log.InfoFormat("[SCENE] Memory post GC {0}", System.GC.GetTotalMemory(true));
             }
-
-            m_sceneGraph.RemoveScenePresence(agentID);
-
-            try
-            {
-                avatar.Close();
-            }
-            catch (NullReferenceException)
-            {
-                //We can safely ignore null reference exceptions.  It means the avatar are dead and cleaned up anyway.
-            }
-            catch (Exception e)
-            {
-                m_log.Error("[SCENE] Scene.cs:RemoveClient exception: " + e.ToString());
-            }
-
-            // Remove client agent from profile, so new logins will work
-            if (!childagentYN)
-            {
-                m_sceneGridService.ClearUserAgent(agentID);
-            }
-
-            m_authenticateHandler.RemoveCircuit(avatar.ControllingClient.CircuitCode);
-
-            //m_log.InfoFormat("[SCENE] Memory pre  GC {0}", System.GC.GetTotalMemory(false));
-            //m_log.InfoFormat("[SCENE] Memory post GC {0}", System.GC.GetTotalMemory(true));
         }
 
         public void HandleRemoveKnownRegionsFromAvatar(UUID avatarID, List<ulong> regionslst)
@@ -2404,7 +2404,7 @@ namespace OpenSim.Region.Framework.Scenes
             // Don't disable this log message - it's too helpful
             m_log.InfoFormat(
                 "[CONNECTION BEGIN]: Region {0} told of incoming {1} agent {2} {3} {4} (circuit code {5})",
-                RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname, 
+                RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname,
                 agent.AgentID, agent.circuitcode);
 
             reason = String.Empty;
@@ -2416,7 +2416,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             m_log.InfoFormat(
                 "[CONNECTION BEGIN]: Region {0} authenticated and authorized incoming {1} agent {2} {3} {4} (circuit code {5})",
-                RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname, 
+                RegionInfo.RegionName, (agent.child ? "child" : "root"), agent.firstname, agent.lastname,
                 agent.AgentID, agent.circuitcode);
 
             CapsModule.NewUserConnection(agent);
@@ -2427,14 +2427,14 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.DebugFormat(
                     "[SCENE]: Adjusting known seeds for existing agent {0} in {1}",
                     agent.AgentID, RegionInfo.RegionName);
-                
+
                 sp.AdjustKnownSeeds();
-                
+
                 return true;
             }
-            
+
             CapsModule.AddCapsHandler(agent.AgentID);
-            
+
             if (!agent.child)
             {
                 // Honor parcel landing type and position.
@@ -2447,9 +2447,9 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                 }
             }
-            
+
             m_authenticateHandler.AddNewCircuit(agent.circuitcode, agent);
-            
+
             // rewrite session_id
             CachedUserInfo userinfo = CommsManager.UserProfileCacheService.GetUserDetails(agent.AgentID);
             if (userinfo != null)
@@ -2461,7 +2461,7 @@ namespace OpenSim.Region.Framework.Scenes
                 m_log.WarnFormat(
                     "[CONNECTION BEGIN]: We couldn't find a User Info record for {0}.  This is usually an indication that the UUID we're looking up is invalid", agent.AgentID);
             }
-            
+
             return true;
         }
 
@@ -2471,7 +2471,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             bool result = CommsManager.UserService.VerifySession(agent.AgentID, agent.SessionID);
             m_log.Debug("[CONNECTION BEGIN]: User authentication returned " + result);
-            if (!result) 
+            if (!result)
                 reason = String.Format("Failed to authenticate user {0} {1}, access denied.", agent.firstname, agent.lastname);
 
             return result;
@@ -2483,7 +2483,7 @@ namespace OpenSim.Region.Framework.Scenes
 
             if (!m_strictAccessControl) return true;
             if (Permissions.IsGod(agent.AgentID)) return true;
-            
+
 
             if (m_regInfo.EstateSettings.IsBanned(agent.AgentID))
             {
@@ -2494,12 +2494,12 @@ namespace OpenSim.Region.Framework.Scenes
                 return false;
             }
 
-            if (!m_regInfo.EstateSettings.PublicAccess && 
+            if (!m_regInfo.EstateSettings.PublicAccess &&
                 !m_regInfo.EstateSettings.HasAccess(agent.AgentID))
             {
                 m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the estate",
                                  agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
-                reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
+                reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.",
                                        RegionInfo.RegionName);
                 return false;
             }
@@ -2516,7 +2516,7 @@ namespace OpenSim.Region.Framework.Scenes
             //         {
             //             m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user has been banned from land",
             //                              agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
-            //             reason = String.Format("Denied access to private region {0}: You are banned from that region.", 
+            //             reason = String.Format("Denied access to private region {0}: You are banned from that region.",
             //                                    RegionInfo.RegionName);
             //             return false;
             //         }
@@ -2525,7 +2525,7 @@ namespace OpenSim.Region.Framework.Scenes
             //         {
             //             m_log.WarnFormat("[CONNECTION BEGIN]: Denied access to: {0} ({1} {2}) at {3} because the user does not have access to the region",
             //                              agent.AgentID, agent.firstname, agent.lastname, RegionInfo.RegionName);
-            //             reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.", 
+            //             reason = String.Format("Denied access to private region {0}: You are not on the access list for that region.",
             //                                    RegionInfo.RegionName);
             //             return false;
             //         }
@@ -2867,7 +2867,7 @@ namespace OpenSim.Region.Framework.Scenes
         #endregion
 
         #region Other Methods
-        
+
         public void SetObjectCapacity(int objects)
         {
             // Region specific config overrides global
@@ -2881,7 +2881,7 @@ namespace OpenSim.Region.Framework.Scenes
             }
             objectCapacity = objects;
         }
-        
+
         public List<FriendListItem> GetFriendList(string id)
         {
             UUID avatarID;
@@ -2980,7 +2980,7 @@ namespace OpenSim.Region.Framework.Scenes
         public override void Show(string[] showParams)
         {
             base.Show(showParams);
-            
+
             switch (showParams[0])
             {
                 case "users":
@@ -2999,9 +2999,9 @@ namespace OpenSim.Region.Framework.Scenes
                                           "Unknown",
                                           RegionInfo.RegionName);
                     }
-                
+
                     break;
-            }           
+            }
         }
 
         #region Script Handling Methods
@@ -3061,8 +3061,8 @@ namespace OpenSim.Region.Framework.Scenes
                     }
                     else if ((parcel.landData.Flags & (uint)Parcel.ParcelFlags.AllowGroupScripts) != 0)
                     {
-                        if (part.OwnerID == parcel.landData.OwnerID 
-                            || (parcel.landData.IsGroupOwned && part.GroupID == parcel.landData.GroupID) 
+                        if (part.OwnerID == parcel.landData.OwnerID
+                            || (parcel.landData.IsGroupOwned && part.GroupID == parcel.landData.GroupID)
                             || Permissions.IsGod(part.OwnerID))
                         {
                             return true;
