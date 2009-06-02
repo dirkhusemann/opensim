@@ -350,7 +350,10 @@ namespace OpenSim.Region.CoreModules.Scripting.DynamicTexture
 
 				part.UpdateTexture(tmptex);
 
-                scene.CommsManager.AssetCache.ExpireAsset(oldID);
+                if(Face == ALL_SIDES)
+                {
+                    scene.CommsManager.AssetCache.ExpireAsset(oldID);
+                }
 
             }
 
