@@ -624,6 +624,8 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // If an access specification was provided, use it.
                     // Otherwise accept the default.
                     newscene.RegionInfo.EstateSettings.PublicAccess = getBoolean(requestData, "public", m_publicAccess);
+                    if (persist)
+                        newscene.RegionInfo.EstateSettings.Save();
 
                     // enable voice on newly created region if
                     // requested by either the XmlRpc request or the
@@ -783,6 +785,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     // Modify access 
                     scene.RegionInfo.EstateSettings.PublicAccess = 
                         getBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
+                    scene.RegionInfo.EstateSettings.Save();
 
                     if (requestData.ContainsKey("enable_voice"))
                     {
