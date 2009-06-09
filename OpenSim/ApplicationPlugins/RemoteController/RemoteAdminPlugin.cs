@@ -636,6 +636,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                         {
                             parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
                             parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
+                            ((Scene)newscene).LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);                    
                         }
                     }
 
@@ -800,6 +801,7 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                                 parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
                                 parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
                             }
+                            scene.LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);
                         }
                     }
 
