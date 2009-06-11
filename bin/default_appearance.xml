@@ -34,7 +34,7 @@
 <Asset>600234ee-b08c-431d-a499-014f12248e4e</Asset>
 </Item>
 </Ensemble>
-<Ensemble name="Male Business">
+<Ensemble name="Business Male">
 <Item name="Jacket" desc="" creator="00000000-0000-0000-0000-000000000000" creationdate="1241115648" invtype="18" assettype="5" flags="8" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>6d2be7dc-25c0-46b8-9e48-f93391eabcbd</Asset>
@@ -72,7 +72,7 @@
 <Asset>66280c1c-9e19-435e-9868-ba70bcb1d9e8</Asset>
 </Item>
 </Ensemble>
-<Ensemble name="Male Casual">
+<Ensemble name="Casual Male">
 <Item name="Hawaiian 3" desc="" creator="00000000-0000-0000-0000-000000000000" creationdate="1241115648" invtype="18" assettype="5" flags="4" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>5f4c4860-3f3d-46ec-a6a5-c592253c9434</Asset>
@@ -118,7 +118,7 @@
 <Asset>66280c1c-9e19-435e-9868-ba70bcb1d9e8</Asset>
 </Item>
 </Ensemble>
-<Ensemble name="Female Business">
+<Ensemble name="Business Female">
 <Item name="Jumper Jacket" desc="" creator="00000000-0000-0000-0000-000000000000" creationdate="1241116362" invtype="18" assettype="5" flags="8" wear="true">
 <Permissions current="7FFFFFFF" next="8E000" group="0" everyone="0" base="7FFFFFFF"/>
 <Asset>bb36989f-0b6c-4ab5-a8ff-38fc6c5f9fa3</Asset>
