@@ -11,8 +11,10 @@ BASECOMMIT = ac863415d07ca69b320ef25a00596f4cd22dd75e
 BASEREV    = 9547
 
 FILTER	  = ${SRC}/ST3D-filter
-PATCHSET  = ${HOME}/Projects/sametime3d-patchset/sametime3d.patch
-PATCHBASE = ${HOME}/Projects/sametime3d-patchset/sametime3d.base
+PATCHDIR  = ${HOME}/Projects/sametime3d-patchset
+PATCHSET  = ${PATCHDIR}/sametime3d.patch
+PATCHBASE = ${PATCHDIR}/sametime3d.base
+PATCHMD5  = ${PATCHDIR}/sametime3d.md5
 
 debug:
 	@echo "GITBRANCH " ${GITBRANCH}
@@ -49,4 +51,5 @@ patchset:
 	@cp ${TMP}/ST3D-patchset ${PATCHSET}
 	@rm -rf ${TMP}
 	@echo ${BASEREV} > ${PATCHBASE}
+	@(cd ${PATCHDIR}; find opensim -type f -a -not -regex ".*\.hgignore" -a -not -regex ".*\.svn.*" -exec md5sum {} \; > ${PATCHMD5})
 	@echo "updated " ${PATCHSET}
