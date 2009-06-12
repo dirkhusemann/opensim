@@ -1,0 +1,5 @@
+Makefile.local
+OpenSim/Region/OptionalModules/Avatar/Voice/VivoxVoice/VivoxVoiceModule.cs
+bin/default_appearance.xml
+ST3D-baseline
+ST3D-filter

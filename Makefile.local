@@ -5,6 +5,12 @@ DST	  = ${HOME}/Projects/st3d-releases/opensim
 CLEAN	  = $(shell git status > /dev/null 2>&1 || echo "clean")
 TMP	  := $(shell mktemp /tmp/opensim-deploy-XXXXXXXXXX)
 
+# patch set generation
+PYPAFIL	  = pypafil.py
+BASEREV	  = ac863415d07ca69b320ef25a00596f4cd22dd75e
+FILTER	  = ${SRC}/ST3D-filter
+PATCHSET  = ${HOME}/Projects/sametime3d-patchset/sametime3d.patch
+
 debug:
 	@echo "GITBRANCH " ${GITBRANCH}
 	@echo "SRC       " ${SRC}
@@ -31,3 +37,12 @@ ifeq ($(CLEAN),clean)
 else
 	@echo ${SRC} "has modified files, commit first"
 endif
+
+patchset:
+	-@rm -rf ${TMP}
+	@mkdir -p ${TMP}
+	git diff ${BASEREV} > ${TMP}/ST3D-patchset
+	${PYPAFIL} --filter ${FILTER} ${TMP}/ST3D-patchset
+	@cp ${TMP}/ST3D-patchset ${PATCHSET}
+	@rm -rf ${TMP}
+	@echo "updated " ${PATCHSET}

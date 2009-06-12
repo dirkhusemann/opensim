@@ -1,0 +1,12 @@
+commit ac863415d07ca69b320ef25a00596f4cd22dd75e
+Author: melanie <melanie@e9a5c24e-b13f-11db-933b-17aa6df88f97>
+Date:   Thu May 14 06:18:18 2009 +0000
+
+    Move the connector for the new asset server to a connectors project. Inherit
+    the region module version from this. This enables inter-server connections
+    to reuse connetor code from region modules.
+
+
+    git-svn-id: svn+ssh://opensimulator.org/var/svn/opensim/trunk@9547 e9a5c24e-b13f-11db-933b-17aa6df88f97
+
+
