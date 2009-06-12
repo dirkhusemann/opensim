@@ -347,9 +347,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         // convert a LSL_Rotation to a Quaternion
         private Quaternion Rot2Quaternion(LSL_Rotation r)
         {
-            Quaternion q = new Quaternion((float)r.x, (float)r.y, (float)r.z, (float)r.s);
-            q.Normalize();
-            return q;
+            return new Quaternion((float)r.x, (float)r.y, (float)r.z, (float)r.s);
         }
 
         //These are the implementations of the various ll-functions used by the LSL scripts.
