@@ -1,7 +1,7 @@
 # local OpenSim Makefile extensions
 GITBRANCH = lotus3d
 SRC	  = $(shell pwd)
-DST	  = ${HOME}/Projects/st3d-releases/opensim
+DST	  = ${HOME}/Projects/st3d/st3d-releases/opensim
 CLEAN	  = $(shell git status > /dev/null 2>&1 || echo "clean")
 TMP	  := $(shell mktemp /tmp/opensim-deploy-XXXXXXXXXX)
 
@@ -11,7 +11,7 @@ BASECOMMIT = ac863415d07ca69b320ef25a00596f4cd22dd75e
 BASEREV    = 9547
 
 FILTER	  = ${SRC}/ST3D-filter
-PATCHDIR  = ${HOME}/Projects/sametime3d-patchset
+PATCHDIR  = ${HOME}/Projects/st3d/sametime3d-patchset
 PATCHSET  = ${PATCHDIR}/sametime3d.patch
 PATCHBASE = ${PATCHDIR}/sametime3d.base
 PATCHMD5  = ${PATCHDIR}/sametime3d.md5
