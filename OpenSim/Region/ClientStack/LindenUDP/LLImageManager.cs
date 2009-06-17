@@ -95,10 +95,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                     J2KImage imgrequest = m_imagestore[newRequest.RequestedAssetID];
 
-                    if (newRequest.requestSequence > imgrequest.m_lastSequence)
-                    {
-                        imgrequest.m_lastSequence = newRequest.requestSequence;
+                    // if (newRequest.requestSequence > imgrequest.m_lastSequence)
+                    // {
+                        if (newRequest.requestSequence > imgrequest.m_lastSequence)
+                            imgrequest.m_lastSequence = newRequest.requestSequence;
 
+                        // This does nothing here anyway, because -1 is most often
+                        // accompanied by a packet # of zero. So we will have already
+                        // excluded the packet on that basis.
                         //First of all, is this being killed?
                         //if (newRequest.Priority == 0.0f && newRequest.DiscardLevel == -1)
                         //{
@@ -108,34 +112,43 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         //{
 
 
-                            //Check the priority
-                            double priority = imgrequest.m_requestedPriority;
-                            if (priority != newRequest.Priority)
+                            if (newRequest.requestSequence == 0 && 
+                                newRequest.DiscardLevel == -1 &&
+                                newRequest.Priority == 0.0)
                             {
-                                //Remove the old priority
-                                m_priorities.Remove(imgrequest.m_designatedPriorityKey);
-                                //Assign a new unique priority
-                                imgrequest.m_requestedPriority = newRequest.Priority;
-                                imgrequest.m_designatedPriorityKey = AssignPriority(newRequest.RequestedAssetID, newRequest.Priority);
+                                imgrequest.m_completedSendAtCurrentDiscardLevel = true;
                             }
+                            else if(newRequest.DiscardLevel != -1)
+                            {
+                                //Check the priority
+                                double priority = imgrequest.m_requestedPriority;
+                                if (priority != newRequest.Priority)
+                                {
+                                    //Remove the old priority
+                                    m_priorities.Remove(imgrequest.m_designatedPriorityKey);
+                                    //Assign a new unique priority
+                                    imgrequest.m_requestedPriority = newRequest.Priority;
+                                    imgrequest.m_designatedPriorityKey = AssignPriority(newRequest.RequestedAssetID, newRequest.Priority);
+                                }
 
-                            //Update the requested discard level
-                            imgrequest.m_requestedDiscardLevel = newRequest.DiscardLevel;
+                                //Update the requested discard level
+                                imgrequest.m_requestedDiscardLevel = newRequest.DiscardLevel;
 
-                            //Update the requested packet number
-                            imgrequest.m_requestedPacketNumber = newRequest.PacketNumber;
+                                //Update the requested packet number
+                                imgrequest.m_requestedPacketNumber = newRequest.PacketNumber;
 
-                             //Check if this will create an outstanding texture request
-                             bool activated = imgrequest.m_completedSendAtCurrentDiscardLevel;
-                             //Run an update
-                             imgrequest.RunUpdate();
-                             if (activated && !imgrequest.m_completedSendAtCurrentDiscardLevel && imgrequest.m_decoded)
-                             {
-                                 m_outstandingtextures++;
+                                 //Check if this will create an outstanding texture request
+                                 bool activated = imgrequest.m_completedSendAtCurrentDiscardLevel;
+                                 //Run an update
+                                 imgrequest.RunUpdate();
+                                 if (activated && !imgrequest.m_completedSendAtCurrentDiscardLevel && imgrequest.m_decoded)
+                                 {
+                                     m_outstandingtextures++;
+                                 }
                              }
 
                         //}
-                    }
+                    // }
                 }
                 else
                 {
