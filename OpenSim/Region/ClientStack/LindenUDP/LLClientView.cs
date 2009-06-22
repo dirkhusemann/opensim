@@ -79,6 +79,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         private List<ObjectUpdatePacket.ObjectDataBlock> m_primFullUpdates =
                 new List<ObjectUpdatePacket.ObjectDataBlock>();
 
+        private Timer m_textureUpdateTimer;
+
         private bool m_clientBlocked;
 
         private int m_probesWithNoIngressPackets;
@@ -138,6 +140,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         protected int m_primTerseUpdateRate = 10;
         protected int m_primFullUpdateRate = 14;
+
+        protected int m_textureUpdateRate  = 100;
+        protected int m_textureSendLimit   = 3;
+        protected int m_textureDataLimit   = 3;
+        protected int m_textureReqs        = 0;
 
         protected int m_packetMTU = 1400;
 
@@ -541,6 +548,15 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     m_primFullUpdateRate = clientConfig.GetInt("FullUpdateRate",
                                                                m_primFullUpdateRate);
 
+                    m_textureUpdateRate = clientConfig.GetInt("TextureUpdateRate",
+                                                               m_textureUpdateRate);
+
+                    m_textureSendLimit = clientConfig.GetInt("TextureSendLimit",
+                                                               m_textureSendLimit);
+
+                    m_textureDataLimit = clientConfig.GetInt("TextureDataLimit",
+                                                               m_textureDataLimit);
+
                     m_packetMTU = clientConfig.GetInt("PacketMTU", 1400);
                 }
             }
@@ -574,6 +590,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_avatarTerseUpdateTimer.Stop();
             m_primTerseUpdateTimer.Stop();
             m_primFullUpdateTimer.Stop();
+            m_textureUpdateTimer.Stop();
 
             // This is just to give the client a reasonable chance of
             // flushing out all it's packets.  There should probably
@@ -657,6 +674,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_avatarTerseUpdateTimer.Stop();
             m_primTerseUpdateTimer.Stop();
             m_primFullUpdateTimer.Stop();
+            m_textureUpdateTimer.Stop();
         }
 
         public void Restart()
@@ -679,6 +697,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_primFullUpdateTimer = new Timer(m_primFullUpdateRate);
             m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
             m_primFullUpdateTimer.AutoReset = false;
+
+            m_textureUpdateTimer = new Timer(m_textureUpdateRate);
+            m_textureUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessTextureUpdates);
+            m_textureUpdateTimer.AutoReset = false;
+
         }
 
         public void Terminate()
@@ -911,6 +934,11 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_primFullUpdateTimer = new Timer(m_primFullUpdateRate);
             m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
             m_primFullUpdateTimer.AutoReset = false;
+
+            m_textureUpdateTimer = new Timer(m_textureUpdateRate);
+            m_textureUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessTextureUpdates);
+            m_textureUpdateTimer.AutoReset = false;
+
             m_scene.AddNewClient(this);
 
             RefreshGroupMembership();
@@ -980,6 +1008,26 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     m_log.ErrorFormat("[CLIENT]: Further exception thrown on forced session logout.  {0}", e2);
                 }
             }
+        }
+
+        protected virtual void TextureRequestHandler()
+        {
+            m_log.DebugFormat("[TRH] Thread started");
+            while(m_imageManager != null)
+            {
+                try
+                {
+                    while(m_imageManager != null)
+                    {
+                    }
+                }
+                catch(Exception e)
+                {
+                    m_log.WarnFormat("[TRH] Exception in handler loop: {0}", e.Message);
+                    m_log.Debug(e);
+                }
+            }
+            m_log.DebugFormat("[TRH] Thread terminated");
         }
 
         # endregion
@@ -3019,6 +3067,21 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             }
         }
 
+        // Unlike the other timers, this one is only started after
+        // the first request is seen.
+
+        void ProcessTextureUpdates(object sender, ElapsedEventArgs e)
+        {
+            if(m_imageManager != null)
+            {
+                if(m_imageManager.ProcessImageQueue(m_textureSendLimit, 
+                                                    m_textureDataLimit))
+                {
+                    m_textureUpdateTimer.Start();
+                }
+            }
+        }
+
         void ProcessPrimFullUpdates(object sender, ElapsedEventArgs e)
         {
             lock (m_primFullUpdates)
@@ -3224,7 +3287,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             ushort numParts, UUID ImageUUID, uint ImageSize, byte[] ImageData, byte imageCodec)
         {
             ImageDataPacket im = new ImageDataPacket();
-            im.Header.Reliable = true;
+            im.Header.Reliable = false;
             im.ImageID.Packets = numParts;
             im.ImageID.ID = ImageUUID;
 
@@ -3240,7 +3303,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public void SendImageNextPart(ushort partNumber, UUID imageUuid, byte[] imageData)
         {
             ImagePacketPacket im = new ImagePacketPacket();
-            im.Header.Reliable = true;
+            im.Header.Reliable = false;
             im.ImageID.Packet = partNumber;
             im.ImageID.ID = imageUuid;
             im.ImageData.Data = imageData;
@@ -4708,16 +4771,9 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         /// <param name="Pack">OpenMetaverse.packet</param>
         public void ProcessInPacket(Packet Pack)
         {
-            // check if we've got a local packet handler for this packet.type.   See RegisterLocalPacketHandlers()
+
             if (ProcessPacketMethod(Pack))
             {
-                //there is a handler registered that handled this packet type
-
-                // in the end, we dereference this, so we have to check if it's null
-                if (m_imageManager != null)
-                {
-                    m_imageManager.ProcessImageQueue(5);
-                }
                 return;
             }
 
@@ -5331,25 +5387,25 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
                         if(update)
                         {
-							AgentUpdateArgs arg = new AgentUpdateArgs();
-							arg.AgentID = x.AgentID;
-							arg.BodyRotation = x.BodyRotation;
-							arg.CameraAtAxis = x.CameraAtAxis;
-							arg.CameraCenter = x.CameraCenter;
-							arg.CameraLeftAxis = x.CameraLeftAxis;
-							arg.CameraUpAxis = x.CameraUpAxis;
-							arg.ControlFlags = x.ControlFlags;
-							arg.Far = x.Far;
-							arg.Flags = x.Flags;
-							arg.HeadRotation = x.HeadRotation;
-							arg.SessionID = x.SessionID;
-							arg.State = x.State;
-							handlerAgentUpdate = OnAgentUpdate;
+                            AgentUpdateArgs arg = new AgentUpdateArgs();
+                            arg.AgentID = x.AgentID;
+                            arg.BodyRotation = x.BodyRotation;
+                            arg.CameraAtAxis = x.CameraAtAxis;
+                            arg.CameraCenter = x.CameraCenter;
+                            arg.CameraLeftAxis = x.CameraLeftAxis;
+                            arg.CameraUpAxis = x.CameraUpAxis;
+                            arg.ControlFlags = x.ControlFlags;
+                            arg.Far = x.Far;
+                            arg.Flags = x.Flags;
+                            arg.HeadRotation = x.HeadRotation;
+                            arg.SessionID = x.SessionID;
+                            arg.State = x.State;
+                            handlerAgentUpdate = OnAgentUpdate;
                             lastarg = arg; // save this set of arguments for nexttime
-							if (handlerAgentUpdate != null)
-								OnAgentUpdate(this, arg);
+                            if (handlerAgentUpdate != null)
+                                OnAgentUpdate(this, arg);
 
-							handlerAgentUpdate = null;
+                            handlerAgentUpdate = null;
                         }
 
                     }
@@ -6396,6 +6452,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             if (m_imageManager != null)
                             {
                                 m_imageManager.EnqueueReq(args);
+                                m_textureUpdateTimer.Start();
                             }
                         }
                     }
@@ -9481,12 +9538,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     #endregion
             }
 
-            // in the end, we dereference this, so we have to check if it's null
-            if (m_imageManager != null )
-            {
-                m_imageManager.ProcessImageQueue(10);
-            }
             PacketPool.Instance.ReturnPacket(Pack);
+
         }
 
         private static PrimitiveBaseShape GetShapeFromAddPacket(ObjectAddPacket addPacket)
