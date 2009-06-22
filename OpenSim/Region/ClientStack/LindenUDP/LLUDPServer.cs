@@ -76,6 +76,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected IPAddress listenIP = IPAddress.Parse("0.0.0.0");
         protected IScene m_localScene;
         protected IAssetCache m_assetCache;
+        protected int m_clientSocketReceiveBuffer = 0;
 
         /// <value>
         /// Manages authentication for agent circuits
@@ -157,6 +158,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             {
                 if (config.Contains("client_throttle_multiplier"))
                     userSettings.ClientThrottleMultipler = config.GetFloat("client_throttle_multiplier"); 
+                if (config.Contains("client_socket_rcvbuf_size"))
+                    m_clientSocketReceiveBuffer = config.GetInt("client_socket_rcvbuf_size");
             }   
             
             m_log.DebugFormat("[CLIENT]: client_throttle_multiplier = {0}", userSettings.ClientThrottleMultipler);
@@ -473,6 +476,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
             ServerIncoming = new IPEndPoint(listenIP, (int)newPort);
             m_socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
+            if (0 != m_clientSocketReceiveBuffer)
+                m_socket.ReceiveBufferSize = m_clientSocketReceiveBuffer;
             m_socket.Bind(ServerIncoming);
             // Add flags to the UDP socket to prevent "Socket forcibly closed by host"
             // uint IOC_IN = 0x80000000;
