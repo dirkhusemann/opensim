@@ -4772,10 +4772,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         public void ProcessInPacket(Packet Pack)
         {
 
-            // if (ProcessPacketMethod(Pack))
-            // {
-            //     return;
-            // }
+            if (ProcessPacketMethod(Pack))
+            {
+                return;
+            }
 
             const bool m_checkPackets = true;
 
