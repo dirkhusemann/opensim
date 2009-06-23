@@ -963,7 +963,8 @@ namespace OpenSim.Region.Physics.OdePlugin
             {
                 m_log.Warn("[PHYSICS]: Got a NaN force vector in Move()");
                 m_log.Warn("[PHYSICS]: Avatar Position is non-finite!");
-                _parent_scene.RemoveCharacter(this);
+                defects.Add(this);
+                // _parent_scene.RemoveCharacter(this);
                 // destroy avatar capsule and related ODE data
                 if (Amotor != IntPtr.Zero)
                 {
