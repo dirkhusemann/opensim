@@ -1321,11 +1321,29 @@
 
     ;PacketMTU = 1400
 
-    ; The following is the configuration section for the new style gtid servers
-    ; If you don't know what this is, don't enable it. It will eat your data,
-    ; format your hard drive and make all meat in your fridge spoil.
-    ; You have been warned.
-    ; Some of this may actually work!
+    ; TextureUpdateRate (mS) determines how many times per second
+    ; texture send processing will occur. The default is 100mS.
+    ;
+    TextureUpdateRate = 100
+
+    ; TextureSendLimit determines how many different textures
+    ; will be considered on each cycle. Textures are selected
+    ; by priority. The old mechanism specified a value of 10 for
+    ; this parameter.
+    ;
+    TextureSendLimit = 10
+
+    ; TextureDataLimit determines how many packets will be sent for
+    ; each of the selected textures. Default is 5.
+    TextureDataLimit = 5
+
+
+; The following is the configuration section for the new style gtid servers
+; If you don't know what this is, don't enable it. It will eat your data,
+; format your hard drive and make all meat in your fridge spoil.
+; You have been warned.
+; Some of this may actually work!
+
 [Modules]
     ; Choose one
     ;AssetServices = "LocalAssetServicesConnector"
