@@ -43,6 +43,26 @@ else
 	@echo ${SRC} "has modified files, commit first"
 endif
 
+deploy-lotus3d-perf:
+ifeq ($(CLEAN),clean)
+	@echo "updating " ${DST}
+	git checkout lotus3d-perf
+	-@rm -rf ${TMP}
+	@mkdir -p ${TMP}
+	@(cd ${TMP}; \
+	 git clone ${SRC} opensim-deploy; \
+	 cd opensim-deploy; \
+	 make; \
+	 rm -rf ${DST}/opensim/*; \
+	 cd bin; \
+	 cp -av * ${DST}/opensim/)
+	@cd ${SRC}
+	@rm -rf ${TMP}
+	@echo "updated " ${DST}
+else
+	@echo ${SRC} "has modified files, commit first"
+endif
+
 patchset:
 	-@rm -rf ${TMP}
 	@mkdir -p ${TMP}
