@@ -194,7 +194,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
 
         }
 
-        public bool ProcessImageQueue(int count, int maxpack)
+        public bool ProcessImageQueue(int count, int maxpack, int senddelay)
         {
 
             // this can happen during Close()
@@ -258,6 +258,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     {
                         numCollected++;
                         //SendPackets will send up to ten packets per cycle
+
                         if (imagereq.SendPackets(m_client, maxpack))
                         {
                             //Send complete
@@ -293,6 +294,10 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                         if (numCollected == count)
                         {
                             break;
+                        }
+                        if(senddelay > 0)
+                        {
+                            Thread.Sleep(senddelay);
                         }
                     }
                     if (numCollected == count || m_outstandingtextures == 0)
