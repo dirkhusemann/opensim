@@ -304,7 +304,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     return;
 
                 int resent = 0;
-                int dueDate = now - m_ResendTimeout;
+                long dueDate = now - m_ResendTimeout;
 
                 List<LLQueItem> dropped = new List<LLQueItem>();
                 foreach (LLQueItem data in m_NeedAck.Values)
