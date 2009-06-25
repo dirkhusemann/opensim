@@ -79,7 +79,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         private List<ObjectUpdatePacket.ObjectDataBlock> m_primFullUpdates =
                 new List<ObjectUpdatePacket.ObjectDataBlock>();
 
-        private Timer m_textureUpdateTimer;
+        private Timer m_textureRequestTimer;
 
         private bool m_clientBlocked;
 
@@ -604,7 +604,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_avatarTerseUpdateTimer.Stop();
             m_primTerseUpdateTimer.Stop();
             m_primFullUpdateTimer.Stop();
-            m_textureUpdateTimer.Stop();
+            m_textureRequestTimer.Stop();
 
             // This is just to give the client a reasonable chance of
             // flushing out all it's packets.  There should probably
@@ -688,7 +688,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_avatarTerseUpdateTimer.Stop();
             m_primTerseUpdateTimer.Stop();
             m_primFullUpdateTimer.Stop();
-            m_textureUpdateTimer.Stop();
+            m_textureRequestTimer.Stop();
         }
 
         public void Restart()
@@ -3083,14 +3083,14 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         // Unlike the other timers, this one is only started after
         // the first request is seen.
 
-        void ProcessTextureUpdates(object sender, ElapsedEventArgs e)
+        void ProcessTextureRequests(object sender, ElapsedEventArgs e)
         {
             if(m_imageManager != null)
             {
                 if(m_imageManager.ProcessImageQueue(m_textureSendLimit, 
                                                     m_textureDataLimit))
                 {
-                    m_textureUpdateTimer.Start();
+                    m_textureRequestTimer.Start();
                 }
             }
         }
@@ -6480,7 +6480,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                             if (m_imageManager != null)
                             {
                                 m_imageManager.EnqueueReq(args);
-                                m_textureUpdateTimer.Start();
+                                m_textureRequestTimer.Start();
                             }
                         }
                     }
