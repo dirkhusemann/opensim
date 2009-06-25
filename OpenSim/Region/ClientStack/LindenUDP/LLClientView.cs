@@ -142,7 +142,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
         protected int m_primTerseUpdateRate = 10;
         protected int m_primFullUpdateRate = 14;
 
-        protected int m_textureUpdateRate  = 100;
+        protected int m_textureRequestRate  = 100;
         protected int m_textureSendLimit   = 10;
         protected int m_textureSendDelay   = 0;
         protected int m_textureDataLimit   = 5;
@@ -549,8 +549,8 @@ namespace OpenSim.Region.ClientStack.LindenUDP
                     m_primFullUpdateRate = clientConfig.GetInt("FullUpdateRate",
                                                                m_primFullUpdateRate);
 
-                    m_textureUpdateRate = clientConfig.GetInt("TextureUpdateRate",
-                                                               m_textureUpdateRate);
+                    m_textureRequestRate = clientConfig.GetInt("TextureRequestRate",
+                                                               m_textureRequestRate);
 
                     m_textureSendLimit = clientConfig.GetInt("TextureSendLimit",
                                                                m_textureSendLimit);
@@ -573,7 +573,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_log.DebugFormat("[CLIENT]  FullUpdatesPerPacket = {0}", m_primFullUpdatesPerPacket);
             m_log.DebugFormat("[CLIENT]       TerseUpdateRate = {0}", m_primTerseUpdateRate);
             m_log.DebugFormat("[CLIENT]        FullUpdateRate = {0}", m_primFullUpdateRate);
-            m_log.DebugFormat("[CLIENT]     TextureUpdateRate = {0}", m_textureUpdateRate);
+            m_log.DebugFormat("[CLIENT]     TextureUpdateRate = {0}", m_textureRequestRate);
             m_log.DebugFormat("[CLIENT]      TextureSendLimit = {0}", m_textureSendLimit);
             m_log.DebugFormat("[CLIENT]      TextureSendDelay = {0}", m_textureSendDelay);
             m_log.DebugFormat("[CLIENT]      TextureDataLimit = {0}", m_textureDataLimit);
@@ -719,7 +719,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
             m_primFullUpdateTimer.AutoReset = false;
 
-            m_textureRequestTimer = new Timer(m_textureUpdateRate);
+            m_textureRequestTimer = new Timer(m_textureRequestRate);
             m_textureRequestTimer.Elapsed += new ElapsedEventHandler(ProcessTextureRequests);
             m_textureRequestTimer.AutoReset = false;
 
@@ -956,7 +956,7 @@ namespace OpenSim.Region.ClientStack.LindenUDP
             m_primFullUpdateTimer.Elapsed += new ElapsedEventHandler(ProcessPrimFullUpdates);
             m_primFullUpdateTimer.AutoReset = false;
 
-            m_textureRequestTimer = new Timer(m_textureUpdateRate);
+            m_textureRequestTimer = new Timer(m_textureRequestRate);
             m_textureRequestTimer.Elapsed += new ElapsedEventHandler(ProcessTextureRequests);
             m_textureRequestTimer.AutoReset = false;
 
