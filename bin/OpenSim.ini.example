@@ -1324,7 +1324,7 @@
     ; TextureUpdateRate (mS) determines how many times per second
     ; texture send processing will occur. The default is 100mS.
     ;
-    TextureUpdateRate = 100
+    TextureRequestRate = 100
 
     ; TextureSendLimit determines how many different textures
     ; will be considered on each cycle. Textures are selected
