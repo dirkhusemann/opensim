@@ -107,19 +107,26 @@ namespace OpenSim.Client.Linden
             }
             else
             {
-                m_log.Info(
-                    "[LOGIN]: Authenticating " + profile.FirstName + " " + profile.SurName);
+                m_log.InfoFormat("[LOGIN]: Authenticating {0} {1}", profile.FirstName, profile.SurName);
 
-                if (!password.StartsWith("$1$"))
-                    password = "$1$" + Util.Md5Hash(password);
+                try {
+                    if (!password.StartsWith("$1$"))
+                        password = "$1$" + Util.Md5Hash(password);
 
-                password = password.Remove(0, 3); //remove $1$
-
-                string s = Util.Md5Hash(password + ":" + profile.PasswordSalt);
-
-                bool loginresult = (profile.PasswordHash.Equals(s.ToString(), StringComparison.InvariantCultureIgnoreCase)
-                            || profile.PasswordHash.Equals(password, StringComparison.InvariantCultureIgnoreCase));
-                return loginresult;
+                    password = password.Remove(0, 3); //remove $1$
+                    
+                    string s = Util.Md5Hash(password + ":" + profile.PasswordSalt);
+                    
+                    bool loginresult = (profile.PasswordHash.Equals(s.ToString(), StringComparison.InvariantCultureIgnoreCase)
+                                        || profile.PasswordHash.Equals(password, StringComparison.InvariantCultureIgnoreCase));
+                    return loginresult;
+                }
+                catch(Exception ex)
+                {
+                    m_log.InfoFormat("[LOGIN]: Authentication of {0} {1} failed: {2}", 
+                                     profile.FirstName, profile.SurName, ex);
+                    return false;
+                }
             }
         }
 
