@@ -2802,10 +2802,18 @@ namespace OpenSim.Region.Physics.OdePlugin
                                 // Move characters
                                 lock (_characters)
                                 {
+                                    List<OdeCharacter> defects = new List<OdeCharacter>();
                                     foreach (OdeCharacter actor in _characters)
                                     {
                                         if (actor != null)
-                                            actor.Move(timeStep);
+                                            actor.Move(timeStep, defects);
+                                    }
+                                    if (0 != defects.Count)
+                                    {
+                                        foreach (OdeCharacter defect in defects)
+                                        {
+                                            RemoveCharacter(defect);
+                                        }
                                     }
                                 }
 
