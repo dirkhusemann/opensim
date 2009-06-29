@@ -723,7 +723,7 @@ VALUES
 ,[elevation_1_ne] = @elevation_1_ne ,[elevation_2_ne] = @elevation_2_ne ,[elevation_1_se] = @elevation_1_se ,[elevation_2_se] = @elevation_2_se 
 ,[elevation_1_sw] = @elevation_1_sw ,[elevation_2_sw] = @elevation_2_sw ,[water_height] = @water_height ,[terrain_raise_limit] = @terrain_raise_limit 
 ,[terrain_lower_limit] = @terrain_lower_limit ,[use_estate_sun] = @use_estate_sun ,[fixed_sun] = @fixed_sun ,[sun_position] = @sun_position 
-,[covenant] = @covenant , [sunvectorx] = @sunvectorx, [sunvectory] = @sunvectory, [sunvectorz] = @sunvectorz,  [Sandbox] = @Sandbox WHERE [regionUUID] = @regionUUID";
+,[covenant] = @covenant , [sunvectorx] = @sunvectorx, [sunvectory] = @sunvectory, [sunvectorz] = @sunvectorz,  [Sandbox] = @Sandbox, [loaded_creation_datetime] = @loaded_creation_datetime, [loaded_creation_id] = @loaded_creation_id WHERE [regionUUID] = @regionUUID";
 
                 using (AutoClosingSqlCommand cmd = _Database.Query(sql))
                 {
@@ -776,13 +776,22 @@ VALUES
                                 [block_show_in_search],[agent_limit],[object_bonus],[maturity],[disable_scripts],[disable_collisions],[disable_physics],
                                 [terrain_texture_1],[terrain_texture_2],[terrain_texture_3],[terrain_texture_4],[elevation_1_nw],[elevation_2_nw],[elevation_1_ne],
                                 [elevation_2_ne],[elevation_1_se],[elevation_2_se],[elevation_1_sw],[elevation_2_sw],[water_height],[terrain_raise_limit],
+<<<<<<< HEAD
                                 [terrain_lower_limit],[use_estate_sun],[fixed_sun],[sun_position],[covenant],[sunvectorx], [sunvectory], [sunvectorz],[Sandbox]) 
+=======
+                                [terrain_lower_limit],[use_estate_sun],[fixed_sun],[sun_position],[covenant],[sunvectorx], [sunvectory], [sunvectorz],[Sandbox], [loaded_creation_datetime], [loaded_creation_id]
+ ) 
+>>>>>>> 3dc2010... From: Chris Yeoh <yeohc@au1.ibm.com>
                             VALUES
                                 (@regionUUID,@block_terraform,@block_fly,@allow_damage,@restrict_pushing,@allow_land_resell,@allow_land_join_divide,
                                 @block_show_in_search,@agent_limit,@object_bonus,@maturity,@disable_scripts,@disable_collisions,@disable_physics,
                                 @terrain_texture_1,@terrain_texture_2,@terrain_texture_3,@terrain_texture_4,@elevation_1_nw,@elevation_2_nw,@elevation_1_ne,
                                 @elevation_2_ne,@elevation_1_se,@elevation_2_se,@elevation_1_sw,@elevation_2_sw,@water_height,@terrain_raise_limit,
+<<<<<<< HEAD
                                 @terrain_lower_limit,@use_estate_sun,@fixed_sun,@sun_position,@covenant,@sunvectorx,@sunvectory, @sunvectorz, @Sandbox)";
+=======
+                                @terrain_lower_limit,@use_estate_sun,@fixed_sun,@sun_position,@covenant,@sunvectorx,@sunvectory, @sunvectorz, @Sandbox, @loaded_creation_datetime, @loaded_creation_id)";
+>>>>>>> 3dc2010... From: Chris Yeoh <yeohc@au1.ibm.com>
 
             using (AutoClosingSqlCommand cmd = _Database.Query(sql))
             {
@@ -843,6 +852,15 @@ VALUES
                                                  );
             newSettings.Covenant = new UUID((Guid)row["covenant"]);
 
+<<<<<<< HEAD
+=======
+            newSettings.LoadedCreationDateTime = Convert.ToInt32(row["loaded_creation_datetime"]);
+
+            if (row["loaded_creation_id"] is DBNull)
+                newSettings.LoadedCreationID = "";
+            else
+                newSettings.LoadedCreationID = (String)row["loaded_creation_id"];
+>>>>>>> 3dc2010... From: Chris Yeoh <yeohc@au1.ibm.com>
             return newSettings;
         }
 
@@ -1240,6 +1258,11 @@ VALUES
             parameters.Add(_Database.CreateParameter("sunvectory", settings.SunVector.Y));
             parameters.Add(_Database.CreateParameter("sunvectorz", settings.SunVector.Z));
             parameters.Add(_Database.CreateParameter("covenant", settings.Covenant));
+<<<<<<< HEAD
+=======
+            parameters.Add(_Database.CreateParameter("LoadedCreationDateTime", settings.LoadedCreationDateTime));
+            parameters.Add(_Database.CreateParameter("LoadedCreationID", settings.LoadedCreationID));
+>>>>>>> 3dc2010... From: Chris Yeoh <yeohc@au1.ibm.com>
 
             return parameters.ToArray();
         }
