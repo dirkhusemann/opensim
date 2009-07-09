@@ -31,6 +31,7 @@ using System.Drawing;
 using System.Reflection;
 using System.Runtime.Serialization;
 using System.Security.Permissions;
+using System.Threading;
 using System.Xml;
 using System.Xml.Serialization;
 using log4net;
@@ -1851,7 +1852,13 @@ if (m_shape != null) {
             // play the sound.
             if (startedColliders.Count > 0 && CollisionSound != UUID.Zero && CollisionSoundVolume > 0.0f)
             {
-                SendSound(CollisionSound.ToString(), CollisionSoundVolume, true, (byte)0);
+
+                // "outsource" the heavy lifter stuff and let the event
+                // handler "return" to the physics engine
+                ThreadPool.QueueUserWorkItem(delegate(Object o)
+                                             {
+                                                 SendSound(CollisionSound.ToString(), CollisionSoundVolume, true, (byte)0);
+                                             });
             }
 
             if ((m_parentGroup.RootPart.ScriptEvents & scriptEvents.collision_start) != 0)
@@ -1914,10 +1921,17 @@ if (m_shape != null) {
                             return;
                         if (m_parentGroup.Scene == null)
                             return;
-                        m_parentGroup.Scene.EventManager.TriggerScriptCollidingStart(LocalId, StartCollidingMessage);
+
+                        // "outsource" the heavy lifter stuff and let the event
+                        // handler "return" to the physics engine
+                        ThreadPool.QueueUserWorkItem(delegate(Object o) 
+                                                     {
+                                                         m_parentGroup.Scene.EventManager.TriggerScriptCollidingStart(LocalId, StartCollidingMessage);
+                                                     });
                     }
                 }
             }
+
             if ((m_parentGroup.RootPart.ScriptEvents & scriptEvents.collision) != 0)
             {
                 if (m_lastColliders.Count > 0)
@@ -1934,6 +1948,7 @@ if (m_shape != null) {
                             return;
                         if (m_parentGroup.Scene == null)
                             return;
+
                         SceneObjectPart obj = m_parentGroup.Scene.GetSceneObjectPart(localId);
                         if (obj != null)
                         {
@@ -1981,11 +1996,17 @@ if (m_shape != null) {
                             return;
                         if (m_parentGroup.Scene == null)
                             return;
-                        m_parentGroup.Scene.EventManager.TriggerScriptColliding(LocalId, CollidingMessage);
-                    }
 
+                        // "outsource" the heavy lifter stuff and let the event
+                        // handler "return" to the physics engine
+                        ThreadPool.QueueUserWorkItem(delegate(Object o) 
+                                                     {
+                                                         m_parentGroup.Scene.EventManager.TriggerScriptColliding(LocalId, CollidingMessage);
+                                                     });
+                    }
                 }
             }
+
             if ((m_parentGroup.RootPart.ScriptEvents & scriptEvents.collision_end) != 0)
             {
                 if (endedColliders.Count > 0)
@@ -2049,7 +2070,13 @@ if (m_shape != null) {
                             return;
                         if (m_parentGroup.Scene == null)
                             return;
-                        m_parentGroup.Scene.EventManager.TriggerScriptCollidingEnd(LocalId, EndCollidingMessage);
+
+                        // "outsource" the heavy lifter stuff and let the event
+                        // handler "return" to the physics engine
+                        ThreadPool.QueueUserWorkItem(delegate(Object o) 
+                                                     {
+                                                         m_parentGroup.Scene.EventManager.TriggerScriptCollidingEnd(LocalId, EndCollidingMessage);
+                                                     });
                     }
 
                 }
