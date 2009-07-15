@@ -1208,9 +1208,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
             m_log.DebugFormat("[RADMIN] updateUserAppearance");
 
-            string dmale   = m_config.GetString("default_male", "Default Male");
-            string dfemale = m_config.GetString("default_female", "Default Female");
-            string dneut   = m_config.GetString("default_female", "Default Default");
+            string dmale   = m_config.GetString("default_male",    "Male Casual");
+            string dfemale = m_config.GetString("default_female",  "Female Casual");
+            string dneut   = m_config.GetString("default_neutral", "Default Default");
             string model   = String.Empty;
 
             // Has a gender preference been supplied?
