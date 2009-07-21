@@ -770,7 +770,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
         public XmlRpcResponse XmlRpcModifyRegionMethod(XmlRpcRequest request)
         {
+
             m_log.Info("[RADMIN]: ModifyRegion: new request");
+
             XmlRpcResponse response = new XmlRpcResponse();
             Hashtable responseData = new Hashtable();
 
@@ -778,45 +780,70 @@ namespace OpenSim.ApplicationPlugins.RemoteController
             {
                 try
                 {
-                    Hashtable requestData = (Hashtable) request.Params[0];
-                    checkStringParameters(request, new string[] {"password", "region_name"});
-
+                    bool enable_voice;
+                    bool access_old;
+                    bool access_new;
                     Scene scene = null;
+
+                    Hashtable requestData = (Hashtable) request.Params[0];
+
+                    DumpRequest(requestData);
+
+                    checkStringParameters(request, new string[] {"password", "region_name"});
                     string regionName = (string) requestData["region_name"];
                     if (!m_app.SceneManager.TryGetScene(regionName, out scene))
                         throw new Exception(String.Format("region \"{0}\" does not exist", regionName));
 
+                    enable_voice = getBoolean(requestData, "enable_voice", true);
+
                     // Modify access 
-                    scene.RegionInfo.EstateSettings.PublicAccess = 
-                        getBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
-                    if (scene.RegionInfo.Persistent)
-                        scene.RegionInfo.EstateSettings.Save();
+                    access_old = scene.RegionInfo.EstateSettings.PublicAccess;
+                    access_new = getBoolean(requestData,"public", scene.RegionInfo.EstateSettings.PublicAccess);
 
-                    if (requestData.ContainsKey("enable_voice"))
+                    m_log.DebugFormat("[RADMIN] public = {0}, enable_voice = {1}",
+                           access_new, enable_voice);
+
+                    // Only update if actually changed.
+                    if(access_old != access_new)
                     {
-                        bool enableVoice = getBoolean(requestData, "enable_voice", true);
-                        List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
+                        
+						m_log.DebugFormat("[RADMIN]: ModifyRegion: access changed to {0}",
+                             access_new ? "public" : "private");
+						scene.RegionInfo.EstateSettings.PublicAccess = access_new;
+						// Save public/private setting information
+						if (scene.RegionInfo.Persistent)
+							scene.RegionInfo.EstateSettings.Save();
+					}
 
-                        foreach (ILandObject parcel in parcels)
-                        {
-                            if (enableVoice)
-                            {
-                                parcel.landData.Flags |= (uint)Parcel.ParcelFlags.AllowVoiceChat;
-                                parcel.landData.Flags |= (uint)Parcel.ParcelFlags.UseEstateVoiceChan;
-                            }
-                            else
-                            {
-                                parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
-                                parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
-                            }
-                            scene.LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);
-                        }
-                    }
+                    // Save voice setting information
+					List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
+
+					foreach (ILandObject parcel in parcels)
+					{
+						uint old_flags = parcel.landData.Flags;
+						if (enable_voice)
+						{
+							parcel.landData.Flags |= (uint)Parcel.ParcelFlags.AllowVoiceChat;
+							parcel.landData.Flags |= (uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+						}
+						else
+						{
+							parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
+							parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+						}
+						if(old_flags != parcel.landData.Flags)
+						{
+							m_log.DebugFormat("[RADMIN]: ModifyRegion: voice {0}",
+								enable_voice ? "enabled" : "disabled");
+							scene.LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);
+						}
+					}
 
                     responseData["success"] = true;
                     responseData["region_name"] = regionName;
 
                     response.Value = responseData;
+
                 }
                 catch (Exception e)
                 {
@@ -2526,6 +2553,15 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         {
             try { return node.Attributes[attr].Value; } catch{}
             return dv;
+        }
+
+        private void DumpRequest(Hashtable requestData)
+        {
+            m_log.Debug("[RADMIN] Request value dump:");
+			foreach(string key in requestData.Keys)
+			{
+				m_log.DebugFormat("[RADMIN]    - {0} = {1}", key, requestData[key]);
+			}
         }
 
         public void Dispose()

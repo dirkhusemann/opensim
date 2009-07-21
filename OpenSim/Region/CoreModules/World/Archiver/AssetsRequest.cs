@@ -106,7 +106,10 @@ namespace OpenSim.Region.CoreModules.World.Archiver
             
             if (asset != null)
             {
-                m_assetCache.ExpireAsset(assetID);
+                // No!! The region is NOT terminating; this will discard temporary assets.
+                // m_assetCache.ExpireAsset(assetID);
+                // What is needed is a way to retrieve an asset via the cache without 
+                // the request asset being cached (if it is not already).
                 m_assets[assetID] = asset;                
             }
             else
