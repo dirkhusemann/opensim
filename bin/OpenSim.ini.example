@@ -827,6 +827,10 @@
     ; Density of tree population
     tree_density = 1000.0
 
+[VectorRender]
+
+    ; the font to use for rendering text (default: Arial)
+    ; font_name = "Arial"
 
 [ScriptEngine.DotNetEngine]
     Enabled = true
