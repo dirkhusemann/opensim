@@ -1,0 +1,27 @@
+#!/bin/bash
+#
+# general opensim start/stop/restart/condrestart script 
+#
+if [ -z "$1" ] ; then 
+    echo "usage: $0 start [n]"
+    echo "       $0 stop [n]"
+    echo "       $0 restart [n]"
+    echo "       $0 condrestart [n]"
+    exit 1
+fi
+cmd=$1
+target=$2
+
+if [ -n "$target" ] ; then 
+
+    if [ -x "%(base)s/bin/$target/opensim" ] ; then
+	"%(base)s/bin/$target/opensim" $cmd $*
+    else
+	echo "cannot find \"%(base)s/bin/$target/opensim\", giving up"
+	exit 1
+    fi
+else
+    for o in %(base)s/bin/[0-9]*/opensim ; do
+	$o $cmd $*
+    done
+fi

@@ -1,0 +1,154 @@
+#!/bin/bash
+OPENSIM=%(base)s/opensim
+
+STATESDLLS=$OPENSIM/ScriptEngines
+REGIONS=%(base)s/regions
+J2KCACHE=$OPENSIM/j2kDecodeCache
+
+INIFILE=%(base)s/etc/OpenSim-%(offset)s.ini
+LOGCFG=%(base)s/etc/log-%(offset)s.cfg
+LOGCFGBG=%(base)s/etc/log-background-%(offset)s.cfg
+LOGS=%(base)s/logs
+MONOLOG=%(base)s/logs/mono-log-%(offset)s.log
+
+SCREEN=$(which screen)
+SCREEN_REQUESTED="$2"
+
+
+MONO_THREADS_PER_CPU=2000
+export MONO_THREADS_PER_CPU
+
+if [ -r %(base)s/bin/mono-setup ]; then
+    source %(base)s/bin/mono-setup
+fi
+export PATH="/usr/local/bin:$PATH"
+
+pid=""
+
+OpenSimIsRunning () 
+{
+    
+    # TODO: check for specific OpenSim (OpenSim-1.ini, ...)
+    pid=$(ps ax | grep OpenSim.exe | grep OpenSim-%(offset)s.ini | grep -v grep | awk '{ print $1 }')
+    if [ -n "$pid" ] ; then
+	return 0
+    else
+	return 1
+    fi
+}
+
+CleanStaleRegions ()
+{
+    echo "- cleaning out stale regions"
+    for i in $STATESDLLS/[0-9a-z]*-[0-9a-z]*-[0-9a-z]*-[0-9a-z]*-[0-9a-z]* ; do  
+	d=$(basename $i)
+	if ! grep -q $d $REGIONS/*/*.xml ; then  
+	    echo "- region states & dlls for region $d: stale, removing"
+	    rm -rf $i
+	fi
+    done
+}
+
+CleanJ2KCache ()
+{
+    echo "- cleaning out J2K JPEG cache"
+    find $J2KCACHE -type f -not -ctime 0 -exec rm -f {} \;
+}
+
+StartOpenSim () 
+{
+	if OpenSimIsRunning ; then
+	    echo "OpenSim already running"
+	    return 
+	fi
+	CleanStaleRegions
+	CleanJ2KCache
+
+	cd $OPENSIM
+
+	if [ -n "$SCREEN" -a "$SCREEN_REQUESTED" == "-S" ] ; then
+	    screen -a -T screen -h 10000 -S OpenSimST3D -L mono --debug OpenSim.exe -inifile=$INIFILE -logconfig=$LOGCFG
+	else
+	    echo "starting OpenSim in background mode on %(host)s:%(9000+offset)d"
+	    if [ -e "$LOGS/start-opensim-%(offset)s.log" ] ; then
+		mv $MONOLOG $MONOLOG.1
+	    fi
+	    
+	    timestamp=$(date)
+	    echo "================================================================================" > $MONOLOG
+	    echo "========== starting OpenSim at $timestamp" >> $LOGS/start-opensim-%(offset)s.log
+	    echo "================================================================================" >> $MONOLOG
+	    netstat -s >> $MONOLOG
+
+	    mono --debug OpenSim.exe -inifile=$INIFILE -background=true -logconfig=$LOGCFGBG >> $MONOLOG 2>&1 &
+
+	fi
+}
+
+StopOpenSim ()
+{
+    	if ! OpenSimIsRunning ; then
+	    echo "OpenSim is not running currently"
+	    return
+	fi
+
+	echo "sending shutdown alert to all running regions on %(host)s:%(9000+offset)d"
+	python %(base)s/tools/shutdown.py --server http://%(host)s:%(9000+offset)d/ --password %(admin_pass)s
+	sleep 10
+
+	if OpenSimIsRunning ; then
+	    echo "OpenSim still running, trying kill $pid"
+	    /bin/kill $pid >/dev/null 2>&1
+	else
+	    echo "OpenSim instance on %(host)s:%(9000+offset)d terminated"
+	    return
+	fi
+
+	if OpenSimIsRunning ; then
+	    for k in {1..5} ; do
+		echo "OpenSim running still, trying kill -9 $pid [attempt $k]"
+		/bin/kill -9 $pid >/dev/null 2>&1
+		if ! OpenSimIsRunning ; then
+		    break
+		fi
+	    done
+	fi
+
+	if OpenSimIsRunning ; then
+	    echo "cannot kill OpenSim. giving up."
+	else
+	    echo "OpenSim finally terminated."
+	fi
+}
+
+OpenSimIsEmpty () 
+{
+	avs=$(python %(base)s/tools/avatars.py --server http://%(host)s:%(9000+offset)d/)
+	return $(($avs != 0))
+}
+
+
+if [ -z $1 ] ; then
+    echo "usage: opensim start | stop | restart | cond-restart"
+    exit 1
+fi
+
+case "$1" in
+    start)
+	StartOpenSim
+	;;
+
+    stop)
+	StopOpenSim
+	;;
+
+    restart)
+	StopOpenSim
+	StartOpenSim
+	;;
+    cond-restart)
+	if OpenSimIsEmpty ; then
+	    StopOpenSim
+	    StartOpenSim
+	fi
+esac

@@ -1,0 +1,12 @@
+<Root>
+  <Config sim_UUID="%(uuid)s"
+  	  sim_name="Sametime 3D" sim_location_x="1000" sim_location_y="1000" 
+	  internal_ip_address="0.0.0.0" internal_ip_port="%(9000+offset)d" 
+	  allow_alternate_ports="false" 
+	  external_host_name="%(host)s" 
+	  master_avatar_uuid="00000000-0000-0000-0000-000000000000" 
+	  master_avatar_first="Dr" master_avatar_last="Sametime" master_avatar_pass="s4m3t1m3" 
+	  lastmap_uuid="562e2d73-e13e-4f40-b1b8-b25a2f09d6ae" lastmap_refresh="0" 
+	  nonphysical_prim_max="0" physical_prim_max="0" clamp_prim_size="false" 
+	  object_capacity="0" />
+</Root>

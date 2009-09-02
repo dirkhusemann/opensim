@@ -1,0 +1,26 @@
+# monit control file for Sametime3D
+
+# base setup
+set daemon 120
+set logfile %(base)s/logs/monit.log
+
+# mail setup
+set mail-format {
+    subject: [Sametime3D-monit] $SERVICE $EVENT at $DATE
+    message: Monit $ACTION $SERVICE at $DATE on $HOST: $DESCRIPTION.
+
+ 	  Yours sincerely,
+	  Sametime3D monit
+}
+set mailserver %(smtp_host)s with timeout 15 seconds
+set eventqueue basedir %(base)s/run/monit slots 1000
+set alert %(admin_email)s
+
+# http interface
+set httpd port 18888 and use address 0.0.0.0
+    	  allow %(admin_name)s:%(admin_pass)s
+
+include %(base)s/etc/opensim-*.monitrc
+
+
+

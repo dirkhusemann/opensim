@@ -1,0 +1,13 @@
+check process opensim-%(offset)s
+      with pidfile "%(base)s/run/opensim-%(offset)s.pid"
+      start program = "%(base)s/bin/%(offset)s/start-opensim"
+      	    with uid %(system_uid)s and gid %(system_gid)s
+      stop program = "%(base)s/bin/%(offset)s/stop-opensim"
+      	    with uid %(system_uid)s and gid %(system_gid)s
+      if failed 
+      	 host %(host)s port %(9000+offset)d
+	 send "GET /admin/regions/ HTTP/1.1\r\nHost: %(host)s:%(9000+offset)d\r\nAccept: text/xml\r\n\r\n"
+	 expect "HTTP/1.1 200 OK.*\r\n"
+	 2 times within 2 cycles
+      then 
+	 restart
