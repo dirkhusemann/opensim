@@ -1,75 +1,118 @@
-# local OpenSim Makefile extensions
-GITBRANCH = lotus3d
-SRC	  = $(shell pwd)
-DST	  = ${HOME}/Projects/st3d/st3d-releases/opensim
-CLEAN	  = $(shell git status > /dev/null 2>&1 || echo "clean")
-TMP	  := $(shell mktemp /tmp/opensim-deploy-XXXXXXXXXX)
+# OpenSim runtime shell installer
+TOP       = $(shell pwd)
 
-# patch set generation
-PYPAFIL	   = pypafil.py
-BASECOMMIT = ac863415d07ca69b320ef25a00596f4cd22dd75e
-BASEREV    = 9547
+# tools
+EXPLODER  = $(TOP)/shell/tools/exploder.sh
+EXPANDER  = $(TOP)/shell/tools/expander.py
 
-FILTER	  = ${SRC}/ST3D-filter
-PATCHDIR  = ${HOME}/Projects/st3d/sametime3d-patchset
-PATCHSET  = ${PATCHDIR}/sametime3d.patch
-PATCHBASE = ${PATCHDIR}/sametime3d.base
-PATCHMD5  = ${PATCHDIR}/sametime3d.md5
+# config: default config file is the first one we find with a .cfg extension
+CONFIG    = $(word 1, $(wildcard *.cfg))
+
+# templates: all files that have a .template extension
+TEMPLATES = $(shell find shell -type f -name "*.template")
+
+# targets: each template file will be expanded to a target file
+TARGETS	  = $(patsubst %.template,%,$(TEMPLATES))
+
+# destination directory: configured in the config file via the "base" variable
+DEST	  = $(shell $(EXPANDER) --config=$(CONFIG) --echo base)
+REGIONMAX = $(shell $(EXPANDER) --config=$(CONFIG) --echo servers)
+
+export CONFIG
+
+ifeq ($(strip $(CONFIG)),)
+all update expand:
+	@echo
+	@echo "    oops, it seems like you have not created a config file yet."
+	@echo "    copy sametime3d.cfg.example to sametime3d.cfg and adapt it"
+	@echo "    to your setup, then run make again"
+	@echo
+else
+all: $(TARGETS)
+
+explode:
+	@echo ""
+	@echo "expanding region master to region files"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template regions/default.xml.master \
+	                         --expandto 'regions/$$x/default.xml' uuid='$$(uuidgen)' offset='$$x'
+	@echo ""
+	@echo "expanding OpenSim.ini master to OpenSim.ini files"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template etc/OpenSim.ini.master \
+	                         --expandto 'etc/OpenSim-$$x.ini' offset='$$x'
+	@echo ""
+	@echo "expanding log.cfg master to log.cfg files"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template etc/log.cfg.master \
+	                         --expandto 'etc/log-$$x.cfg' offset='$$x'
+	@echo ""
+	@echo "expanding log-background.cfg master to log-background.cfg files"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template etc/log-background.cfg.master \
+	                         --expandto 'etc/log-background-$$x.cfg' offset='$$x'
+	@echo ""
+	@echo "expanding opensim control script master to opensim control scripts"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template bin/opensim.master \
+	                         --expandto 'bin/$$x/opensim' offset='$$x'
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template bin/start-opensim.master \
+	                         --expandto 'bin/$$x/start-opensim' offset='$$x'
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template bin/stop-opensim.master \
+	                         --expandto 'bin/$$x/stop-opensim' offset='$$x'
+
+	@echo ""
+	@echo "expanding opensim monit master to opensim monit scripts"
+	@echo ""
+	@$(EXPLODER) $(REGIONMAX) $(EXPANDER) --config $(CONFIG) --template etc/opensim.monitrc.master \
+	                         --expandto 'etc/opensim-$$x.monitrc' offset='$$x'
+
+# update the destination from the source
+update: explode
+	@echo ""
+	@echo "updating $(DEST)"
+	@echo ""
+	@rm -rf $(DEST)/opensim/*
+	@rsync -a --exclude '*~' --exclude '/*.cfg' --exclude 'tmp/' . $(DEST)
+	@cp -uv $(CONFIG) $(DEST)
+	@cp -uv Makefile $(DEST)
+
+# expand all template files in the destination subtree
+expand-dest:
+	@echo ""
+	@echo "expanding templates in $(DEST)"
+	@echo ""
+	$(MAKE) -C $(DEST) expand
+
+# expand all template files
+expand: $(TARGETS)
+endif
+
+
+$(TARGETS): $(CONFIG)
+
+%: %.cfg
+	$(MAKE) CONFIG=$< update
+	$(MAKE) CONFIG=$< expand-dest
+
+%-debug: %.cfg
+	$(MAKE) CONFIG=$< debug
+
+%: %.template
+	@echo ""
+	@echo "expanding $< to $@"
+	@echo ""
+	$(EXPANDER) --config=$(CONFIG) --template=$< --expandto=$@
+
+clean:
+	rm -f $(TARGETS)
 
 debug:
-	@echo "GITBRANCH " ${GITBRANCH}
-	@echo "SRC       " ${SRC}
-	@echo "DST       " ${DST}
-	@echo "TMP       " ${TMP}
-	@echo "CLEAN     " ${CLEAN}
+	@echo "expander  " $(EXPANDER)
+	@echo "config    " $(CONFIG)
+	@echo "templates " $(TEMPLATES)
+	@echo "targets   " $(TARGETS)
+	@echo "dest      " $(DEST)
+	@echo "top       " $(TOP)
 
-deploy:
-ifeq ($(CLEAN),clean)
-	@echo "updating " ${DST}
-	git checkout ${GITBRANCH}
-	-@rm -rf ${TMP}
-	@mkdir -p ${TMP}
-	@(cd ${TMP}; \
-	 git clone ${SRC} opensim-deploy; \
-	 cd opensim-deploy; \
-	 make; \
-	 rm -rf ${DST}/opensim/*; \
-	 cd bin; \
-	 cp -av * ${DST}/opensim/)
-	@cd ${SRC}
-	@rm -rf ${TMP}
-	@echo "updated " ${DST}
-else
-	@echo ${SRC} "has modified files, commit first"
-endif
 
-deploy-lotus3d-perf:
-ifeq ($(CLEAN),clean)
-	@echo "updating " ${DST}
-	git checkout lotus3d-perf
-	-@rm -rf ${TMP}
-	@mkdir -p ${TMP}
-	@(cd ${TMP}; \
-	 git clone ${SRC} opensim-deploy; \
-	 cd opensim-deploy; \
-	 make; \
-	 rm -rf ${DST}/opensim/*; \
-	 cd bin; \
-	 cp -av * ${DST}/opensim/)
-	@cd ${SRC}
-	@rm -rf ${TMP}
-	@echo "updated " ${DST}
-else
-	@echo ${SRC} "has modified files, commit first"
-endif
-
-patchset:
-	-@rm -rf ${TMP}
-	@mkdir -p ${TMP}
-	git diff ${BASECOMMIT} > ${TMP}/ST3D-patchset
-	${PYPAFIL} --filter ${FILTER} ${TMP}/ST3D-patchset
-	@cp ${TMP}/ST3D-patchset ${PATCHSET}
-	@rm -rf ${TMP}
-	@echo ${BASEREV} > ${PATCHBASE}
-	@(cd ${PATCHDIR}; find opensim -type f -a -not -regex ".*\.hgignore" -a -not -regex ".*\.svn.*" -exec md5sum {} \; > ${PATCHMD5})
-	@echo "updated " ${PATCHSET}
