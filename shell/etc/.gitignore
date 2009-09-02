@@ -1,0 +1,4 @@
+log-[0-9]*.cfg
+log-background-[0-9]*.cfg
+OpenSim-[0-9]*.ini
+opensim-[0-9]*.monitrc
