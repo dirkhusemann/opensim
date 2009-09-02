@@ -21,6 +21,8 @@ bin/*.dll
 bin/ScriptEngines/*.dll
 bin/ScriptEngines/*/*.dll
 bin/ScriptEngines/*/*.state
+bin/ScriptEngines/*/*.map
+bin/ScriptEngines/*/*.text
 bin/*.maddin
 bin/*.exe
 bin/j2kDecodeCache
@@ -28,6 +30,7 @@ bin/Physics*
 bin/Terrain*
 bin/UserAssets
 bin/estate_settings.xml
+bin/crashes/*
 Examples/*.dll
 OpenSim.build
 OpenSim.sln
