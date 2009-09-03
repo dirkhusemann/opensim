@@ -887,7 +887,7 @@
     login         = http://%(host)s:%(9000+offset)d/
 
     ; authenticator:
-    authenticator = http://%(authhost)s:%(authport)s/PlatformService/auth/%%(rezzme_base)s%%(region)s/%%(userid)s/
+    authenticator = http://%(authhost)s:%(authport)s/%(authpath)s
     authgridname  = %(authname)s Credentials
     authuseridtooltip = enter your %(authname)s user ID here (e.g., albus.bumblebee@xy.ibm.com)
     authpasswordtooltip = enter your %(authname)s password here
