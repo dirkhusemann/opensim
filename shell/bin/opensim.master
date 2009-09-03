@@ -70,13 +70,13 @@ StartOpenSim ()
 	    screen -a -T screen -h 10000 -S OpenSimST3D -L mono --debug OpenSim.exe -inifile=$INIFILE -logconfig=$LOGCFG
 	else
 	    echo "starting OpenSim in background mode on %(host)s:%(9000+offset)d"
-	    if [ -e "$LOGS/start-opensim-%(offset)s.log" ] ; then
+	    if [ -e "$MONOLOG" ] ; then
 		mv $MONOLOG $MONOLOG.1
 	    fi
 	    
 	    timestamp=$(date)
 	    echo "================================================================================" > $MONOLOG
-	    echo "========== starting OpenSim at $timestamp" >> $LOGS/start-opensim-%(offset)s.log
+	    echo "========== starting OpenSim at $timestamp" >> $MONOLOG
 	    echo "================================================================================" >> $MONOLOG
 	    netstat -s >> $MONOLOG
 
