@@ -123,7 +123,7 @@ shell-install:
 	@echo "installing to $(DEST)"
 	@echo 
 	@echo "--- installing runtime shell"
-	@rsync -a --exclude '*~' --exclude '/*.cfg' --exclude 'tmp/' $(SHELLSRC)/* $(DEST)
+	@rsync -a --exclude '*~' --exclude '/*.cfg' --exclude 'tmp/' --exclude '*.example' $(SHELLSRC)/* $(DEST)
 	@echo "--- installing opensim binaries"
 	@rm -rf $(DEST)/opensim
 	@rsync -a --exclude '*~' --exclude "Debug" --exclude "j2kDecodeCache" --exclude "ScriptEngines/*" bin/ $(DEST)/opensim
