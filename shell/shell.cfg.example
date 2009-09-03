@@ -1,0 +1,81 @@
+[opensim]
+## base opensim directory: the destination directory to which to
+## install the runtime opensim package and from where to run it all
+base = /opt/opensim
+host = opensim.yourcompany.com
+
+## number of standalone opensim region servers to start 
+servers = 4
+
+# upper limit on number of regions that can be created via XmlRpc
+region_limit = 1
+
+## system user and group id under which to run
+system_uid = opensim
+system_gid = opensim
+
+## MySQL server and database
+mysql_server = localhost
+mysql_db = opensim
+
+## in case the server is using databases hosted on another server, you
+## need to use and adapt this configuration:
+##
+# mysql_server = remote.host
+# mysql_db = opensim
+# mysql_region_db_server = localhost
+# mysql_region_db = opensim
+
+## MySQL opensim user name and password
+opensim_user = opensim
+opensim_pass = SECRET
+
+## admin email: used by monit to alert admin about status changes
+admin_email = opensimadmin@yourcompany.com
+## admin name: used by monit for its web interface
+admin_name = drsametime
+## admin password used for various opensim region modules.
+## note: needs to match with configuration for the collab layer
+admin_pass = SECRET
+
+## IRC server name
+irc_server = opensim.yourcompany.com
+## in case you are running opensim without IRC relay you can disable
+## it by uncommenting this variable
+# irc_enabled = false
+
+## GridInfo: name of the grid and short name of the grid
+gridname = Xanadu Grid
+gridnick = xanadu
+
+## authenticator host:port used for rezzme password verification
+authhost = opensim.yourcompany.com
+authport = 8080
+## authentication name: e.g. YourCompany Intranet
+authname = Xanadu Grid
+
+## broker host:port used by opensim to update attendee lists
+brokerhost = opensim.yourcompany.com
+brokerport = 8080
+
+## SMTP settings to enable OpenSim script to send email
+smtp_domain = opensim.yourcompany.com
+smtp_host   = 127.0.0.1
+smtp_user   = opensim
+smtp_pass   = opensim
+
+## Vivox settings: these settings are NOT going to work! You need to
+## obtain a vivox admin user account and fill in the correct value
+## below
+## 
+## you need to uncomment this variable for it all to work 
+# vivox_enabled   = true
+vivox_server    = www-vivox1.yourcompany.com
+vivox_sip_uri   = yourcompany.com
+vivox_user      = sametime3d
+vivox_password  = SECRET
+
+## japanese language support: uncomment to enable support japanese
+## fonts (and make sure you have that TrueType font installed
+## actually!)
+# font = Kochi Mincho
