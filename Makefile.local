@@ -1,4 +1,7 @@
+# Hey, emacs! this is a -*- makefile -*- file!
+#
 # OpenSim runtime shell installer
+#
 TOP       = $(shell pwd)
 
 # tools
@@ -14,23 +17,24 @@ TEMPLATES = $(shell find shell -type f -name "*.template")
 # targets: each template file will be expanded to a target file
 TARGETS	  = $(patsubst %.template,%,$(TEMPLATES))
 
-# destination directory: configured in the config file via the "base" variable
-DEST	  = $(shell $(EXPANDER) --config=$(CONFIG) --echo base)
-REGIONMAX = $(shell $(EXPANDER) --config=$(CONFIG) --echo servers)
-
 export CONFIG
 
 ifeq ($(strip $(CONFIG)),)
-all update expand:
+shell-all shell-update shell-expand:
 	@echo
 	@echo "    oops, it seems like you have not created a config file yet."
 	@echo "    copy sametime3d.cfg.example to sametime3d.cfg and adapt it"
 	@echo "    to your setup, then run make again"
 	@echo
 else
-all: $(TARGETS)
 
-explode:
+# destination directory: configured in the config file via the "base" variable
+DEST	  = $(shell $(EXPANDER) --config=$(CONFIG) --echo base)
+REGIONMAX = $(shell $(EXPANDER) --config=$(CONFIG) --echo servers)
+
+shell-all: $(TARGETS)
+
+shell-explode:
 	@echo ""
 	@echo "expanding region master to region files"
 	@echo ""
@@ -68,7 +72,7 @@ explode:
 	                         --expandto 'etc/opensim-$$x.monitrc' offset='$$x'
 
 # update the destination from the source
-update: explode
+shell-update: shell-explode
 	@echo ""
 	@echo "updating $(DEST)"
 	@echo ""
@@ -78,14 +82,14 @@ update: explode
 	@cp -uv Makefile $(DEST)
 
 # expand all template files in the destination subtree
-expand-dest:
+shell-expand-dest:
 	@echo ""
 	@echo "expanding templates in $(DEST)"
 	@echo ""
 	$(MAKE) -C $(DEST) expand
 
 # expand all template files
-expand: $(TARGETS)
+shell-expand: $(TARGETS)
 endif
 
 
@@ -104,10 +108,10 @@ $(TARGETS): $(CONFIG)
 	@echo ""
 	$(EXPANDER) --config=$(CONFIG) --template=$< --expandto=$@
 
-clean:
+shell-clean:
 	rm -f $(TARGETS)
 
-debug:
+shell-debug:
 	@echo "expander  " $(EXPANDER)
 	@echo "config    " $(CONFIG)
 	@echo "templates " $(TEMPLATES)
