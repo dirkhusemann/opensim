@@ -969,7 +969,7 @@
     Enabled = false 
 
 [VivoxVoice]
-    enabled = %(vivox_enabled=true)s
+    enabled = %(vivox_enabled=false)s
     vivox_server = %(vivox_server)s
     vivox_sip_uri = %(vivox_sip_uri)s
     vivox_admin_user = %(vivox_user)s
