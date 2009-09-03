@@ -32,7 +32,7 @@ install shell-all shell-install shell-expand shell-help:
 else
 
 # destination directory: configured in the config file via the "base" variable
-DEST	  = $(shell $(EXPANDER) --config=$(SHELLCONFIG) --echo base)
+DEST	= $(shell $(EXPANDER) --config=$(SHELLCONFIG) --echo base)
 SERVERS = $(shell $(EXPANDER) --config=$(SHELLCONFIG) --echo servers)
 
 shell-all: $(TARGETS)
