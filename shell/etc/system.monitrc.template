@@ -6,8 +6,8 @@ set logfile %(base)s/logs/monit.log
 
 # mail setup
 set mail-format {
-    subject: [Sametime3D-monit] $SERVICE $EVENT at $DATE
-    message: Monit $ACTION $SERVICE at $DATE on $HOST: $DESCRIPTION.
+    subject: [Sametime3D-%(host)s] $SERVICE $EVENT at $DATE
+    message: Monit $ACTION $SERVICE at $DATE on %(host)s: $DESCRIPTION.
 
  	  Yours sincerely,
 	  Sametime3D monit
