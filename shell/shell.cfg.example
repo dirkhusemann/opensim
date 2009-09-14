@@ -48,9 +48,10 @@ irc_server = opensim.yourcompany.com
 gridname = Xanadu Grid
 gridnick = xanadu
 
-## authenticator host:port used for rezzme password verification
+## authenticator host:port, & path used for rezzme password verification
 authhost = opensim.yourcompany.com
 authport = 8080
+authpath = PlatformService/auth/%(rezzme_base)s%(region)s/%(userid)s/ 
 ## authentication name: e.g. YourCompany Intranet
 authname = Xanadu Grid
 
