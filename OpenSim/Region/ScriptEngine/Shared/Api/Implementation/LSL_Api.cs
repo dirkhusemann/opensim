@@ -82,6 +82,8 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         private bool m_automaticLinkPermission=false;
         private IMessageTransferModule m_TransferModule = null;
         private int m_notecardLineReadCharsMax = 255;
+        private int m_scriptConsoleChannel = 0;
+        private bool m_scriptConsoleChannelEnabled = false;
         private IUrlModule m_UrlModule = null;
 
         //private static readonly ILog m_log = LogManager.GetLogger(System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
@@ -101,6 +103,9 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                 m_ScriptEngine.Config.GetFloat("MinTimerInterval", 0.5f);
             m_automaticLinkPermission =
                 m_ScriptEngine.Config.GetBoolean("AutomaticLinkPermission", false);
+            m_scriptConsoleChannel =
+                m_ScriptEngine.Config.GetInt("ScriptConsoleChannel", 0);
+            m_scriptConsoleChannelEnabled = (m_scriptConsoleChannel != 0);
             m_notecardLineReadCharsMax =
                 m_ScriptEngine.Config.GetInt("NotecardLineReadCharsMax", 255);
             if (m_notecardLineReadCharsMax > 65535)
@@ -726,14 +731,21 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         {
             m_host.AddScriptLPS(1);
 
-            if (text.Length > 1023)
-                text = text.Substring(0, 1023);
+            if (m_scriptConsoleChannelEnabled && (channelID == m_scriptConsoleChannel))
+            {
+                Console.WriteLine(text);
+            }
+            else
+            {
+				if (text.Length > 1023)
+					text = text.Substring(0, 1023);
 
-            World.SimChat(Utils.StringToBytes(text),
-                          ChatTypeEnum.Say, channelID, m_host.ParentGroup.RootPart.AbsolutePosition, m_host.Name, m_host.UUID, false);
+				World.SimChat(Utils.StringToBytes(text),
+							  ChatTypeEnum.Say, channelID, m_host.ParentGroup.RootPart.AbsolutePosition, m_host.Name, m_host.UUID, false);
 
-            IWorldComm wComm = m_ScriptEngine.World.RequestModuleInterface<IWorldComm>();
-            wComm.DeliverMessage(ChatTypeEnum.Say, channelID, m_host.Name, m_host.UUID, text);
+				IWorldComm wComm = m_ScriptEngine.World.RequestModuleInterface<IWorldComm>();
+				wComm.DeliverMessage(ChatTypeEnum.Say, channelID, m_host.Name, m_host.UUID, text);
+            }
         }
 
         public void llShout(int channelID, string text)
@@ -4977,6 +4989,10 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                             result.Add(src.Data[i]);
                     }
                 }
+            }
+            else
+            {
+                result.Add(src.Data[start]);
             }
 
             return result;
