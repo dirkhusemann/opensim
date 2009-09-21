@@ -586,22 +586,25 @@ namespace OpenSim.Region.ScriptEngine.Shared.CodeTools
                             lslPos.Key - 1, lslPos.Value - 1,
                             CompErr.ErrorNumber, text, severity);
                 }
-                
-                if (!File.Exists(OutFile))
+            }
+
+            //  On today's highly asynchronous systems, the result of
+            //  the compile may not be immediately apparent. Wait a 
+            //  reasonable amount of time before giving up on it.
+
+            if (!File.Exists(OutFile))
+            {
+                for(int i=0; i<20 && !File.Exists(OutFile); i++)
+					System.Threading.Thread.Sleep(250);
+                // One final chance...
+				if (!File.Exists(OutFile))
                 {
-                    throw new Exception(errtext);
+					string errtext = String.Empty;
+					errtext += "No compile error. But not able to locate compiled file.";
+					throw new Exception(errtext);
                 }
             }
 
-            //
-            // NO ERRORS, BUT NO COMPILED FILE
-            //
-            if (!File.Exists(OutFile))
-            {
-                string errtext = String.Empty;
-                errtext += "No compile error. But not able to locate compiled file.";
-                throw new Exception(errtext);
-            }
 //            m_log.DebugFormat("[Compiler] Compiled new assembly "+
 //                    "for {0}", asset);
 
