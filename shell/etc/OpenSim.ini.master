@@ -83,7 +83,7 @@
     ;     create privilegies if you want it to auto-create needed
     ;     tables.
     storage_plugin="OpenSim.Data.MySQL.dll"
-    storage_connection_string="Data Source=%(mysql_region_db_server:mysql_server)s;Database=%(mysql_region_db:mysql_db)s;User ID=%(opensim_user)s;Password=%(opensim_pass)s;";
+    storage_connection_string="Data Source=%(mysql_region_db_server)s;Database=%(mysql_region_db+offset)s;User ID=%(opensim_user)s;Password=%(opensim_pass)s;";
 
     ; If you want to use a different database/server for estate data,
     ; then uncomment and change this connect string. Defaults to the

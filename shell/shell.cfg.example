@@ -17,6 +17,8 @@ system_gid = opensim
 ## MySQL server and database
 mysql_server = localhost
 mysql_db = opensim
+mysql_region_db_server = localhost
+mysql_region_db = opensim
 
 ## in case the server is using databases hosted on another server, you
 ## need to use and adapt this configuration:
