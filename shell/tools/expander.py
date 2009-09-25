@@ -32,6 +32,8 @@ def expandVariable(match, expansions, errors):
 
     # literal default
     if kind == '=':
+        if key in expansions:
+            return expansions[key]
         return default
 
     # variable default
