@@ -18,7 +18,7 @@ import sys
 # - %(dog:cat) --- if there is an expansion for dog, dog will be used; otherwise if cat exists cat will be used
 # - %(dog=cat) --- if there is an expansion for dog, dog will be used; otherwise "cat" will be used
 # reConf = re.compile(r'(?<!%)%\((?P<key>[^\(]+?)\)s')
-reConf = re.compile(r'(?P<verbatim>%?)%\((?P<key>[^+=:\)]+?)(?:(?P<kind>[+=:])(?P<default>[^\)]+))?\)(?P<type>s|d)')
+reConf = re.compile(r'(?P<verbatim>%?)%\((?P<key>[^+=:&\)]+?)(?:(?P<kind>[+=:&])(?P<default>[^\)]+))?\)(?P<type>s|d)')
 
 def expandVariable(match, expansions, errors):
     key = match.group('key')
@@ -30,9 +30,6 @@ def expandVariable(match, expansions, errors):
     if verbatim:
         return match.group(0)[1:]
 
-    if key in expansions:
-        return expansions[key]
-        
     # literal default
     if kind == '=':
         return default
@@ -42,6 +39,8 @@ def expandVariable(match, expansions, errors):
         return expansions[default]
 
     if kind == '+' and default in expansions:
+        if key in expansions:
+            key = expansions[key]
         if typ == 's':
             return '%s%s' % (key, expansions[default])
         if typ == 'd':
@@ -50,6 +49,18 @@ def expandVariable(match, expansions, errors):
             except:
                 pass
 
+    if kind == '&' and default in expansions:
+        if typ == 's':
+            return '%s%s' % (key, expansions[default])
+        if typ == 'd':
+            try:
+                return str(int(key) + int(expansions[default]))
+            except:
+                pass
+
+    if key in expansions:
+        return expansions[key]
+        
     if not match.group(0) in errors:
         errors.append(match.group(0))
 
