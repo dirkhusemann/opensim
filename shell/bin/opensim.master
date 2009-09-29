@@ -1,5 +1,5 @@
 #!/bin/bash
-OPENSIM=%(base)s/opensim
+OPENSIM=%(base)s/opensim/%(offset)s
 
 STATESDLLS=$OPENSIM/ScriptEngines
 REGIONS=%(base)s/regions
