@@ -874,6 +874,8 @@
     ; prims 
     DisableUndergroundMovement = false
 
+    ScriptConsoleChannel = -153
+
 [GridInfo]
     ; These settings are used to return information on a get_grid_info call.
     ; Client launcher scripts and third-party clients make use of this to
