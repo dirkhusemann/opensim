@@ -119,6 +119,8 @@ shell-expand: shell-explode $(TARGETS)
 
 endif
 
+SERVERSLIM = $(shell echo $$(($(SERVERS) - 1)))
+
 # update the destination from the source
 shell-install: 
 	@echo 
@@ -126,11 +128,14 @@ shell-install:
 	@echo 
 	@echo "--- installing runtime shell"
 	@rsync -a --exclude '*~' --exclude '/*.cfg' --exclude 'tmp/' --exclude '*.example' \
-	          --exclude '.gitignore' $(SHELLSRC)/* $(DEST)
+	       --exclude '.gitignore' $(SHELLSRC)/* $(DEST)
 	@echo "--- installing opensim binaries"
 	@rm -rf $(DEST)/opensim
-	@rsync -a --exclude '*~' --exclude "Debug" --exclude "j2kDecodeCache" --exclude "ScriptEngines/*" \
-                  --exclude '.gitignore' bin/ $(DEST)/opensim
+	@for r in {0..$(SERVERSLIM)} ; do \
+	    mkdir -p $(DEST)/opensim/$$r; \
+	    rsync -a --exclude '*~' --exclude "Debug" --exclude "j2kDecodeCache" --exclude "ScriptEngines/*" \
+                  --exclude '.gitignore' bin/ $(DEST)/opensim/$$r ; \
+	done
 	@cp $(SHELLCONFIG) $(DEST)
 	@cp Makefile.local $(DEST)/Makefile
 
