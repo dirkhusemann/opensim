@@ -92,8 +92,13 @@ StopOpenSim ()
 	    return
 	fi
 
-	echo "sending shutdown alert to all running regions on %(host)s:%(9000+offset)d"
-	python %(base)s/tools/shutdown.py --server http://%(host)s:%(9000+offset)d/ --password %(admin_pass)s
+	if OpenSimIsEmpty ; then
+	    echo "no avatars logged in on %(host)s:%(9000+offset)d, doing immediate shutdown"
+	    python %(base)s/tools/shutdown.py --server http://%(host)s:%(9000+offset)d/ --password %(admin_pass)s --immediate
+	else
+	    echo "sending shutdown alert to all running regions on %(host)s:%(9000+offset)d"
+	    python %(base)s/tools/shutdown.py --server http://%(host)s:%(9000+offset)d/ --password %(admin_pass)s
+	fi
 	sleep 10
 
 	if OpenSimIsRunning ; then

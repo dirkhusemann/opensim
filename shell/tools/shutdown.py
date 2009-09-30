@@ -15,6 +15,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser()
     parser.add_option('-s', '--server', dest = 'opensim', help = 'opensim server (URL)', metavar = 'SERVER')
     parser.add_option('-p', '--password', dest = 'passwd', help = 'opensim server password', metavar = 'PASSWORD')
+    parser.add_option('-i', '--immediate', dest = 'immediate', action = 'store_true', default = False, help = 'shutdown immediate')
 
     (options, args) = parser.parse_args()
 
@@ -26,11 +27,12 @@ if __name__ == '__main__':
     try:
         opensim = xmlrpclib.Server(options.opensim)
 
-        for countDown in range(0, 10):
-            opensim.admin_broadcast(dict(password = options.passwd,
-                                         message = 'Shutting down grid for maintenance in %d secs. Please log off now.' % (10 - countDown)))
-            time.sleep(1)
-        
+        if not options.immediate:
+            for countDown in range(0, 10):
+                opensim.admin_broadcast(dict(password = options.passwd,
+                                             message = 'Shutting down grid for maintenance in %d secs. Please log off now.' % (10 - countDown)))
+                time.sleep(1)
+            
         res = opensim.admin_shutdown(dict(password = options.passwd))
         if 'success' in res and res['success'] == 'true':
             sys.exit(0)
