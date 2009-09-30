@@ -68,27 +68,27 @@ namespace OpenSim.Framework.Serialization.External
             
             xtr.ReadStartElement("LandData");
 
-            landData.Area           = Convert.ToInt32(                 xtr.ReadElementString("Area"));
-            landData.AuctionID      = Convert.ToUInt32(                xtr.ReadElementString("AuctionID"));
-            landData.AuthBuyerID    = UUID.Parse(                      xtr.ReadElementString("AuthBuyerID"));
-            landData.Category       = (ParcelCategory)Convert.ToSByte( xtr.ReadElementString("Category"));
-            landData.ClaimDate      = Convert.ToInt32(                 xtr.ReadElementString("ClaimDate"));
-            landData.ClaimPrice     = Convert.ToInt32(                 xtr.ReadElementString("ClaimPrice"));
-            landData.GlobalID       = UUID.Parse(                      xtr.ReadElementString("GlobalID"));
-            landData.GroupID        = UUID.Parse(                      xtr.ReadElementString("GroupID"));
-            landData.IsGroupOwned   = Convert.ToBoolean(               xtr.ReadElementString("IsGroupOwned"));
-            landData.Bitmap         = Convert.FromBase64String(        xtr.ReadElementString("Bitmap"));
-            landData.Description    =                                  xtr.ReadElementString("Description");
-            landData.Flags          = Convert.ToUInt32(                xtr.ReadElementString("Flags"));
-            landData.LandingType    = Convert.ToByte(                  xtr.ReadElementString("LandingType"));
-            landData.Name           =                                  xtr.ReadElementString("Name");
-            landData.Status         = (ParcelStatus)Convert.ToSByte(   xtr.ReadElementString("Status"));
-            landData.LocalID        = Convert.ToInt32(                 xtr.ReadElementString("LocalID"));
-            landData.MediaAutoScale = Convert.ToByte(                  xtr.ReadElementString("MediaAutoScale"));
-            landData.MediaID        = UUID.Parse(                      xtr.ReadElementString("MediaID"));
-            landData.MediaURL       =                                  xtr.ReadElementString("MediaURL");
-            landData.MusicURL       =                                  xtr.ReadElementString("MusicURL");
-            landData.OwnerID        = UUID.Parse(                      xtr.ReadElementString("OwnerID"));
+            landData.Area           = Convert.ToInt32(                       xtr.ReadElementString("Area"));
+            landData.AuctionID      = Convert.ToUInt32(                      xtr.ReadElementString("AuctionID"));
+            landData.AuthBuyerID    = UUID.Parse(                            xtr.ReadElementString("AuthBuyerID"));
+            landData.Category       = (Parcel.ParcelCategory)Convert.ToSByte(xtr.ReadElementString("Category"));
+            landData.ClaimDate      = Convert.ToInt32(                       xtr.ReadElementString("ClaimDate"));
+            landData.ClaimPrice     = Convert.ToInt32(                       xtr.ReadElementString("ClaimPrice"));
+            landData.GlobalID       = UUID.Parse(                            xtr.ReadElementString("GlobalID"));
+            landData.GroupID        = UUID.Parse(                            xtr.ReadElementString("GroupID"));
+            landData.IsGroupOwned   = Convert.ToBoolean(                     xtr.ReadElementString("IsGroupOwned"));
+            landData.Bitmap         = Convert.FromBase64String(              xtr.ReadElementString("Bitmap"));
+            landData.Description    =                                        xtr.ReadElementString("Description");
+            landData.Flags          = Convert.ToUInt32(                      xtr.ReadElementString("Flags"));
+            landData.LandingType    = Convert.ToByte(                        xtr.ReadElementString("LandingType"));
+            landData.Name           =                                        xtr.ReadElementString("Name");
+            landData.Status         = (Parcel.ParcelStatus)Convert.ToSByte(  xtr.ReadElementString("Status"));
+            landData.LocalID        = Convert.ToInt32(                       xtr.ReadElementString("LocalID"));
+            landData.MediaAutoScale = Convert.ToByte(                        xtr.ReadElementString("MediaAutoScale"));
+            landData.MediaID        = UUID.Parse(                            xtr.ReadElementString("MediaID"));
+            landData.MediaURL       =                                        xtr.ReadElementString("MediaURL");
+            landData.MusicURL       =                                        xtr.ReadElementString("MusicURL");
+            landData.OwnerID        = UUID.Parse(                            xtr.ReadElementString("OwnerID"));
 
             landData.ParcelAccessList = new List<ParcelManager.ParcelAccessEntry>();
             xtr.ReadStartElement("ParcelAccessList");
@@ -97,23 +97,23 @@ namespace OpenSim.Framework.Serialization.External
                 ParcelManager.ParcelAccessEntry pae;
 
                 xtr.ReadStartElement("ParcelAccessEntry");
-                pae.AgentID    = UUID.Parse(                           xtr.ReadElementString("AgentID"));
-                pae.Time       = Convert.ToDateTime(                   xtr.ReadElementString("Time"));
-                pae.Flags      = (AccessList)Convert.ToUInt32(         xtr.ReadElementString("AccessList"));
+                pae.AgentID    = UUID.Parse(                                 xtr.ReadElementString("AgentID"));
+                pae.Time       = Convert.ToDateTime(                         xtr.ReadElementString("Time"));
+                pae.Flags      = (AccessList)Convert.ToUInt32(               xtr.ReadElementString("AccessList"));
                 xtr.ReadEndElement();
 
                 landData.ParcelAccessList.Add(pae);
             }
             xtr.ReadEndElement();
 
-            landData.PassHours      = Convert.ToSingle(                xtr.ReadElementString("PassHours"));
-            landData.PassPrice      = Convert.ToInt32(                 xtr.ReadElementString("PassPrice"));
-            landData.SalePrice      = Convert.ToInt32(                 xtr.ReadElementString("SalePrice"));
-            landData.SnapshotID     = UUID.Parse(                      xtr.ReadElementString("SnapshotID"));
-            landData.UserLocation   = Vector3.Parse(                   xtr.ReadElementString("UserLocation"));
-            landData.UserLookAt     = Vector3.Parse(                   xtr.ReadElementString("UserLookAt"));
-            landData.Dwell          = Convert.ToInt32(                 xtr.ReadElementString("Dwell"));
-            landData.OtherCleanTime = Convert.ToInt32(                 xtr.ReadElementString("OtherCleanTime"));
+            landData.PassHours      = Convert.ToSingle(                      xtr.ReadElementString("PassHours"));
+            landData.PassPrice      = Convert.ToInt32(                       xtr.ReadElementString("PassPrice"));
+            landData.SalePrice      = Convert.ToInt32(                       xtr.ReadElementString("SalePrice"));
+            landData.SnapshotID     = UUID.Parse(                            xtr.ReadElementString("SnapshotID"));
+            landData.UserLocation   = Vector3.Parse(                         xtr.ReadElementString("UserLocation"));
+            landData.UserLookAt     = Vector3.Parse(                         xtr.ReadElementString("UserLookAt"));
+            landData.Dwell          = Convert.ToInt32(                       xtr.ReadElementString("Dwell"));
+            landData.OtherCleanTime = Convert.ToInt32(                       xtr.ReadElementString("OtherCleanTime"));
 
             xtr.ReadEndElement();
             
