@@ -654,7 +654,7 @@ namespace OpenSim.Data.MySQL
                         "?UserLookAtX, ?UserLookAtY, ?UserLookAtZ, " +
                         "?AuthbuyerID, ?OtherCleanTime, ?Dwell)";
 
-                FillLandCommand(cmd, parcel.landData, parcel.regionUUID);
+                FillLandCommand(cmd, parcel.LandData, parcel.RegionUUID);
 
                 ExecuteNonQuery(cmd);
 
@@ -669,9 +669,9 @@ namespace OpenSim.Data.MySQL
                         "?Flags)";
 
                 foreach (ParcelManager.ParcelAccessEntry entry in
-                        parcel.landData.ParcelAccessList)
+                        parcel.LandData.ParcelAccessList)
                 {
-                    FillLandAccessCommand(cmd, entry, parcel.landData.GlobalID);
+                    FillLandAccessCommand(cmd, entry, parcel.LandData.GlobalID);
                     ExecuteNonQuery(cmd);
                     cmd.Parameters.Clear();
                 }

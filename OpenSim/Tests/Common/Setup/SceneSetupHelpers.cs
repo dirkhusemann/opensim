@@ -126,7 +126,7 @@ namespace OpenSim.Tests.Common.Setup
             
             testScene.SetModuleInterfaces();
 
-            testScene.LandChannel = new TestLandChannel();
+            testScene.LandChannel = new TestLandChannel(testScene);
             testScene.LoadWorldMap();
 
             PhysicsPluginManager physicsPluginManager = new PhysicsPluginManager();
