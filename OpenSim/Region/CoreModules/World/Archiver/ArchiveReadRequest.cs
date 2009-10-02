@@ -144,7 +144,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                     } 
                     else if (filePath == ArchiveConstants.CONTROL_FILE_PATH)
                     {
-                        LoadControlFile(filePath, data);
+                        LoadArchiveMetadata(filePath, data);
                     }
                 }
 

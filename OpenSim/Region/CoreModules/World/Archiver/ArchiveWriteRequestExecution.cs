@@ -111,7 +111,7 @@ namespace OpenSim.Region.CoreModules.World.Archiver
                 LandData landData = lo.LandData;
                 string landDataPath = String.Format("{0}{1}.xml", ArchiveConstants.LANDDATA_PATH, 
                                                     landData.GlobalID.ToString());
-                m_archiveWriter.WriteFile(landDataPath, LandDataSerializer.Serialize(landData));
+                archive.WriteFile(landDataPath, LandDataSerializer.Serialize(landData));
             }
             m_log.InfoFormat("[ARCHIVER]: Added parcel settings to archive.");
 

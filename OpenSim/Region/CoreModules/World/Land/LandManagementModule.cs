@@ -366,7 +366,7 @@ namespace OpenSim.Region.CoreModules.World.Land
                     {
                         handleAvatarChangingParcel(clientAvatar, parcel.LandData.LocalID, m_scene.RegionInfo.RegionID);
                         //They are going below the safety line!
-                        if (!parcel.isBannedFromLand(clientAvatar.UUID))
+                        if (!parcel.IsBannedFromLand(clientAvatar.UUID))
                         {
                             clientAvatar.sentMessageAboutRestrictedParcelFlyingDown = false;
                         }
@@ -1336,14 +1336,14 @@ namespace OpenSim.Region.CoreModules.World.Land
             if (data != null)  // if we found some data, send it
             {
                 RegionInfo info;
-                if (data.regionHandle == m_scene.RegionInfo.RegionHandle)
+                if (data.RegionHandle == m_scene.RegionInfo.RegionHandle)
                 {
                     info = m_scene.RegionInfo;
                 }
                 else
                 {
                     // most likely still cached from building the extLandData entry
-                    info = m_scene.CommsManager.GridService.RequestNeighbourInfo(data.regionHandle);
+                    info = m_scene.CommsManager.GridService.RequestNeighbourInfo(data.RegionHandle);
                 }
                 // we need to transfer the fake parcelID, not the one in landData, so the viewer can match it to the landmark.
                 m_log.DebugFormat("[LAND] got parcelinfo for parcel {0} in region {1}; sending...",
