@@ -640,9 +640,9 @@ namespace OpenSim.ApplicationPlugins.RemoteController
 
                         foreach (ILandObject parcel in parcels)
                         {
-                            parcel.landData.Flags |= (uint) Parcel.ParcelFlags.AllowVoiceChat;
-                            parcel.landData.Flags |= (uint) Parcel.ParcelFlags.UseEstateVoiceChan;
-                            ((Scene)newscene).LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);                    
+                            parcel.LandData.Flags |= (uint) ParcelFlags.AllowVoiceChat;
+                            parcel.LandData.Flags |= (uint) ParcelFlags.UseEstateVoiceChan;
+                            ((Scene)newscene).LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
                         }
                     }
 
@@ -807,37 +807,37 @@ namespace OpenSim.ApplicationPlugins.RemoteController
                     if(access_old != access_new)
                     {
                         
-						m_log.DebugFormat("[RADMIN]: ModifyRegion: access changed to {0}",
+                        m_log.DebugFormat("[RADMIN]: ModifyRegion: access changed to {0}",
                              access_new ? "public" : "private");
-						scene.RegionInfo.EstateSettings.PublicAccess = access_new;
-						// Save public/private setting information
-						if (scene.RegionInfo.Persistent)
-							scene.RegionInfo.EstateSettings.Save();
-					}
+                        scene.RegionInfo.EstateSettings.PublicAccess = access_new;
+                        // Save public/private setting information
+                        if (scene.RegionInfo.Persistent)
+                            scene.RegionInfo.EstateSettings.Save();
+                    }
 
                     // Save voice setting information
-					List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
+                    List<ILandObject> parcels = ((Scene)scene).LandChannel.AllParcels();
 
-					foreach (ILandObject parcel in parcels)
-					{
-						uint old_flags = parcel.landData.Flags;
-						if (enable_voice)
-						{
-							parcel.landData.Flags |= (uint)Parcel.ParcelFlags.AllowVoiceChat;
-							parcel.landData.Flags |= (uint)Parcel.ParcelFlags.UseEstateVoiceChan;
-						}
-						else
-						{
-							parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
-							parcel.landData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
-						}
-						if(old_flags != parcel.landData.Flags)
-						{
-							m_log.DebugFormat("[RADMIN]: ModifyRegion: voice {0}",
-								enable_voice ? "enabled" : "disabled");
-							scene.LandChannel.UpdateLandObject(parcel.landData.LocalID, parcel.landData);
-						}
-					}
+                    foreach (ILandObject parcel in parcels)
+                    {
+                        uint old_flags = parcel.LandData.Flags;
+                        if (enable_voice)
+                        {
+                            parcel.LndData.Flags |= (uint)Parcel.ParcelFlags.AllowVoiceChat;
+                            parcel.LandData.Flags |= (uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+                        }
+                        else
+                        {
+                            parcel.LandData.Flags &= ~(uint)Parcel.ParcelFlags.AllowVoiceChat;
+                            parcel.LandData.Flags &= ~(uint)Parcel.ParcelFlags.UseEstateVoiceChan;
+                        }
+                        if(old_flags != parcel.LandData.Flags)
+                        {
+                            m_log.DebugFormat("[RADMIN]: ModifyRegion: voice {0}",
+                                enable_voice ? "enabled" : "disabled");
+                            scene.LandChannel.UpdateLandObject(parcel.LandData.LocalID, parcel.LandData);
+                        }
+                    }
 
                     responseData["success"] = true;
                     responseData["region_name"] = regionName;
@@ -2558,10 +2558,10 @@ namespace OpenSim.ApplicationPlugins.RemoteController
         private void DumpRequest(Hashtable requestData)
         {
             m_log.Debug("[RADMIN] Request value dump:");
-			foreach(string key in requestData.Keys)
-			{
-				m_log.DebugFormat("[RADMIN]    - {0} = {1}", key, requestData[key]);
-			}
+            foreach(string key in requestData.Keys)
+            {
+                m_log.DebugFormat("[RADMIN]    - {0} = {1}", key, requestData[key]);
+            }
         }
 
         public void Dispose()

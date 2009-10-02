@@ -581,7 +581,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     // agent must be over owners land to avoid abuse
                     if (m_host.OwnerID
                         == World.LandChannel.GetLandObject(
-                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).LandData.OwnerID)
                     {
 
                         // Check for hostname , attempt to make a hglink
@@ -632,7 +632,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     // agent must be over owners land to avoid abuse
                     if (m_host.OwnerID
                         == World.LandChannel.GetLandObject(
-                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).landData.OwnerID)
+                            presence.AbsolutePosition.X, presence.AbsolutePosition.Y).LandData.OwnerID)
                     {
                         presence.ControllingClient.SendTeleportLocationStart();
                         World.RequestTeleportLocation(presence.ControllingClient, regionHandle,
@@ -1149,7 +1149,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
             ILandObject land
                 = World.LandChannel.GetLandObject(m_host.AbsolutePosition.X, m_host.AbsolutePosition.Y);
 
-            if (land.landData.OwnerID != m_host.ObjectOwner)
+            if (land.LandData.OwnerID != m_host.ObjectOwner)
                 return;
 
             land.SetMediaUrl(url);
