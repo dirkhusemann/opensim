@@ -5483,11 +5483,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
                     if (obj != null)
                         if (m_host.OwnerID
                             == World.LandChannel.GetLandObject(
-<<<<<<< HEAD
-                                obj.AbsolutePosition.X, obj.AbsolutePosition.Y).landData.OwnerID)                             
-=======
                                 obj.AbsolutePosition.X, obj.AbsolutePosition.Y).LandData.OwnerID)
->>>>>>> 2107b67... - cleaning up LandData/ILandObject capitalization issues
                             return 1;
                 }
             }
@@ -5498,11 +5494,7 @@ namespace OpenSim.Region.ScriptEngine.Shared.Api
         public LSL_String llGetLandOwnerAt(LSL_Vector pos)
         {
             m_host.AddScriptLPS(1);
-<<<<<<< HEAD
-            return World.LandChannel.GetLandObject((float)pos.x, (float)pos.y).landData.OwnerID.ToString();            
-=======
             return World.LandChannel.GetLandObject((float)pos.x, (float)pos.y).LandData.OwnerID.ToString();
->>>>>>> 2107b67... - cleaning up LandData/ILandObject capitalization issues
         }
 
         /// <summary>
