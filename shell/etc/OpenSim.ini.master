@@ -893,7 +893,8 @@
     authgridname  = %(authname)s Credentials
     authuseridtooltip = enter your %(authname)s user ID here (e.g., albus.bumblebee@xy.ibm.com)
     authpasswordtooltip = enter your %(authname)s password here
-    
+
+    appearanceuri = true
 
 [OpenGridProtocol]
     ;These are the settings for the Open Grid Protocol..  the Agent Domain, Region Domain,   you know..
